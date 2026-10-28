@@ -2,87 +2,89 @@
 
 ## Goal
 
-Automatic **multi-app pipeline** that can run the full lifecycle of **multiple Shopify apps at the same time** — not just multiple codebases, but parallel research, prototyping, development, testing, release, and update cycles.
+Automatic pipeline driven by **one single user request / requirement**.
 
-Each app is a first-class citizen in the pipeline with its own:
-- Idea & decision tracking
-- Research & MMMVP history
-- Prototype
-- Epics / Stories / Kanban
-- Test store
-- Release state
-- Ongoing update loop
+From that one request the system can generate and manage **multiple Shopify apps** in parallel.
 
-All apps share the same agents, skills, and hooks. The pipeline itself is multi-tenant.
+Multiple independent user requests are **not supported**. Everything flows from a single master request.
 
-**Per-app Flow:**
+**Core Idea:**
+One Request → Multiple Apps (each with its own full lifecycle)
 
-1. User submits idea → tracked in `apps/<app-name>/idea.md` + `changes.md`
-2. Research (Original idea **or** Competitor killer)
-3. Ranked MMMVP proposals
-4. Build prototype
-5. User reviews / refines
-6. Production goals defined
-7. Full SDLC (Epics + Stories) in concurrent Kanban
-8. Create Shopify Test Store → User tests
-9. User approves → Actual release
-10. Ongoing loop: re-research → propose updates → update app + test store → user approves
+**Per-app Flow (all apps born from the same original request):**
 
-Multiple apps can be at completely different stages at the same time.
+1. Master request / requirement is recorded
+2. Research (Original idea **or** Competitor killer) against that single request
+3. Ranked MMMVP proposals (can result in multiple distinct apps)
+4. User selects which MMMVP(s) to turn into apps
+5. For each selected app:
+   - Build prototype
+   - User reviews / refines
+   - Production goals defined
+   - Full SDLC (Epics + Stories) in concurrent Kanban
+   - Create Shopify Test Store → User tests
+   - User approves → Actual release
+6. Ongoing loop (per app or across apps): re-research against the **original single request** → propose updates → update app(s) + test store(s) → user approves
 
 ---
 
 ## Acceptance Criteria
 
-### Multi-app Pipeline Support (Must Pass)
-- [ ] Pipeline can manage multiple apps simultaneously across all stages
-- [ ] Every app has fully isolated state: idea, research, MMMVPs, prototype, epics/stories, test store, release status
-- [ ] `/start` shows a dashboard of **all apps** and their current pipeline stage
-- [ ] All skills accept `--app <name>` (or auto-detect context)
+### Single Request → Multi-app
+- [ ] System accepts only **one master request / requirement**
+- [ ] That single request is the source of truth for all research and updates
+- [ ] Research can produce multiple MMMVP proposals
+- [ ] User can choose to turn one or more MMMVPs into separate apps
+- [ ] Multiple apps can run in parallel, all traced back to the same original request
+- [ ] Multiple separate user requests are not supported
+
+### Multi-app Pipeline Support
+- [ ] Each app has fully isolated state (idea refinement, prototype, epics/stories, test store, release)
+- [ ] `/start` shows dashboard of all apps born from the master request + their stages
+- [ ] All skills are app-scoped (`--app <name>` or context detection)
 - [ ] `/kanban-status` supports single app or `--all`
-- [ ] Research, prototype, SDLC, test store, and release can run for different apps in parallel without interference
-- [ ] Approval gates are enforced **per app**
-- [ ] Shared agents/skills never leak data or decisions between apps
+- [ ] Approval gates are enforced per app
+- [ ] Shared agents/skills never leak data between apps
 
-### Core Flow (per app)
-- [ ] Idea tracking works
-- [ ] Research supports Original Idea + Competitor Killer
+### Core Flow
+- [ ] Master request tracked
+- [ ] Research supports Original Idea + Competitor Killer modes
 - [ ] Ranked MMMVP proposals generated
-- [ ] Prototype build + user review
-- [ ] Epics + Stories created after production goals confirmed
+- [ ] Prototype + user review per selected app
+- [ ] Epics + Stories after production goals confirmed
 - [ ] Concurrent Kanban development
-- [ ] Test store creation & deployment
+- [ ] Test store creation & deployment per app
 - [ ] Release blocked until explicit user approval
-- [ ] Ongoing update loop works
+- [ ] Ongoing update loop always refers back to the original single request
 
 ---
 
-## Phase 0 – Multi-app Pipeline Foundation
+## Phase 0 – Master Request & Multi-app Foundation
 
-- [ ] Folder structure: `apps/<app-name>/` (code + all pipeline artifacts)
-- [ ] Per-app files: `idea.md`, `changes.md`, `status.md` (or equivalent)
-- [ ] Central app registry / dashboard (used by `/start` and `/kanban-status`)
-- [ ] Convention: every skill is app-scoped (`--app <name>` or context detection)
-- [ ] Hook: `track-idea-changes.sh` (per app)
-- [ ] Session start shows multi-app pipeline overview
+- [ ] Master request file (e.g. `request.md` or `requirement.md`)
+- [ ] Folder structure: `apps/<app-name>/`
+- [ ] Per-app: `idea.md`, `changes.md`, `status.md`
+- [ ] Central registry of all apps generated from the master request
+- [ ] Convention: every skill is app-scoped
+- [ ] `/start` shows master request + all derived apps and stages
 
 ---
 
-## Phase 1 – Research & MMMVP (per app)
+## Phase 1 – Research & MMMVP (from single request)
 
 **Agents**
 - [x] `product-director`
 - [ ] `research-specialist`
 
 **Skills**
-- [x] `/start` → multi-app dashboard + create/select app
-- [x] `/research --app <name>` (Original + Competitor Killer)
-- [ ] `/idea-validate --app <name>`
-- [ ] `/mmmvp-proposals --app <name>`
+- [x] `/start`
+- [x] `/research` (Original + Competitor Killer) – always against master request
+- [ ] `/idea-validate`
+- [ ] `/mmmvp-proposals` → can recommend multiple apps
 
 ---
 
-## Phase 2 – Prototype (per app)
+## Phase 2 – Prototype (per selected app)
 
 **Agents**
 - [ ] `prototype-builder`
@@ -138,11 +140,13 @@ Multiple apps can be at completely different stages at the same time.
 
 ---
 
-## Phase 6 – Ongoing Update Loop (per app)
+## Phase 6 – Ongoing Update Loop
+
+Always re-researches against the **original single master request**.
 
 **Skills**
-- [ ] `/update-research --app <name>`
-- [ ] `/propose-updates --app <name>`
+- [ ] `/update-research` (uses master request)
+- [ ] `/propose-updates` (can affect one or multiple apps)
 - [ ] `/apply-updates --app <name>`
 
 ---
@@ -159,7 +163,7 @@ Multiple apps can be at completely different stages at the same time.
 
 | Hook | Purpose | Status |
 |------|---------|--------|
-| `session-start.sh` | Multi-app pipeline dashboard | ☐ |
+| `session-start.sh` | Show master request + all apps & stages | ☐ |
 | `track-idea-changes.sh` | Log changes per app | ☐ |
 | `validate-shopify-toml.sh` | Validate config per app | ☐ |
 | `security-scan.sh` | Catch secrets / unsafe code | ☐ |
@@ -169,7 +173,7 @@ Multiple apps can be at completely different stages at the same time.
 
 ## Human Approval Gates (Required – per app)
 
-1. MMMVP selection
+1. MMMVP selection (which proposals become apps)
 2. Prototype → Production
 3. Scope confirmation before full SDLC
 4. Test Store → Live Release
