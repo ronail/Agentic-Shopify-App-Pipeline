@@ -2,9 +2,18 @@
 
 ## Goal
 
-Automatic **multi-app** pipeline that can develop, test, and release **multiple Shopify apps in the same repo at the same time**.
+Automatic **multi-app pipeline** that can run the full lifecycle of **multiple Shopify apps at the same time** — not just multiple codebases, but parallel research, prototyping, development, testing, release, and update cycles.
 
-Each app is fully isolated (idea, research, prototype, epics/stories, test store, release) while sharing the same agents, skills, and hooks.
+Each app is a first-class citizen in the pipeline with its own:
+- Idea & decision tracking
+- Research & MMMVP history
+- Prototype
+- Epics / Stories / Kanban
+- Test store
+- Release state
+- Ongoing update loop
+
+All apps share the same agents, skills, and hooks. The pipeline itself is multi-tenant.
 
 **Per-app Flow:**
 
@@ -19,43 +28,43 @@ Each app is fully isolated (idea, research, prototype, epics/stories, test store
 9. User approves → Actual release
 10. Ongoing loop: re-research → propose updates → update app + test store → user approves
 
-Multiple apps can be at different stages simultaneously.
+Multiple apps can be at completely different stages at the same time.
 
 ---
 
 ## Acceptance Criteria
 
-### Multi-app Support (Must Pass)
-- [ ] All apps live under `apps/<app-name>/`
-- [ ] Each app has its own `idea.md`, `changes.md`, epics, stories, status, and test store config
-- [ ] Every skill accepts `--app <name>` (or auto-detects from context)
-- [ ] `/start` can list all apps + their current stage
-- [ ] `/kanban-status` can show one app or all apps
-- [ ] Different apps can run research, development, and release cycles independently
-- [ ] Shared agents/skills never mix data between apps
+### Multi-app Pipeline Support (Must Pass)
+- [ ] Pipeline can manage multiple apps simultaneously across all stages
+- [ ] Every app has fully isolated state: idea, research, MMMVPs, prototype, epics/stories, test store, release status
+- [ ] `/start` shows a dashboard of **all apps** and their current pipeline stage
+- [ ] All skills accept `--app <name>` (or auto-detect context)
+- [ ] `/kanban-status` supports single app or `--all`
+- [ ] Research, prototype, SDLC, test store, and release can run for different apps in parallel without interference
+- [ ] Approval gates are enforced **per app**
+- [ ] Shared agents/skills never leak data or decisions between apps
 
 ### Core Flow (per app)
-- [ ] Idea tracking works per app
-- [ ] Research supports Original Idea + Competitor Killer modes
+- [ ] Idea tracking works
+- [ ] Research supports Original Idea + Competitor Killer
 - [ ] Ranked MMMVP proposals generated
 - [ ] Prototype build + user review
 - [ ] Epics + Stories created after production goals confirmed
 - [ ] Concurrent Kanban development
-- [ ] Test store creation & deployment per app
+- [ ] Test store creation & deployment
 - [ ] Release blocked until explicit user approval
 - [ ] Ongoing update loop works
-- [ ] Human approval gates enforced at every critical transition
 
 ---
 
-## Phase 0 – Multi-app Foundation
+## Phase 0 – Multi-app Pipeline Foundation
 
-- [ ] Standard folder structure: `apps/<app-name>/`
-- [ ] `apps/<app-name>/idea.md` template
-- [ ] `apps/<app-name>/changes.md` template
-- [ ] App registry file (e.g. `apps/registry.md` or `apps/status.json`) showing all apps + stage
-- [ ] Convention: all skills require `--app <name>` or detect current app context
-- [ ] Hook: `track-idea-changes.sh` (scoped per app)
+- [ ] Folder structure: `apps/<app-name>/` (code + all pipeline artifacts)
+- [ ] Per-app files: `idea.md`, `changes.md`, `status.md` (or equivalent)
+- [ ] Central app registry / dashboard (used by `/start` and `/kanban-status`)
+- [ ] Convention: every skill is app-scoped (`--app <name>` or context detection)
+- [ ] Hook: `track-idea-changes.sh` (per app)
+- [ ] Session start shows multi-app pipeline overview
 
 ---
 
@@ -66,7 +75,7 @@ Multiple apps can be at different stages simultaneously.
 - [ ] `research-specialist`
 
 **Skills**
-- [x] `/start` → list apps / create new app / select app
+- [x] `/start` → multi-app dashboard + create/select app
 - [x] `/research --app <name>` (Original + Competitor Killer)
 - [ ] `/idea-validate --app <name>`
 - [ ] `/mmmvp-proposals --app <name>`
@@ -79,7 +88,7 @@ Multiple apps can be at different stages simultaneously.
 - [ ] `prototype-builder`
 
 **Skills**
-- [x] `/scaffold --app <name>` (creates `apps/<name>/`)
+- [x] `/scaffold --app <name>`
 - [ ] `/build-prototype --app <name>`
 - [ ] `/prototype-review --app <name>`
 
@@ -150,7 +159,7 @@ Multiple apps can be at different stages simultaneously.
 
 | Hook | Purpose | Status |
 |------|---------|--------|
-| `session-start.sh` | Show all apps + current stages | ☐ |
+| `session-start.sh` | Multi-app pipeline dashboard | ☐ |
 | `track-idea-changes.sh` | Log changes per app | ☐ |
 | `validate-shopify-toml.sh` | Validate config per app | ☐ |
 | `security-scan.sh` | Catch secrets / unsafe code | ☐ |
