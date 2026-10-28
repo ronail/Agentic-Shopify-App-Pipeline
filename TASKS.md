@@ -1,6 +1,40 @@
-# Agentic Shopify App Pipeline – Task List
+# Agentic Shopify App Pipeline – Vision & Task List
 
-**Goal**: Convert the Agent-Harness structure into a fully automated research → development → release → review pipeline for Shopify apps. Built for solo founders.
+**Goal**: Fully automatic pipeline that takes a user idea, researches, proposes MMMVPs, builds prototype → production, manages full SDLC, deploys to test store, and supports ongoing updates — all with human approval gates.
+
+---
+
+## Pipeline Flow
+
+```
+1. User Idea (tracked in idea.md / changes.md)
+          ↓
+2. Research
+   - Path A: Original idea validation
+   - Path B: Competitor killer analysis
+          ↓
+3. Return list of MMMVP proposals
+          ↓
+4. Build Prototype
+          ↓
+5. User Review / Refinement
+          ↓
+6. Production Goals Defined
+          ↓
+7. Full SDLC (Epics → Stories → Kanban, concurrent)
+          ↓
+8. Ready for Release → Create Shopify Test Store
+          ↓
+9. User Testing & Approval
+          ↓
+10. Actual Release
+          ↓
+11. Ongoing Loop (Scheduled or Manual)
+    - Re-research with same original request
+    - Determine update requirements
+    - Update App + Test Store
+    - Wait for user approval
+```
 
 ---
 
@@ -8,15 +42,16 @@
 
 | # | Task | Status |
 |---|------|--------|
-| 1.1 | Repo created: `Agentic-Shopify-App-Pipeline` | ✅ Done |
-| 1.2 | Add this TASKS.md | ✅ Done |
-| 1.3 | Create CLAUDE.md | ✅ Done |
-| 1.4 | Update README.md with Shopify focus | ☐ |
+| 1.1 | Repo created | ✅ Done |
+| 1.2 | This TASKS.md (vision + tasks) | ✅ Done |
+| 1.3 | CLAUDE.md created | ✅ Done |
+| 1.4 | Update README.md | ☐ |
 | 1.5 | Create AGENTS.md overview | ☐ |
+| 1.6 | Create idea.md + changes.md tracking templates | ☐ |
 
 ---
 
-## Phase 2 – Agents (Generate)
+## Phase 2 – Agents
 
 ### Directors
 - [x] `product-director`
@@ -42,21 +77,30 @@
 - [ ] `billing-specialist`
 - [ ] `auth-specialist`
 - [ ] `performance-specialist`
+- [ ] `research-specialist` (new – owns MMMVP generation)
+- [ ] `prototype-builder` (new)
+- [ ] `test-store-manager` (new)
 
 ---
 
-## Phase 3 – Skills (Generate)
+## Phase 3 – Skills
 
 ### Research & Discovery
 - [x] `/start`
-- [x] `/research`
+- [x] `/research` (supports Original + Competitor Killer paths)
 - [ ] `/idea-validate`
+- [ ] `/mmmvp-proposals` ← generate ranked MMMVP list
 
-### Development
+### Prototype
 - [x] `/scaffold`
+- [ ] `/build-prototype`
+- [ ] `/prototype-review`
+
+### Planning & Development
 - [ ] `/create-epics`
 - [ ] `/create-stories`
 - [ ] `/dev-story`
+- [ ] `/kanban-status`
 - [ ] `/webhook-design`
 - [ ] `/billing-setup`
 - [ ] `/polaris-ui`
@@ -68,14 +112,21 @@
 - [ ] `/performance-check`
 - [ ] `/app-store-checklist`
 
-### Release
+### Release & Test Store
+- [ ] `/create-test-store`
+- [ ] `/deploy-to-test-store`
 - [ ] `/release`
 - [ ] `/hotfix`
 - [ ] `/changelog`
 
+### Ongoing Update Loop
+- [ ] `/update-research` (re-run research on original idea)
+- [ ] `/propose-updates`
+- [ ] `/apply-updates`
+
 ---
 
-## Phase 4 – Hooks (Generate)
+## Phase 4 – Hooks
 
 | Hook | Trigger | Status |
 |------|---------|--------|
@@ -84,34 +135,41 @@
 | `validate-scopes.sh` | Pre-push | ☐ |
 | `security-scan.sh` | Post-edit | ☐ |
 | `app-store-gate.sh` | Pre-release | ☐ |
+| `track-idea-changes.sh` | On idea.md edit | ☐ |
 
 ---
 
-## Phase 5 – Templates
+## Phase 5 – Templates & Tracking
 
+- [ ] `idea.md` – Master idea + decisions log
+- [ ] `changes.md` – Tracked changes / refinement history
 - [ ] App PRD template
+- [ ] MMMVP proposal template
 - [ ] Webhook design doc
 - [ ] Billing plan matrix
 - [ ] App Store listing template
 - [ ] Security review checklist
 - [ ] Release notes template
+- [ ] Test store setup checklist
 
 ---
 
-## Phase 6 – Pipeline Flow
+## Phase 6 – Human Approval Gates (Non-negotiable)
 
-```
-Research → Validate Idea → Scaffold → Epics/Stories → Dev → Code Review → Security → App Store Checklist → Release → Monitor
-```
+1. After MMMVP proposals → User chooses which to prototype
+2. After Prototype → User approves / requests refinement
+3. After Production goals defined → User confirms scope
+4. After Test Store ready → User tests & approves release
+5. After any Update proposal → User approves before applying
 
 ---
 
-## Next Immediate Actions
+## Next Immediate Actions (when ready)
 
-1. Finish remaining high-value agents (app-architect, api-lead, billing-specialist, webhooks-specialist)
-2. Finish core skills (`/app-store-checklist`, `/create-epics`, `/dev-story`, `/release`)
-3. Create basic hooks
-4. Update README
+1. Create `idea.md` + `changes.md` templates
+2. Finish critical new agents: `research-specialist`, `prototype-builder`, `test-store-manager`
+3. Build `/mmmvp-proposals`, `/build-prototype`, `/create-test-store` skills
+4. Update README with full vision
 
 ---
 
