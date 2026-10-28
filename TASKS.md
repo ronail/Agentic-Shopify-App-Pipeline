@@ -1,97 +1,46 @@
-# Agentic Shopify App Pipeline – Vision & Task List
+# Agentic Shopify App Pipeline – Task List
 
 ## Goal
 
-Build a fully automatic Shopify app pipeline that:
+Automatic pipeline that turns a user idea into a live Shopify app with human approval at every critical stage.
 
-1. Takes a user initial request / idea (tracked in markdown)
-2. Performs research on either:
-   - Original idea validation, **or**
-   - Competitor killer analysis
-3. Returns a ranked list of **MMMVP proposals**
-4. Builds a prototype
-5. Asks user to review or refine for production development
-6. Once production goals are defined → runs full SDLC (Epics → Stories) in a **Kanban concurrent** style until ready to release
-7. Sets up a Shopify **Test Store** for user testing
-8. Waits for explicit user approval before actual release
-9. Supports ongoing loop (scheduled or manual):
-   - Re-research using the original request
-   - Determine update requirements
-   - Update the app + test store
-   - Wait for user approval again
+**Flow:**
 
-All major stage transitions require **human approval gates**.
+1. User submits idea (tracked in `idea.md` + `changes.md`)
+2. Research → Original idea **or** Competitor killer
+3. Generate ranked **MMMVP proposals**
+4. Build prototype
+5. User reviews / refines
+6. Production goals defined
+7. Full SDLC (Epics + Stories) in concurrent Kanban style
+8. Create Shopify Test Store → User tests
+9. User approves → Actual release
+10. Ongoing loop (scheduled or manual): re-research → propose updates → update app + test store → user approves
 
 ---
 
-## Acceptance Criteria (Refactoring Goal)
+## Acceptance Criteria
 
-The pipeline is considered complete when **all** of the following are true:
+The refactoring is complete only when all of these pass:
 
-### Core Flow
-- [ ] User can start with a raw idea in `idea.md`
-- [ ] System can run research in two modes: Original Idea **or** Competitor Killer
-- [ ] System returns a clear ranked list of MMMVP proposals
-- [ ] User can select one MMMVP and trigger prototype build
+- [ ] Idea is tracked in `idea.md` / `changes.md`
+- [ ] Research supports two modes: Original Idea and Competitor Killer
+- [ ] System returns ranked MMMVP proposals
+- [ ] User can select an MMMVP and trigger prototype
 - [ ] Prototype can be reviewed and refined by user
-- [ ] After user confirms production goals, system creates Epics + Stories
-- [ ] Development can run concurrently in Kanban style (`/kanban-status` works)
-- [ ] When ready, system can create and deploy to a Shopify Test Store
-- [ ] Actual production release is blocked until user explicitly approves
-- [ ] Ongoing research + update proposals can be triggered (manual or scheduled)
-- [ ] All updates also go through test store + user approval before live release
-
-### Structure & Quality
-- [ ] Agents, skills, and hooks exist for every major stage above
-- [ ] `idea.md` and `changes.md` are the single source of truth for decisions
-- [ ] Human approval gates are enforced at every critical transition
-- [ ] README clearly explains the full pipeline for a solo founder
-
-### Non-Goals (Out of Scope for v1)
-- Fully autonomous release without any human approval
-- Multi-app portfolio management
-- Advanced analytics / revenue tracking
-
----
-
-## Pipeline Flow
-
-```
-1. User Idea (tracked in idea.md / changes.md)
-          ↓
-2. Research
-   - Path A: Original idea validation
-   - Path B: Competitor killer analysis
-          ↓
-3. Ranked list of MMMVP proposals
-          ↓
-4. Build Prototype
-          ↓
-5. User Review / Refinement
-          ↓
-6. Production Goals Defined
-          ↓
-7. Full SDLC (Epics → Stories → Kanban concurrent)
-          ↓
-8. Ready → Create Shopify Test Store
-          ↓
-9. User Testing & Approval
-          ↓
-10. Actual Release
-          ↓
-11. Ongoing Loop (Scheduled or Manual)
-    - Re-research with same original request
-    - Determine update requirements
-    - Update App + Test Store
-    - Wait for user approval
-```
+- [ ] After production goals confirmed → Epics + Stories created
+- [ ] Development runs concurrently (Kanban visible via `/kanban-status`)
+- [ ] System can create and deploy to a Shopify Test Store
+- [ ] Actual release is blocked until user explicitly approves
+- [ ] Ongoing research + update loop works (manual + scheduled ready)
+- [ ] All major transitions have enforced human approval gates
 
 ---
 
 ## Phase 0 – Idea Tracking
 
-- [ ] Create `idea.md` template (master idea + decisions)
-- [ ] Create `changes.md` template (refinement history)
+- [ ] `idea.md` template (master idea + key decisions)
+- [ ] `changes.md` template (refinement history)
 - [ ] Hook: `track-idea-changes.sh`
 
 ---
@@ -99,8 +48,8 @@ The pipeline is considered complete when **all** of the following are true:
 ## Phase 1 – Research & MMMVP
 
 **Agents**
-- [ ] `research-specialist`
 - [x] `product-director`
+- [ ] `research-specialist`
 
 **Skills**
 - [x] `/start`
@@ -122,7 +71,7 @@ The pipeline is considered complete when **all** of the following are true:
 
 ---
 
-## Phase 3 – Production Planning & SDLC
+## Phase 3 – Production Planning & Concurrent SDLC
 
 **Agents**
 - [x] `technical-director`
@@ -138,7 +87,7 @@ The pipeline is considered complete when **all** of the following are true:
 
 ---
 
-## Phase 4 – Quality & Security
+## Phase 4 – Quality Gates
 
 **Agents**
 - [x] `security-specialist`
@@ -175,46 +124,33 @@ The pipeline is considered complete when **all** of the following are true:
 
 ---
 
-## Phase 7 – Supporting Agents & Skills (Nice-to-have)
+## Supporting (Later)
 
-- [ ] `ux-lead`, `growth-lead`
-- [ ] Liquid / Polaris / App Bridge / GraphQL / Webhooks / Billing / Auth / Performance specialists
-- [ ] `/webhook-design`, `/billing-setup`, `/polaris-ui`, etc.
+- Remaining specialists (Liquid, Polaris, App Bridge, GraphQL, Webhooks, Billing, Auth, Performance)
+- Extra skills (`/webhook-design`, `/billing-setup`, `/polaris-ui`, etc.)
+- Growth & UX leads
 
 ---
 
 ## Hooks
 
-| Hook | Trigger | Status |
+| Hook | Purpose | Status |
 |------|---------|--------|
-| `session-start.sh` | Session open | ☐ |
-| `track-idea-changes.sh` | On idea.md edit | ☐ |
-| `validate-shopify-toml.sh` | Pre-commit | ☐ |
-| `validate-scopes.sh` | Pre-push | ☐ |
-| `security-scan.sh` | Post-edit | ☐ |
-| `app-store-gate.sh` | Pre-release | ☐ |
+| `session-start.sh` | Show current stage | ☐ |
+| `track-idea-changes.sh` | Log changes to idea | ☐ |
+| `validate-shopify-toml.sh` | Validate config | ☐ |
+| `security-scan.sh` | Catch secrets / unsafe code | ☐ |
+| `app-store-gate.sh` | Block release if checklist fails | ☐ |
 
 ---
 
-## Templates
+## Human Approval Gates (Required)
 
-- [ ] `idea.md`
-- [ ] `changes.md`
-- [ ] MMMVP proposal template
-- [ ] App PRD template
-- [ ] Test store setup checklist
-- [ ] Security review checklist
-- [ ] Release notes template
-
----
-
-## Human Approval Gates (Must Enforce)
-
-1. After MMMVP proposals → User selects which to prototype
-2. After Prototype → User approves or requests refinement
-3. After Production goals defined → User confirms scope
-4. After Test Store ready → User tests & approves release
-5. After any Update proposal → User approves before applying
+1. MMMVP selection
+2. Prototype → Production
+3. Scope confirmation before full SDLC
+4. Test Store → Live Release
+5. Any future update proposal
 
 ---
 
