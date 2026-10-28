@@ -10,50 +10,50 @@
 |---|------|--------|
 | 1.1 | Repo created: `Agentic-Shopify-App-Pipeline` | ✅ Done |
 | 1.2 | Add this TASKS.md | ✅ Done |
-| 1.3 | Copy core structure from Agent-Harness-Game-Studios (`.claude/`, agents, skills skeleton) | ☐ |
+| 1.3 | Create CLAUDE.md | ✅ Done |
 | 1.4 | Update README.md with Shopify focus | ☐ |
-| 1.5 | Create CLAUDE.md / AGENTS.md for Shopify context | ☐ |
+| 1.5 | Create AGENTS.md overview | ☐ |
 
 ---
 
-## Phase 2 – Agent Hierarchy
+## Phase 2 – Agents (Generate)
 
-### Directors (Opus-level)
-- [ ] Product Director
-- [ ] Technical Director
-- [ ] Release Manager
+### Directors
+- [x] `product-director`
+- [x] `technical-director`
+- [x] `release-manager`
 
-### Leads (Sonnet-level)
-- [ ] App Architect
-- [ ] UX Lead
-- [ ] API Lead
-- [ ] QA Lead
-- [ ] Growth Lead
+### Leads
+- [ ] `app-architect`
+- [ ] `ux-lead`
+- [ ] `api-lead`
+- [ ] `qa-lead`
+- [ ] `growth-lead`
 
 ### Specialists
-- [ ] Liquid Specialist
-- [ ] React Admin Specialist
-- [ ] Polaris UI Specialist
-- [ ] App Bridge Specialist
-- [ ] GraphQL Specialist
-- [ ] Webhooks Specialist
-- [ ] Billing Specialist
-- [ ] Auth & Sessions Specialist
-- [ ] Performance Specialist
-- [ ] Security Specialist
-- [ ] App Store Review Specialist
+- [x] `security-specialist`
+- [x] `app-store-reviewer`
+- [ ] `liquid-specialist`
+- [ ] `react-admin-specialist`
+- [ ] `polaris-specialist`
+- [ ] `app-bridge-specialist`
+- [ ] `graphql-specialist`
+- [ ] `webhooks-specialist`
+- [ ] `billing-specialist`
+- [ ] `auth-specialist`
+- [ ] `performance-specialist`
 
 ---
 
-## Phase 3 – Core Skills / Slash Commands
+## Phase 3 – Skills (Generate)
 
 ### Research & Discovery
-- [ ] `/start` – Bootstrap + stage detection
-- [ ] `/research` – Competitor + App Store research
-- [ ] `/idea-validate` – Quick idea scoring
+- [x] `/start`
+- [x] `/research`
+- [ ] `/idea-validate`
 
 ### Development
-- [ ] `/scaffold` – Remix / Node / React Router app template
+- [x] `/scaffold`
 - [ ] `/create-epics`
 - [ ] `/create-stories`
 - [ ] `/dev-story`
@@ -63,8 +63,8 @@
 - [ ] `/app-bridge-review`
 
 ### Review & Quality
+- [x] `/security-audit`
 - [ ] `/code-review`
-- [ ] `/security-audit`
 - [ ] `/performance-check`
 - [ ] `/app-store-checklist`
 
@@ -75,15 +75,15 @@
 
 ---
 
-## Phase 4 – Automation Hooks
+## Phase 4 – Hooks (Generate)
 
-| Hook | Trigger | Purpose |
-|------|---------|---------|
-| validate-shopify-toml | Pre-commit | Validate `shopify.app.toml` |
-| validate-scopes | Pre-push | Check API scopes |
-| security-scan | Post-edit | Detect secrets / unsafe patterns |
-| app-store-gate | Pre-release | Run full checklist |
-| session-start | Session open | Show current app stage |
+| Hook | Trigger | Status |
+|------|---------|--------|
+| `session-start.sh` | Session open | ☐ |
+| `validate-shopify-toml.sh` | Pre-commit | ☐ |
+| `validate-scopes.sh` | Pre-push | ☐ |
+| `security-scan.sh` | Post-edit | ☐ |
+| `app-store-gate.sh` | Pre-release | ☐ |
 
 ---
 
@@ -95,11 +95,10 @@
 - [ ] App Store listing template
 - [ ] Security review checklist
 - [ ] Release notes template
-- [ ] Privacy policy / data handling notes
 
 ---
 
-## Phase 6 – End-to-End Pipeline
+## Phase 6 – Pipeline Flow
 
 ```
 Research → Validate Idea → Scaffold → Epics/Stories → Dev → Code Review → Security → App Store Checklist → Release → Monitor
@@ -109,9 +108,10 @@ Research → Validate Idea → Scaffold → Epics/Stories → Dev → Code Revie
 
 ## Next Immediate Actions
 
-1. Copy and adapt core agent/skill structure
-2. Write first 5 high-value agents (Product Director, App Architect, Security, App Store Review, Release Manager)
-3. Implement `/start` and `/scaffold` skills
+1. Finish remaining high-value agents (app-architect, api-lead, billing-specialist, webhooks-specialist)
+2. Finish core skills (`/app-store-checklist`, `/create-epics`, `/dev-story`, `/release`)
+3. Create basic hooks
+4. Update README
 
 ---
 
