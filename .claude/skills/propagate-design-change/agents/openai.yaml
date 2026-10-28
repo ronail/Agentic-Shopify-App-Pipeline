@@ -1,0 +1,6 @@
+interface:
+  display_name: "Propagate Design Change"
+  short_description: "When a GDD is revised, scans all ADRs and the traceability index to identify which architectural decisions are now potentially stale. Produces a change impac..."
+  default_prompt: "Use the $propagate-design-change skill for the requested task."
+policy:
+  allow_implicit_invocation: true

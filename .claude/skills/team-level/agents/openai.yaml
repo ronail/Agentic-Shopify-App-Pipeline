@@ -1,0 +1,6 @@
+interface:
+  display_name: "Team Level"
+  short_description: "Orchestrate level design team: level-designer + narrative-director + world-builder + art-director + systems-designer + qa-tester for complete area/level crea..."
+  default_prompt: "Use the $team-level skill for the requested task."
+policy:
+  allow_implicit_invocation: true

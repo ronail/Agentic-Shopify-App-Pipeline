@@ -1,0 +1,6 @@
+interface:
+  display_name: "Asset Spec"
+  short_description: "Generate per-asset visual specifications and AI generation prompts from GDDs, level docs, or character profiles. Produces structured spec files and updates t..."
+  default_prompt: "Use the $asset-spec skill for the requested task."
+policy:
+  allow_implicit_invocation: true

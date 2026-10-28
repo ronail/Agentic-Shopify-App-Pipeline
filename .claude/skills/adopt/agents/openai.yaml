@@ -1,0 +1,6 @@
+interface:
+  display_name: "Adopt"
+  short_description: "Brownfield onboarding — audits existing project artifacts for template format compliance (not just existence), classifies gaps by impact, and produces a numb..."
+  default_prompt: "Use the $adopt skill for the requested task."
+policy:
+  allow_implicit_invocation: true

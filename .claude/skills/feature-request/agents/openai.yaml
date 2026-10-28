@@ -1,0 +1,6 @@
+interface:
+  display_name: "Feature Request"
+  short_description: "Handle a feature request with tiered routing: simple single-domain requests delegate directly to domain agents; complex cross-domain requests go through the producer for full 3-phase coordination."
+  default_prompt: "Use the $feature-request skill for the requested task."
+policy:
+  allow_implicit_invocation: true

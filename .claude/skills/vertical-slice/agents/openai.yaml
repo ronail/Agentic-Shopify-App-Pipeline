@@ -1,0 +1,6 @@
+interface:
+  display_name: "Vertical Slice"
+  short_description: "Pre-Production validation — build a production-quality end-to-end build to confirm the full game loop is achievable before committing to Production. Run afte..."
+  default_prompt: "Use the $vertical-slice skill for the requested task."
+policy:
+  allow_implicit_invocation: true

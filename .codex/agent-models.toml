@@ -1,0 +1,9 @@
+# Shared agent tiers to Codex models.
+# Keep this file in sync with the model field in .claude/agents/*.md and
+# .claude/skills/*/SKILL.md. Codex must pass the resolved model explicitly
+# when spawning a studio agent.
+
+[tiers]
+haiku = "gpt-6-luna"
+sonnet = "gpt-6.1-terra"
+opus = "gpt-6.1-sol"

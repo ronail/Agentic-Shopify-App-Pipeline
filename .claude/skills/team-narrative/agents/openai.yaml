@@ -1,0 +1,6 @@
+interface:
+  display_name: "Team Narrative"
+  short_description: "Orchestrate the narrative team: coordinates narrative-director, writer, world-builder, and level-designer to create cohesive story content, world lore, and n..."
+  default_prompt: "Use the $team-narrative skill for the requested task."
+policy:
+  allow_implicit_invocation: true

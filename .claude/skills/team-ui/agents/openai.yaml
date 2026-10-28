@@ -1,0 +1,6 @@
+interface:
+  display_name: "Team UI"
+  short_description: "Orchestrate the UI team through the full UX pipeline: from UX spec authoring through visual design, implementation, review, and polish. Integrates with /ux-d..."
+  default_prompt: "Use the $team-ui skill for the requested task."
+policy:
+  allow_implicit_invocation: true

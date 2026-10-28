@@ -1,44 +1,54 @@
-# Agentic Shopify App Pipeline
+# Agent Harness Game Studios -- Game Studio Agent Architecture
 
-AI-driven research, development, release and review pipeline for Shopify apps.
-Built for solo founders who want studio-level structure without the headcount.
+Indie game development managed through 49 coordinated Claude Code subagents.
+Each agent owns a specific domain, enforcing separation of concerns and quality.
 
-## Core Philosophy
+## Technology Stack
 
-- You stay in control. Agents propose, you decide.
-- Every agent has clear domain boundaries.
-- Quality gates before every major stage.
-- Shopify App Store requirements are first-class citizens.
+- **Engine**: [CHOOSE: Godot 4 / Unity / Unreal Engine 5]
+- **Language**: [CHOOSE: GDScript / C# / C++ / Blueprint]
+- **Version Control**: Git with trunk-based development
+- **Build System**: [SPECIFY after choosing engine]
+- **Asset Pipeline**: [SPECIFY after choosing engine]
 
-## Agent Hierarchy
+> **Note**: Engine-specialist agents exist for Godot, Unity, and Unreal with
+> dedicated sub-specialists. Use the set matching your engine.
 
-### Tier 1 – Directors
-- `product-director` – Vision, prioritization, market fit
-- `technical-director` – Architecture, tech debt, scalability
-- `release-manager` – Shipping, versioning, App Store compliance
+## Project Structure
 
-### Tier 2 – Leads
-- `app-architect` – Overall app structure & patterns
-- `ux-lead` – Merchant experience & Polaris
-- `api-lead` – GraphQL, REST, webhooks
-- `qa-lead` – Testing strategy & quality gates
-- `growth-lead` – Monetization, onboarding, retention
+@.claude/docs/directory-structure.md
 
-### Tier 3 – Specialists
-- Liquid, React Admin, Polaris, App Bridge, GraphQL, Webhooks, Billing, Auth, Performance, Security, App Store Review
+## Engine Version Reference
 
-## Pipeline Stages
+@docs/engine-reference/godot/VERSION.md
 
-1. **Research** → Idea validation + competitor analysis
-2. **Scaffold** → Project setup
-3. **Plan** → Epics & stories
-4. **Build** → Feature development
-5. **Review** → Code + security + UX
-6. **Ship** → App Store checklist + release
-7. **Monitor** → Post-launch
+## Technical Preferences
 
-## How to Use
+@.claude/docs/technical-preferences.md
 
-Run `/start` at the beginning of every session.
+## Coordination Rules
 
-Use specialized agents via the Task tool or by invoking their skills directly.
+@.claude/docs/coordination-rules.md
+
+## Collaboration Protocol
+
+**User-driven collaboration, not autonomous execution.**
+Every task follows: **Question -> Options -> Decision -> Draft -> Approval**
+
+- Agents MUST ask "May I write this to [filepath]?" before using Write/Edit tools
+- Agents MUST show drafts or summaries before requesting approval
+- Multi-file changes require explicit approval for the full changeset
+- No commits without user instruction
+
+See `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` for full protocol and examples.
+
+> **First session?** If the project has no engine configured and no game concept,
+> run `/start` to begin the guided onboarding flow.
+
+## Coding Standards
+
+@.claude/docs/coding-standards.md
+
+## Context Management
+
+@.claude/docs/context-management.md

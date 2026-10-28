@@ -1,0 +1,6 @@
+interface:
+  display_name: "Test Setup"
+  short_description: "Scaffold the test framework and CI/CD pipeline for the project's engine. Creates the tests/ directory structure, engine-specific test runner configuration, a..."
+  default_prompt: "Use the $test-setup skill for the requested task."
+policy:
+  allow_implicit_invocation: true

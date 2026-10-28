@@ -1,0 +1,6 @@
+interface:
+  display_name: "Milestone Review"
+  short_description: "Generates a comprehensive milestone progress review including feature completeness, quality metrics, risk assessment, and go/no-go recommendation. Use at mil..."
+  default_prompt: "Use the $milestone-review skill for the requested task."
+policy:
+  allow_implicit_invocation: true

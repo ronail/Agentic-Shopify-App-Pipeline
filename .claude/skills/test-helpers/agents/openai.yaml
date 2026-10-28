@@ -1,0 +1,6 @@
+interface:
+  display_name: "Test Helpers"
+  short_description: "Generate engine-specific test helper libraries for the project's test suite. Reads existing test patterns and produces tests/helpers/ with assertion utilitie..."
+  default_prompt: "Use the $test-helpers skill for the requested task."
+policy:
+  allow_implicit_invocation: true

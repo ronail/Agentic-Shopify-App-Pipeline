@@ -1,0 +1,6 @@
+interface:
+  display_name: "Smoke Check"
+  short_description: "Run the critical path smoke test gate before QA hand-off. Executes the automated test suite, verifies core functionality, and produces a PASS/FAIL report. Ru..."
+  default_prompt: "Use the $smoke-check skill for the requested task."
+policy:
+  allow_implicit_invocation: true

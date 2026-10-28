@@ -1,0 +1,6 @@
+interface:
+  display_name: "Help"
+  short_description: "Analyzes what is done and the users query and offers advice on what to do next. Use if user says what should I do next or what do I do now or I'm stuck or I..."
+  default_prompt: "Use the $help skill for the requested task."
+policy:
+  allow_implicit_invocation: true

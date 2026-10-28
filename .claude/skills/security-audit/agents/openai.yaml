@@ -1,0 +1,6 @@
+interface:
+  display_name: "Security Audit"
+  short_description: "Audit the game for security vulnerabilities: save tampering, cheat vectors, network exploits, data exposure, and input validation gaps. Produces a prioritise..."
+  default_prompt: "Use the $security-audit skill for the requested task."
+policy:
+  allow_implicit_invocation: true

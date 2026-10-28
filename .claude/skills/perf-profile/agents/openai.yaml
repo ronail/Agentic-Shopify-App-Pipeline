@@ -1,0 +1,6 @@
+interface:
+  display_name: "Perf Profile"
+  short_description: "Structured performance profiling workflow. Identifies bottlenecks, measures against budgets, and generates optimization recommendations with priority rankings."
+  default_prompt: "Use the $perf-profile skill for the requested task."
+policy:
+  allow_implicit_invocation: true

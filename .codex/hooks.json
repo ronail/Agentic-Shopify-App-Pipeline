@@ -1,0 +1,142 @@
+{
+  "description": "Codex lifecycle hooks for Claude Code Game Studios.",
+  "hooks": {
+    "SessionStart": [
+      {
+        "matcher": "startup|resume|clear|compact",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-start.sh\"",
+            "timeout": 10,
+            "statusMessage": "Loading project session context"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/detect-gaps.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking documentation gaps"
+          }
+        ]
+      }
+    ],
+    "PreToolUse": [
+      {
+        "matcher": "^Bash$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/guard-command.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking command safety"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-commit.sh\"",
+            "timeout": 15,
+            "statusMessage": "Checking commit policy"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-push.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking push policy"
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "^Bash$|^apply_patch$|^Edit$|^Write$",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/validate-assets.sh\"",
+            "timeout": 10,
+            "statusMessage": "Validating asset changes"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/validate-skill-change.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking skill changes"
+          }
+        ]
+      }
+    ],
+    "PreCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/pre-compact.sh\"",
+            "timeout": 10,
+            "statusMessage": "Saving session state before compaction"
+          }
+        ]
+      }
+    ],
+    "PostCompact": [
+      {
+        "matcher": "manual|auto",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/post-compact.sh\"",
+            "timeout": 10,
+            "statusMessage": "Restoring session context"
+          }
+        ]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-stop.sh\"",
+            "timeout": 3,
+            "statusMessage": "Recording session summary"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-stop.sh\"",
+            "timeout": 3,
+            "statusMessage": "Recording turn summary"
+          }
+        ]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/log-agent.sh\"",
+            "timeout": 5,
+            "statusMessage": "Recording subagent start"
+          }
+        ]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/log-agent-stop.sh\"",
+            "timeout": 5,
+            "statusMessage": "Recording subagent completion"
+          }
+        ]
+      }
+    ]
+  }
+}

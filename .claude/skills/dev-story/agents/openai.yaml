@@ -1,0 +1,6 @@
+interface:
+  display_name: "Dev Story"
+  short_description: "Read a story file and implement it. Loads the full context (story, GDD requirement, ADR guidelines, control manifest), routes to the right programmer agent f..."
+  default_prompt: "Use the $dev-story skill for the requested task."
+policy:
+  allow_implicit_invocation: true

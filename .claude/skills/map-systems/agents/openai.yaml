@@ -1,0 +1,6 @@
+interface:
+  display_name: "Map Systems"
+  short_description: "Decompose a game concept into individual systems, map dependencies, prioritize design order, and create the systems index."
+  default_prompt: "Use the $map-systems skill for the requested task."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Patch Notes"
+  short_description: "Generate player-facing patch notes from git history, sprint data, and internal changelogs. Translates developer language into clear, engaging player communic..."
+  default_prompt: "Use the $patch-notes skill for the requested task."
+policy:
+  allow_implicit_invocation: true

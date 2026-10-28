@@ -1,0 +1,6 @@
+interface:
+  display_name: "Test Flakiness"
+  short_description: "Detect non-deterministic (flaky) tests by reading CI run logs or test result history. Aggregates pass rates per test, identifies intermittent failures, recom..."
+  default_prompt: "Use the $test-flakiness skill for the requested task."
+policy:
+  allow_implicit_invocation: true

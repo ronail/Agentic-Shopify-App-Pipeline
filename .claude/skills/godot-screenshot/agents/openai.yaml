@@ -1,0 +1,6 @@
+interface:
+  display_name: "Godot Screenshot"
+  short_description: "Capture in-game screenshots from Godot's viewport."
+  default_prompt: "Use the $godot-screenshot skill to capture a screenshot from the running Godot game."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Playtest Report"
+  short_description: "Generates a structured playtest report template or analyzes existing playtest notes into a structured format. Use this to standardize playtest feedback colle..."
+  default_prompt: "Use the $playtest-report skill for the requested task."
+policy:
+  allow_implicit_invocation: true

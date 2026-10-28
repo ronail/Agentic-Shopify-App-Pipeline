@@ -1,0 +1,6 @@
+interface:
+  display_name: "Quick Design"
+  short_description: "Lightweight design spec for small changes — tuning adjustments, minor mechanics, balance tweaks. Skips full GDD authoring when a system GDD already exists or..."
+  default_prompt: "Use the $quick-design skill for the requested task."
+policy:
+  allow_implicit_invocation: true

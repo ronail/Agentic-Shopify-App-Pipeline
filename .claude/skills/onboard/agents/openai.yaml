@@ -1,0 +1,6 @@
+interface:
+  display_name: "Onboard"
+  short_description: "Generates a contextual onboarding document for a new contributor or agent joining the project. Summarizes project state, architecture, conventions, and curre..."
+  default_prompt: "Use the $onboard skill for the requested task."
+policy:
+  allow_implicit_invocation: true

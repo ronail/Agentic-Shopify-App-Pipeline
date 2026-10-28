@@ -1,0 +1,147 @@
+# Project command policy translated from .claude/settings.json.
+#
+# prefix_rule decisions apply when Codex is asked to run a command outside the
+# sandbox. The Codex PreToolUse guard in .codex/hooks/guard-command.sh also
+# enforces the destructive-command and secret-file restrictions for Bash calls.
+
+# Safe, frequently used repository inspection and validation commands.
+prefix_rule(
+    pattern = ["git", "status"],
+    decision = "allow",
+    justification = "Repository status is read-only.",
+    match = ["git status", "git status --short"],
+)
+
+prefix_rule(
+    pattern = ["git", "diff"],
+    decision = "prompt",
+    justification = "Reviewing a diff is usually read-only, but some flags can write files.",
+    match = ["git diff", "git diff --cached"],
+)
+
+prefix_rule(
+    pattern = ["git", "log"],
+    decision = "allow",
+    justification = "Reading commit history is read-only.",
+    match = ["git log", "git log --oneline -5"],
+)
+
+prefix_rule(
+    pattern = ["git", "branch"],
+    decision = "prompt",
+    justification = "Branch inspection is usually read-only, but some flags can delete branches.",
+    match = ["git branch", "git branch --show-current"],
+)
+
+prefix_rule(
+    pattern = ["git", "rev-parse"],
+    decision = "allow",
+    justification = "Reading repository metadata is read-only.",
+    match = ["git rev-parse --show-toplevel", "git rev-parse --abbrev-ref HEAD"],
+)
+
+prefix_rule(
+    pattern = ["ls"],
+    decision = "allow",
+    justification = "Listing files is read-only.",
+    match = ["ls", "ls -la"],
+)
+
+prefix_rule(
+    pattern = ["dir"],
+    decision = "allow",
+    justification = "Listing files is read-only.",
+    match = ["dir", "dir ."],
+)
+
+prefix_rule(
+    pattern = ["python", "-m", "json.tool"],
+    decision = "allow",
+    justification = "Validating JSON is a read-only check.",
+    match = ["python -m json.tool assets/data/example.json"],
+)
+
+prefix_rule(
+    pattern = ["python", "-m", "pytest"],
+    decision = "allow",
+    justification = "Running the test suite is an approved validation command.",
+    match = ["python -m pytest", "python -m pytest tests/"],
+)
+
+prefix_rule(
+    pattern = ["py", "-m", "pytest"],
+    decision = "allow",
+    justification = "Running the test suite is an approved validation command.",
+    match = ["py -m pytest", "py -m pytest tests/"],
+)
+
+# Commands explicitly denied by the Claude configuration.
+prefix_rule(
+    pattern = ["rm", "-rf"],
+    decision = "forbidden",
+    justification = "Recursive force deletion is forbidden. Remove specific files safely instead.",
+    match = ["rm -rf build"],
+)
+
+prefix_rule(
+    pattern = ["rm", ["-r", "-f"], ["-f", "-r"]],
+    decision = "forbidden",
+    justification = "Recursive force deletion is forbidden. Remove specific files safely instead.",
+    match = ["rm -r -f build", "rm -f -r build"],
+)
+
+prefix_rule(
+    pattern = ["rm", ["--recursive", "--force"], ["--force", "--recursive"]],
+    decision = "forbidden",
+    justification = "Recursive force deletion is forbidden. Remove specific files safely instead.",
+    match = ["rm --recursive --force build", "rm --force --recursive build"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--force"],
+    decision = "forbidden",
+    justification = "Force-pushing is forbidden because it can overwrite shared history.",
+    match = ["git push --force origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "-f"],
+    decision = "forbidden",
+    justification = "Force-pushing is forbidden because it can overwrite shared history.",
+    match = ["git push -f origin main"],
+)
+
+prefix_rule(
+    pattern = ["git", "push", "--force-with-lease"],
+    decision = "prompt",
+    justification = "Prompt before force-with-lease; forbid it on main/master and use it elsewhere only for an intentional branch update such as a PR rebase.",
+    match = ["git push --force-with-lease origin <branch>"],
+)
+
+prefix_rule(
+    pattern = ["git", "reset", "--hard"],
+    decision = "forbidden",
+    justification = "Hard resets can destroy uncommitted work. Use a recoverable operation instead.",
+    match = ["git reset --hard HEAD"],
+)
+
+prefix_rule(
+    pattern = ["git", "clean", "-f"],
+    decision = "forbidden",
+    justification = "Forced cleaning can delete untracked work. Remove specific files safely instead.",
+    match = ["git clean -f"],
+)
+
+prefix_rule(
+    pattern = ["sudo"],
+    decision = "forbidden",
+    justification = "Privilege escalation is forbidden for this project.",
+    match = ["sudo ls"],
+)
+
+prefix_rule(
+    pattern = ["chmod", "777"],
+    decision = "forbidden",
+    justification = "World-writable permissions are forbidden.",
+    match = ["chmod 777 script.sh"],
+)

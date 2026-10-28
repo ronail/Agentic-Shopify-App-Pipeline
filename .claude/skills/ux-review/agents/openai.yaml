@@ -1,0 +1,6 @@
+interface:
+  display_name: "UX Review"
+  short_description: "Validates a UX spec, HUD design, or interaction pattern library for completeness, accessibility compliance, GDD alignment, and implementation readiness. Prod..."
+  default_prompt: "Use the $ux-review skill for the requested task."
+policy:
+  allow_implicit_invocation: true
