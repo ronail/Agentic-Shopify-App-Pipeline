@@ -2,97 +2,99 @@
 
 ## Goal
 
-Automatic pipeline driven by **one single master request / requirement**.
+Automatic pipeline driven by **one single master request** (updatable + fully tracked).
 
-From that one request the system can generate and manage **multiple Shopify apps** in parallel.
+From that one request the system can generate and run **multiple Shopify apps** in parallel through the full lifecycle.
 
-The master request **can be updated** at any time. Every update must be fully tracked.
+**Flow:**
 
-Multiple independent user requests are **not supported**. Everything flows from the single (versioned) master request.
-
-**Core Idea:**
-One Master Request (updatable + fully tracked) → Multiple Apps
-
-**Per-app Flow:**
-
-1. Master request is recorded (and can be updated later)
+1. Master request recorded (can be updated later, all changes tracked)
 2. Research (Original idea **or** Competitor killer) against current master request
-3. Ranked MMMVP proposals (can result in multiple distinct apps)
-4. User selects which MMMVP(s) to turn into apps
-5. For each selected app:
-   - Build prototype
-   - User reviews / refines
+3. Ranked MMMVP proposals → User selects which become apps
+4. For each selected app:
+   - Build prototype → User reviews / refines
    - Production goals defined
    - Full SDLC (Epics + Stories) in concurrent Kanban
    - Create Shopify Test Store → User tests
    - User approves → Actual release
-6. Ongoing loop: re-research against the **current master request** → propose updates → update app(s) + test store(s) → user approves
+5. Ongoing loop: re-research against current master request → propose updates → update app(s) + test store(s) → user approves
 
 ---
 
 ## Acceptance Criteria
 
 ### Master Request
-- [ ] System has exactly one master request
-- [ ] Master request can be updated at any time
-- [ ] Every update to the master request is tracked (who/what/when + reason)
-- [ ] Full history of master request changes is available
-- [ ] All research and update loops always use the **current** version of the master request
-- [ ] Multiple independent requests are not supported
+- [ ] Exactly one master request
+- [ ] Can be updated at any time
+- [ ] Every update is tracked with history
+- [ ] All research/update loops use the current version
 
-### Single Request → Multi-app
-- [ ] One master request can generate multiple MMMVP proposals
-- [ ] User can turn one or more MMMVPs into separate apps
-- [ ] Multiple apps can run in parallel, all traced back to the same master request
+### Multi-app from One Request
+- [ ] One master request can produce multiple apps
+- [ ] Apps run in parallel with isolated state
+- [ ] `/start` shows master request + all apps and their stages
 
-### Multi-app Pipeline Support
-- [ ] Each app has fully isolated state (prototype, epics/stories, test store, release)
-- [ ] `/start` shows master request (current version) + all derived apps and stages
-- [ ] All skills are app-scoped (`--app <name>` or context detection)
-- [ ] `/kanban-status` supports single app or `--all`
-- [ ] Approval gates are enforced per app
-- [ ] Shared agents/skills never leak data between apps
-
-### Core Flow
-- [ ] Research supports Original Idea + Competitor Killer modes
-- [ ] Ranked MMMVP proposals generated
-- [ ] Prototype + user review per selected app
-- [ ] Epics + Stories after production goals confirmed
-- [ ] Concurrent Kanban development
-- [ ] Test store creation & deployment per app
-- [ ] Release blocked until explicit user approval
-- [ ] Ongoing update loop always refers to current master request
+### Pipeline
+- [ ] Research supports Original + Competitor Killer
+- [ ] Ranked MMMVP proposals
+- [ ] Prototype + user review
+- [ ] Epics + Stories + concurrent Kanban
+- [ ] Test store per app
+- [ ] Release only after explicit user approval
+- [ ] Ongoing update loop works
+- [ ] Human approval gates enforced per app
 
 ---
 
-## Phase 0 – Master Request & Multi-app Foundation
+## Workflow Guideline
+
+```
+Master Request (request.md + history)
+        ↓
+Research (Original | Competitor Killer)
+        ↓
+MMMVP Proposals → User selects apps
+        ↓
+┌─────────────────────────────┐
+│  For each selected app:     │
+│  Prototype → Review         │
+│  → Production Goals         │
+│  → Epics + Stories (Kanban) │
+│  → Test Store               │
+│  → User Approval → Release  │
+└─────────────────────────────┘
+        ↓
+Ongoing: Update master request or re-research → Propose updates → Apply (with approval)
+```
+
+---
+
+## Phase 0 – Master Request & Foundation
 
 - [ ] `request.md` (current master request)
-- [ ] `request-history.md` or equivalent (full tracked changelog of every update)
-- [ ] Folder structure: `apps/<app-name>/`
-- [ ] Per-app: `idea.md`, `changes.md`, `status.md`
-- [ ] Central registry of all apps generated from the master request
-- [ ] Skill or command to update master request (with mandatory reason)
-- [ ] `/start` shows current master request + change history summary + all apps
+- [ ] `request-history.md` (full tracked changelog)
+- [ ] `apps/<app-name>/` structure
+- [ ] Per-app: `status.md`
+- [ ] App registry / dashboard data
+- [ ] `/update-request` skill (mandatory reason + auto-track)
 
 ---
 
-## Phase 1 – Research & MMMVP (from current master request)
+## Phase 1 – Research & MMMVP
 
 **Agents**
 - [x] `product-director`
 - [ ] `research-specialist`
 
 **Skills**
-- [x] `/start`
-- [x] `/research` (Original + Competitor Killer) – always against current master request
-- [ ] `/idea-validate`
-- [ ] `/mmmvp-proposals` → can recommend multiple apps
-- [ ] `/update-request` (update master request + force tracking entry)
+- [x] `/start` (dashboard: master request + all apps)
+- [x] `/research`
+- [ ] `/mmmvp-proposals`
+- [ ] `/update-request`
 
 ---
 
-## Phase 2 – Prototype (per selected app)
+## Phase 2 – Prototype
 
 **Agents**
 - [ ] `prototype-builder`
@@ -104,13 +106,11 @@ One Master Request (updatable + fully tracked) → Multiple Apps
 
 ---
 
-## Phase 3 – Production Planning & Concurrent SDLC (per app)
+## Phase 3 – SDLC (Concurrent Kanban)
 
 **Agents**
 - [x] `technical-director`
 - [ ] `app-architect`
-- [ ] `api-lead`
-- [ ] `qa-lead`
 
 **Skills**
 - [ ] `/create-epics --app <name>`
@@ -120,74 +120,60 @@ One Master Request (updatable + fully tracked) → Multiple Apps
 
 ---
 
-## Phase 4 – Quality Gates (per app)
+## Phase 4 – Quality & Release
 
 **Agents**
 - [x] `security-specialist`
 - [x] `app-store-reviewer`
-
-**Skills**
-- [x] `/security-audit --app <name>`
-- [ ] `/code-review --app <name>`
-- [ ] `/app-store-checklist --app <name>`
-
----
-
-## Phase 5 – Test Store & Release (per app)
-
-**Agents**
 - [x] `release-manager`
 - [ ] `test-store-manager`
 
 **Skills**
+- [x] `/security-audit --app <name>`
+- [ ] `/app-store-checklist --app <name>`
 - [ ] `/create-test-store --app <name>`
 - [ ] `/deploy-to-test-store --app <name>`
 - [ ] `/release --app <name>`
-- [ ] `/hotfix --app <name>`
-- [ ] `/changelog --app <name>`
 
 ---
 
-## Phase 6 – Ongoing Update Loop
-
-Always re-researches against the **current master request**.
+## Phase 5 – Ongoing Update Loop
 
 **Skills**
-- [ ] `/update-research`
-- [ ] `/propose-updates` (can affect one or multiple apps)
+- [ ] `/update-research` (against current master request)
+- [ ] `/propose-updates`
 - [ ] `/apply-updates --app <name>`
 
 ---
 
-## Supporting (Later)
-
-- Remaining specialists (Liquid, Polaris, App Bridge, GraphQL, Webhooks, Billing, Auth, Performance)
-- Extra skills (`/webhook-design`, `/billing-setup`, `/polaris-ui`, etc.)
-- Growth & UX leads
-
----
-
-## Hooks
+## Hooks (Minimal)
 
 | Hook | Purpose | Status |
 |------|---------|--------|
-| `session-start.sh` | Show current master request + history summary + all apps | ☐ |
-| `track-request-changes.sh` | Force tracking on every master request update | ☐ |
-| `track-idea-changes.sh` | Log changes per app | ☐ |
-| `validate-shopify-toml.sh` | Validate config per app | ☐ |
-| `security-scan.sh` | Catch secrets / unsafe code | ☐ |
+| `session-start.sh` | Show master request + all apps & stages | ☐ |
+| `track-request-changes.sh` | Enforce tracking on master request updates | ☐ |
 | `app-store-gate.sh` | Block release if checklist fails | ☐ |
 
 ---
 
-## Human Approval Gates (Required – per app)
+## Human Approval Gates (per app)
 
-1. MMMVP selection (which proposals become apps)
+1. MMMVP selection (which become apps)
 2. Prototype → Production
 3. Scope confirmation before full SDLC
 4. Test Store → Live Release
-5. Any future update proposal
-6. Any update to the master request (optional confirmation)
+5. Any update proposal
+
+---
+
+## Removed / Deferred (Not needed for core pipeline)
+
+- Low-level specialists (Liquid, Polaris, App Bridge, GraphQL, Webhooks, Billing, Auth, Performance)
+- Extra skills (`/webhook-design`, `/billing-setup`, `/polaris-ui`, `/code-review`, `/hotfix`, etc.)
+- Growth / UX leads
+- Most validation hooks
+
+These can be added later if needed.
 
 ---
 
