@@ -1,0 +1,134 @@
+{
+  "schema": "hermes-profile-mapping/1",
+  "phase": "R0",
+  "description": "Hermes profile -> Shopify agent-role resolution. Hermes parity is a hard gate in R10, so every delegate_task profile must resolve to an agent from the ratified R2 target roster.",
+  "baseline": {
+    "imported_sha": "fec6e35",
+    "imported_sha_subject": "chore: import Agent Harness Game Studios framework as baseline",
+    "ratification_head_sha": "258f862",
+    "counts": {
+      "agents_current": 49,
+      "agents_target": 31,
+      "agents_deleted": 31,
+      "agents_rewritten": 18,
+      "agents_added": 13,
+      "skills_current": 75,
+      "skills_target": 66,
+      "skills_deleted": 23,
+      "skills_rewritten": 31,
+      "skills_kept": 21,
+      "skills_added": 14,
+      "rules_current": 11,
+      "hooks_current": 12,
+      "templates_current": 37
+    },
+    "arithmetic": {
+      "agents": "49 - 31 = 18 net reduction; 31 deleted + 18 rewritten = 49 accounted for; 18 rewritten + 13 new = 31 target",
+      "skills": "23 delete + 31 rewrite + 21 keep = 75 accounted for; 31 rewritten + 21 kept + 14 added = 66 target"
+    }
+  },
+  "delegate_task_profiles_enum": [
+    "planner",
+    "product",
+    "researcher",
+    "dev",
+    "tester",
+    "reviewer",
+    "devops"
+  ],
+  "profiles": {
+    "planner": {
+      "agent": "producer",
+      "fallback_agent": null,
+      "model_tier": "opus",
+      "purpose": "Pipeline, kanban, milestones, scope gates",
+      "writes": [
+        "production/apps/<app>/sprints/",
+        "production/apps/<app>/milestones/",
+        "production/apps/<app>/session-state/"
+      ]
+    },
+    "product": {
+      "agent": "product-director",
+      "fallback_agent": null,
+      "model_tier": "opus",
+      "purpose": "Product vision; owner of the master request.md",
+      "writes": [
+        "apps/<app>/request.md",
+        "design/"
+      ]
+    },
+    "researcher": {
+      "agent": "research-specialist",
+      "fallback_agent": null,
+      "model_tier": "sonnet",
+      "purpose": "Market, competitor and app-ecosystem research",
+      "writes": [
+        "design/research/",
+        "apps/<app>/research/"
+      ]
+    },
+    "dev": {
+      "agent": "lead-engineer",
+      "fallback_agent": "app-architect",
+      "fallback_when": "Task goal is explicitly architecture-shaped (new app layout, cross-cutting technical design, ADR authoring).",
+      "model_tier": "opus",
+      "purpose": "Implementation lead; app-architect for per-app architecture work",
+      "writes": [
+        "apps/<app>/",
+        "src/"
+      ]
+    },
+    "tester": {
+      "agent": "qa-lead",
+      "fallback_agent": null,
+      "model_tier": "sonnet",
+      "purpose": "Test strategy, quality gates, dev-store verification passes",
+      "writes": [
+        "apps/<app>/tests/",
+        "production/apps/<app>/test-reports/"
+      ]
+    },
+    "reviewer": {
+      "agent": "app-store-reviewer",
+      "fallback_agent": "technical-director",
+      "fallback_when": "Task goal is explicitly architecture review (tech debt, API version policy, structural critique) rather than App Store compliance.",
+      "model_tier": "sonnet",
+      "purpose": "App Store review and listing compliance; technical-director for architecture review",
+      "writes": [
+        "production/apps/<app>/reviews/"
+      ]
+    },
+    "devops": {
+      "agent": "devops-engineer",
+      "fallback_agent": null,
+      "model_tier": "sonnet",
+      "purpose": "Hosting, CI/CD, environments, deploy to test store",
+      "writes": [
+        "production/apps/<app>/deploys/",
+        ".github/workflows/"
+      ]
+    }
+  },
+  "resolution_rules": [
+    "A Hermes subagent launched with profile P loads .claude/agents/<agent>.md from the profiles table.",
+    "fallback_agent applies only when fallback_when matches the delegated goal; otherwise the primary agent wins.",
+    "model_tier must equal the agent frontmatter 'model:' field once R2 writes agents; Codex resolves it through .codex/agent-models.toml per AGENTS.md.",
+    "A profile missing from this table is a pipeline defect: fail the launch rather than guessing an agent.",
+    "Per-app writes are isolated to the app named in the task; no profile may write another app's directory."
+  ],
+  "directories": {
+    "keep": ["src", "design", "production", "docs"],
+    "absent": ["assets", "prototypes", "tests", "tools"],
+    "per_app_state": {
+      "apps/<app>/": "Per-app working state and source: app code, prototype/, app-local docs, app config",
+      "production/apps/<app>/": "Per-app build and pipeline artefacts: sprints/, milestones/, session-state/, release manifests, kanban cards"
+    }
+  },
+  "attribution": {
+    "derives_from": "ronail/Agent-Harness-Game-Studios",
+    "upstream": "Donchitos/Claude-Code-Game-Studios",
+    "license": "MIT",
+    "action": "Keep LICENSE; credit both projects in README.md"
+  }
+}
