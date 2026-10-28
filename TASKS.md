@@ -2,11 +2,13 @@
 
 ## Goal
 
-Automatic pipeline that turns a user idea into a live Shopify app with human approval at every critical stage.
+Automatic multi-app pipeline that can run **multiple Shopify apps in the same repo at the same time**.
 
-**Flow:**
+Each app has its own isolated idea tracking, research, prototype, SDLC, test store, and release cycle — while sharing the same agent/skill infrastructure.
 
-1. User submits idea (tracked in `idea.md` + `changes.md`)
+**Per-app Flow:**
+
+1. User submits idea for an app (tracked in `apps/<app-name>/idea.md` + `changes.md`)
 2. Research → Original idea **or** Competitor killer
 3. Generate ranked **MMMVP proposals**
 4. Build prototype
@@ -17,31 +19,43 @@ Automatic pipeline that turns a user idea into a live Shopify app with human app
 9. User approves → Actual release
 10. Ongoing loop (scheduled or manual): re-research → propose updates → update app + test store → user approves
 
+Multiple apps can be at different stages simultaneously.
+
 ---
 
 ## Acceptance Criteria
 
 The refactoring is complete only when all of these pass:
 
-- [ ] Idea is tracked in `idea.md` / `changes.md`
+### Multi-app Support
+- [ ] Repo can contain multiple independent apps under `apps/`
+- [ ] Each app has its own `idea.md`, `changes.md`, epics, stories, and status
+- [ ] Pipeline commands accept an `--app <name>` parameter (or detect context)
+- [ ] Different apps can be at different stages at the same time
+- [ ] Shared agents/skills work across all apps without conflict
+
+### Core Flow (per app)
+- [ ] Idea is tracked per app
 - [ ] Research supports two modes: Original Idea and Competitor Killer
 - [ ] System returns ranked MMMVP proposals
 - [ ] User can select an MMMVP and trigger prototype
 - [ ] Prototype can be reviewed and refined by user
 - [ ] After production goals confirmed → Epics + Stories created
 - [ ] Development runs concurrently (Kanban visible via `/kanban-status`)
-- [ ] System can create and deploy to a Shopify Test Store
+- [ ] System can create and deploy to a Shopify Test Store per app
 - [ ] Actual release is blocked until user explicitly approves
 - [ ] Ongoing research + update loop works (manual + scheduled ready)
 - [ ] All major transitions have enforced human approval gates
 
 ---
 
-## Phase 0 – Idea Tracking
+## Phase 0 – Multi-app Foundation & Idea Tracking
 
-- [ ] `idea.md` template (master idea + key decisions)
-- [ ] `changes.md` template (refinement history)
-- [ ] Hook: `track-idea-changes.sh`
+- [ ] Folder structure: `apps/<app-name>/`
+- [ ] `apps/<app-name>/idea.md` template
+- [ ] `apps/<app-name>/changes.md` template
+- [ ] App registry (list of active apps + current stage)
+- [ ] Hook: `track-idea-changes.sh` (scoped per app)
 
 ---
 
@@ -52,8 +66,8 @@ The refactoring is complete only when all of these pass:
 - [ ] `research-specialist`
 
 **Skills**
-- [x] `/start`
-- [x] `/research` (Original + Competitor Killer)
+- [x] `/start` (supports selecting or creating an app)
+- [x] `/research` (Original + Competitor Killer, scoped to app)
 - [ ] `/idea-validate`
 - [ ] `/mmmvp-proposals`
 
@@ -65,7 +79,7 @@ The refactoring is complete only when all of these pass:
 - [ ] `prototype-builder`
 
 **Skills**
-- [x] `/scaffold`
+- [x] `/scaffold` (creates new app folder)
 - [ ] `/build-prototype`
 - [ ] `/prototype-review`
 
@@ -83,7 +97,7 @@ The refactoring is complete only when all of these pass:
 - [ ] `/create-epics`
 - [ ] `/create-stories`
 - [ ] `/dev-story`
-- [ ] `/kanban-status`
+- [ ] `/kanban-status` (can show one app or all apps)
 
 ---
 
@@ -136,15 +150,15 @@ The refactoring is complete only when all of these pass:
 
 | Hook | Purpose | Status |
 |------|---------|--------|
-| `session-start.sh` | Show current stage | ☐ |
-| `track-idea-changes.sh` | Log changes to idea | ☐ |
-| `validate-shopify-toml.sh` | Validate config | ☐ |
+| `session-start.sh` | Show all apps + current stages | ☐ |
+| `track-idea-changes.sh` | Log changes per app | ☐ |
+| `validate-shopify-toml.sh` | Validate config per app | ☐ |
 | `security-scan.sh` | Catch secrets / unsafe code | ☐ |
 | `app-store-gate.sh` | Block release if checklist fails | ☐ |
 
 ---
 
-## Human Approval Gates (Required)
+## Human Approval Gates (Required – per app)
 
 1. MMMVP selection
 2. Prototype → Production
