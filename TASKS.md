@@ -200,7 +200,26 @@ These can be added later if needed.
 - **Baseline metric:** 163 files currently match `godot|unity|unreal|gdextension|gds`. Whole-refactor definition of done: **0 outside `docs/legacy/`**.
 - **Recovery:** previous Shopify harness is at `2e8c57e`; project intent preserved in `docs/legacy/CLAUDE.shopify-pipeline.md`.
 - **Execution order ≠ numbering.** Run `R0 → R1 → R2 → R8 → R3 → R4 → R5 → R6 → R7 → R9 → R10`. R8 lands the `apps/<app-name>/` layout that R3's rule globs, R6's hooks and R4's `/start` all reference; the R-numbers stay fixed so links and commits remain stable.
-- **Every phase ends in a gate a command can check**, not a judgement call.
+
+---
+
+### Phase completion rule — non-negotiable
+
+Every phase (R0–R10) carries its own **acceptance criteria** (`AC-Rn.x`) and its own **smoke test**. A phase is complete **only when all four are true**:
+
+1. **Every acceptance criterion in that phase is ticked.** All of them — not most. An unchecked criterion means the phase is in progress, and no later phase in the execution order may start.
+2. **The phase smoke test passes when run verbatim:** exit code `0` and the output the phase states. "It looked fine in the editor", "the files exist", or a green result from a *different* command is not a pass. Paste the output into the commit message.
+3. **Its gate passes** where the phase defines one (R3, R9, R10 add gates beyond the smoke test).
+4. **The tree is clean** — the phase's changes are committed, and `git status --porcelain` shows nothing unexpected.
+
+Corollaries that decide real arguments:
+
+- **No phase is "mostly done".** Files landing is not progress; a phase with a red smoke test is at 0% for completion purposes, however much work is behind it.
+- **A criterion may move, never disappear.** If an AC cannot pass in its phase, move it into a later phase's AC list **in the same commit**, with the reason. Deleting it, or leaving it unticked and moving on, is the failure this rule exists to stop.
+- **Downstream phases do not compensate.** R4 passing does not excuse a red R8; R8 is a hard precondition for R3–R7 by execution order.
+- **Ticking a criterion you did not run is worse than leaving it unticked** — an unticked box is visible, a false tick is not.
+
+Worked example: R6 is a phase with 15 hooks. `ls .claude/hooks/*.sh | wc -l` returning 15 with one hook failing `bash -n` is a **failed** R6, and R7 does not start.
 
 ---
 
@@ -215,7 +234,26 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] Write `production/hermes-profile-mapping.json` (Hermes profile → agent-role resolution). Hermes parity is a hard gate in R10, so this is required, not optional
 - [ ] Record attribution: this repo derives from `ronail/Agent-Harness-Game-Studios` (MIT), itself a fork of `Donchitos/Claude-Code-Game-Studios`; keep `LICENSE`, credit both in `README.md`
 
-**Done when:** `docs/legacy/REFACTOR-DECISIONS.md` holds the ratified roster, the skill table, the directory decisions and the Hermes mapping, and is committed. **No other file changed in this phase.**
+**Acceptance criteria**
+
+- [ ] **AC-R0.1** `docs/legacy/REFACTOR-DECISIONS.md` exists and has five `##` sections: baseline, roster, skills, directories, Hermes mapping (attribution may be a sixth)
+- [ ] **AC-R0.2** The roster section lists exactly 31 agents (18 rewritten + 13 new) and names the 31 deleted ones — the arithmetic 49 − 31 = 18 is stated and correct
+- [ ] **AC-R0.3** The skills section assigns **all 75** current skills to Delete / Rewrite / Keep and lists the 14 additions; 23 + 31 + 21 = 75
+- [ ] **AC-R0.4** The directories section states keep/drop for `src`, `design`, `production`, `docs` and marks `assets`/`prototypes`/`tests`/`tools` absent
+- [ ] **AC-R0.5** `production/hermes-profile-mapping.json` exists and parses as JSON
+- [ ] **AC-R0.6** `# Open` is empty — nothing is deferred into R1
+- [ ] **AC-R0.7** `git status --porcelain` lists only the two files above
+
+**Smoke test**
+
+```bash
+test -f docs/legacy/REFACTOR-DECISIONS.md \
+  && python3 -m json.tool production/hermes-profile-mapping.json >/dev/null \
+  && [ "$(grep -c '^## ' docs/legacy/REFACTOR-DECISIONS.md)" -ge 5 ] \
+  && [ "$(git status --porcelain | wc -l)" -eq 2 ] && echo R0-OK
+```
+
+Expected: `R0-OK`. Any other output — missing file, unparsable JSON, extra modified file — is a failed phase.
 
 ---
 
@@ -237,7 +275,26 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] `.claude/docs/coding-standards.md` — rewrite (GDScript / C# → TypeScript / React)
 - [ ] `.claude/docs/context-management.md` — keep the structure, swap the examples
 
-**Done when:** `CLAUDE.md` loads with no dangling `@`-imports, no engine tech choice remains, and `grep -riE 'godot|unity|unreal' CLAUDE.md AGENTS.md README.md docs/CLAUDE.md src/CLAUDE.md` returns nothing.
+**Acceptance criteria**
+
+- [ ] **AC-R1.1** No engine technology choice remains in the five config files: `grep -riE 'godot|unity|unreal|gdscript'` over `CLAUDE.md AGENTS.md README.md docs/CLAUDE.md src/CLAUDE.md` returns nothing
+- [ ] **AC-R1.2** Every `@`-import in `CLAUDE.md` resolves to an existing path
+- [ ] **AC-R1.3** `UPGRADING.md` is gone and `docs/legacy/DIVERGENCE.md` states the no-upstream-merge rule and the divergence SHA
+- [ ] **AC-R1.4** `.gitignore` has no Godot/Unity/Unreal/binary-asset block; still ignores `.env*`, `.claude/settings.local.json`, `node_modules/`
+- [ ] **AC-R1.5** `.github/FUNDING.yml` is gone, CODEOWNERS has no `settings.json` entry, PR + issue templates are intact
+- [ ] **AC-R1.6** `docs/CLAUDE.md` no longer requires a "GDD Requirements Addressed" ADR section or `tr-registry.yaml`
+- [ ] **AC-R1.7** `coding-standards.md` and `technical-preferences.md` name the Shopify stack, and `grep -iE 'gdscript|c#'` on them returns nothing
+
+**Smoke test**
+
+```bash
+! grep -riE 'godot|unity|unreal|gdscript' CLAUDE.md AGENTS.md README.md docs/CLAUDE.md src/CLAUDE.md \
+  && ! test -e UPGRADING.md && test -f docs/legacy/DIVERGENCE.md \
+  && grep -oE '^@[^ ]+' CLAUDE.md | tr -d '@' | while read -r p; do test -e "$p" || { echo "MISSING $p"; exit 1; }; done \
+  && echo R1-OK
+```
+
+Expected: `R1-OK` with no `MISSING` line. A `MISSING` path means `CLAUDE.md` still points at a deleted doc.
 
 ---
 
@@ -281,7 +338,28 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] Record in `.claude/docs/agent-roster.md` (this phase owns that file) which rule and which skill invoke the agent. No agent ships without an owner — `ai-agent-engineer` was dropped for exactly this reason
 - [ ] Regenerate the Codex layer: `python3 .codex/generate_compat.py`; delete stale `.codex/agents/*.toml`
 
-**Done when:** `ls .claude/agents` = **31** files matching the roster above exactly, `.codex/agents` = 31, zero engine names remain, and every roster row has an owner recorded.
+**Acceptance criteria**
+
+- [ ] **AC-R2.1** `ls .claude/agents/*.md` = **31** files and the names match the rewrite table + Add list exactly — no leftover, no extra
+- [ ] **AC-R2.2** All 31 deleted agents are gone from `.claude/agents` and from `.codex/agents`
+- [ ] **AC-R2.3** `.codex/agents/*.toml` = 31 and `python3 .codex/generate_compat.py` produces no diff
+- [ ] **AC-R2.4** No engine/audio/art/narrative string in any agent body: `grep -rilE 'godot|unity|unreal|gdscript|gdd|battle pass' .claude/agents` returns nothing
+- [ ] **AC-R2.5** Every agent has the Collaboration Protocol section (`grep -L 'Collaboration Protocol' .claude/agents/*.md` is empty)
+- [ ] **AC-R2.6** Every agent's frontmatter has a valid `model:` tier of `opus|sonnet|haiku`
+- [ ] **AC-R2.7** `.claude/docs/agent-roster.md` lists all 31 with an owning rule + skill column, and that file's rows match the directory 1:1
+
+**Smoke test**
+
+```bash
+[ "$(ls .claude/agents/*.md | wc -l)" -eq 31 ] \
+  && [ "$(ls .codex/agents/*.toml | wc -l)" -eq 31 ] \
+  && ! grep -rilE 'godot|unity|unreal|gdscript|battle pass' .claude/agents \
+  && [ -z "$(grep -L 'Collaboration Protocol' .claude/agents/*.md)" ] \
+  && [ -z "$(grep -L -E '^model: (opus|sonnet|haiku)' .claude/agents/*.md)" ] \
+  && echo R2-OK
+```
+
+Expected: `R2-OK`. Any count mismatch, game string, or agent missing the protocol/model line fails the phase.
 
 ---
 
@@ -297,7 +375,24 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] `.claude/docs/rules-reference.md` lists every rule file, 1:1
 - [ ] No rule contradicts `.claude/docs/coding-standards.md` or `technical-preferences.md`
 
-**Done when:** `ls .claude/rules` = **13** files == the entries in `rules-reference.md`, and every glob has been resolved by a `find` you can re-run.
+**Acceptance criteria**
+
+- [ ] **AC-R3.1** `ls .claude/rules/*.md` = **13** files, matching the delete/rewrite/add lists
+- [ ] **AC-R3.2** No rule references a game path: `grep -rilE 'src/game|assets/|shader|godot|unity|unreal' .claude/rules` returns nothing
+- [ ] **AC-R3.3** Every rule has `paths:` frontmatter whose glob resolves to ≥1 existing file (record the `find` per glob in the commit)
+- [ ] **AC-R3.4** `rules-reference.md` has exactly 13 entries and each names a file that exists
+- [ ] **AC-R3.5** Each of the 7 new rules has a stated owner among the R2 agents
+
+**Smoke test**
+
+```bash
+[ "$(ls .claude/rules/*.md | wc -l)" -eq 13 ] \
+  && ! grep -rilE 'src/game|assets/|shader|godot|unity|unreal' .claude/rules \
+  && for f in $(grep -oE '[a-z0-9-]+\.md' .claude/docs/rules-reference.md | sort -u); do test -f ".claude/rules/$f" || { echo "MISSING $f"; exit 1; }; done \
+  && echo R3-OK
+```
+
+Expected: `R3-OK`. Then run the per-glob `find` checks manually — that part cannot be faked by a count.
 
 ---
 
@@ -317,7 +412,27 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] `.claude/docs/workflow-catalog.yaml` — `/help` resolves every `step` id to an existing skill directory (manual pass; record the command used)
 - [ ] `.agents/skills` symlink still resolves (Codex discovery)
 
-**Done when:** `ls -d .claude/skills/*/` = **66** directories == the entries in `skills-reference.md` == the set of skills referenced by surviving agents (no orphans either direction).
+**Acceptance criteria**
+
+- [ ] **AC-R4.1** `ls -d .claude/skills/*/` = **66** directories; the 23 deleted names are absent, the 14 new names are present
+- [ ] **AC-R4.2** `.agents/skills` is a symlink that resolves to `.claude/skills`
+- [ ] **AC-R4.3** No skill frontmatter/body carries game vocabulary: `grep -rilE 'godot|unity|unreal|gdd|bartle|mda framework' .claude/skills/*/SKILL.md` returns nothing
+- [ ] **AC-R4.4** `skills-reference.md` has 66 entries, each naming a directory that exists
+- [ ] **AC-R4.5** Every skill named in an agent body exists, and every agent named in a skill body exists (R10's `check-references.py` is the arbiter; it must report zero here)
+- [ ] **AC-R4.6** `/research` and `/scaffold` exist as directories with `SKILL.md` and are listed in the catalog
+- [ ] **AC-R4.7** `/start` run once shows master request + apps + stages (empty-state output is acceptable before R8 seeds data, but the command must not error)
+
+**Smoke test**
+
+```bash
+[ "$(ls -d .claude/skills/*/ | wc -l)" -eq 66 ] \
+  && [ -L .agents/skills ] && [ -e .agents/skills ] \
+  && test -f .claude/skills/research/SKILL.md && test -f .claude/skills/scaffold/SKILL.md \
+  && ! grep -rilE 'godot|unity|unreal|gdd|bartle' .claude/skills/*/SKILL.md \
+  && echo R4-OK
+```
+
+Expected: `R4-OK`, then a manual `/start` invocation recorded in the commit message.
 
 ---
 
@@ -333,7 +448,25 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] No template keeps GDD / MDA / Bartle / engine concepts as required sections
 - [ ] Every `.claude/docs/templates/...` path mentioned in a skill body resolves on disk (R10 automates this)
 
-**Done when:** `.claude/docs/templates` = **35** `.md` files + `collaborative-protocols/`, and every template path referenced by a skill resolves.
+**Acceptance criteria**
+
+- [ ] **AC-R5.1** `ls .claude/docs/templates/*.md` = **35** files; the 14 deleted names are absent, the 12 new names are present
+- [ ] **AC-R5.2** `collaborative-protocols/` still exists and is documented as a directory, not a template
+- [ ] **AC-R5.3** No template requires GDD / MDA / Bartle / engine sections: `grep -rilE 'game design document|\bmda\b|bartle|engine compatibility' .claude/docs/templates` returns nothing
+- [ ] **AC-R5.4** Every `.claude/docs/templates/<name>.md` path referenced from a skill body resolves
+- [ ] **AC-R5.5** Each of the 12 new templates is referenced by at least one skill (otherwise it is dead weight — link it or drop it)
+
+**Smoke test**
+
+```bash
+[ "$(ls .claude/docs/templates/*.md | wc -l)" -eq 35 ] \
+  && test -d .claude/docs/templates/collaborative-protocols \
+  && ! grep -rilE 'game design document|\bmda\b|bartle|engine compatibility' .claude/docs/templates \
+  && for p in $(grep -rhoE '\.claude/docs/templates/[a-z0-9/-]+\.md' .claude/skills | sort -u); do test -f "$p" || { echo "MISSING $p"; exit 1; }; done \
+  && echo R5-OK
+```
+
+Expected: `R5-OK`. A `MISSING` line is a skill pointing at a template that was deleted or never written.
 
 ---
 
@@ -351,7 +484,29 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] Wire every hook in `.claude/settings.json` **and** `.codex/hooks.json`, and register the same set in the Hermes profile's hook config
 - [ ] `bash -n` every hook; hooks still exit gracefully when `jq` / `python3` are missing
 
-**Done when:** `ls .claude/hooks/*.sh` = **15**, `bash -n` clean on all of them, every hook wired in all three harness configs, and no game path string survives.
+**Acceptance criteria**
+
+- [ ] **AC-R6.1** `ls .claude/hooks/*.sh` = **15** and each one is named in `hooks-reference.md`
+- [ ] **AC-R6.2** `bash -n` is clean on all 15
+- [ ] **AC-R6.3** `.claude/settings.json` and `.codex/hooks.json` both parse as JSON and register the full set
+- [ ] **AC-R6.4** The three new hooks exist and are executable by `bash`: `track-request-changes.sh`, `approval-gate.sh`, `app-store-gate.sh`
+- [ ] **AC-R6.5** No hook references a game path: `grep -rilE 'src/game|assets/|godot|unity|unreal' .claude/hooks .codex/hooks` returns nothing
+- [ ] **AC-R6.6** `approval-gate.sh` and `app-store-gate.sh` were each run against a deliberately failing fixture and exited non-zero **by name** — a gate that has never rejected anything is not verified
+- [ ] **AC-R6.7** Hooks still work when `jq` is unavailable (simulate by `PATH` without `jq`)
+
+**Smoke test**
+
+```bash
+[ "$(ls .claude/hooks/*.sh | wc -l)" -eq 15 ] \
+  && for f in .claude/hooks/*.sh; do bash -n "$f" || exit 1; done \
+  && python3 -m json.tool .claude/settings.json >/dev/null \
+  && python3 -m json.tool .codex/hooks.json >/dev/null \
+  && for h in track-request-changes.sh approval-gate.sh app-store-gate.sh; do test -f ".claude/hooks/$h" || { echo "MISSING $h"; exit 1; }; done \
+  && ! grep -rilE 'src/game|assets/|godot|unity|unreal' .claude/hooks .codex/hooks \
+  && echo R6-OK
+```
+
+Expected: `R6-OK`, then the two negative fixtures recorded in the commit (gate rejects → non-zero). Note the worked example in the completion rule: 15 files with one `bash -n` failure is a **failed** R6.
 
 ---
 
@@ -370,7 +525,26 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] `docs/registry/`, `docs/examples/` — rebuild for Shopify; delete engine examples
 - [ ] `docs/WORKFLOW-GUIDE.md`, `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` — keep the principles, swap every example
 
-**Done when:** every path referenced from `CLAUDE.md`, agents and skills resolves, and no engine reference dir remains (`ls docs/engine-reference` fails).
+**Acceptance criteria**
+
+- [ ] **AC-R7.1** `docs/engine-reference/` no longer exists; `docs/shopify-api-reference/VERSION.md` does and pins a concrete API version
+- [ ] **AC-R7.2** No game-engine string under `.claude/docs/` or `docs/` outside `docs/legacy/` (`godot|unity|unreal|threejs|gdscript`)
+- [ ] **AC-R7.3** Every reference doc that enumerates a set (roster, skills, rules, hooks) is 1:1 with disk
+- [ ] **AC-R7.4** `workflow-catalog.yaml` parses as YAML and its top-level phases are 0–5
+- [ ] **AC-R7.5** `quick-start.md` boots a fresh reader: Partner account → dev store → `shopify app dev` → `/start`, with no engine step
+- [ ] **AC-R7.6** Every path referenced from `CLAUDE.md`, agents and skills resolves
+
+**Smoke test**
+
+```bash
+test ! -d docs/engine-reference \
+  && test -f docs/shopify-api-reference/VERSION.md \
+  && ! grep -rilE 'godot|unity|unreal|threejs|gdscript' --exclude-dir=legacy .claude/docs docs \
+  && python3 -c "import sys;d=open('.claude/docs/workflow-catalog.yaml').read();assert 'phase' in d.lower()" \
+  && echo R7-OK
+```
+
+Expected: `R7-OK`. If `grep` prints filenames instead, the docs layer still teaches the game framework.
 
 ---
 
@@ -388,7 +562,33 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] Apply the directory decisions recorded in R0 (do not re-decide them here)
 - [ ] Every loop (research, update, propose) reads the **current** `request.md`, never a cached copy
 
-**Done when:** `/start` renders entirely from these files, and two apps can advance through different stages at the same time without either writing a file the other touches.
+**Acceptance criteria**
+
+- [ ] **AC-R8.1** `request.md` exists, and `ls request*.md` shows exactly one request file
+- [ ] **AC-R8.2** `request-history.md` exists and its format records version, reason, timestamp
+- [ ] **AC-R8.3** `docs/registry/apps.json` parses as JSON and lists every directory under `apps/`
+- [ ] **AC-R8.4** Each `apps/<app>/` has `status.md` and `approvals.json`; the latter parses as JSON and its keys are a subset of the five gate ids
+- [ ] **AC-R8.5** `directory-structure.md` contains the isolation contract, including the "no shared mutable file outside the registry" rule and the one-writer-per-app rule
+- [ ] **AC-R8.6** `production/apps/<app>/` exists for each app and holds `sprints/`, `milestones/`, `session-state/`
+- [ ] **AC-R8.7** Two seed apps exist (`/scaffold` twice) and neither writes a file inside the other's directory — demonstrate with `git status` after touching both
+- [ ] **AC-R8.8** An untracked edit to `request.md` is rejected by `track-request-changes.sh` (negative fixture, non-zero exit)
+
+**Smoke test**
+
+```bash
+test -f request.md && test -f request-history.md \
+  && [ "$(ls request*.md | wc -l)" -eq 1 ] \
+  && python3 -m json.tool docs/registry/apps.json >/dev/null \
+  && [ "$(ls -d apps/*/ | wc -l)" -ge 2 ] \
+  && for a in apps/*/; do
+       test -f "$a/status.md" || { echo "MISSING $a/status.md"; exit 1; }
+       python3 -m json.tool "$a/approvals.json" >/dev/null || exit 1
+     done \
+  && grep -q 'no shared mutable file' .claude/docs/directory-structure.md \
+  && echo R8-OK
+```
+
+Expected: `R8-OK` with **at least two** app directories — the point of the phase is proving isolation, and one app proves nothing. This gate must be green before R3, R4's `/start`, or R6's `session-start.sh` are judged.
 
 ---
 
@@ -400,7 +600,25 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] Respec `skills/` test specs to the 66 surviving skills
 - [ ] `quality-rubric.md` — keep the rubric shape, drop the game-specific criteria
 
-**Done when:** every agent and skill in the roster has a spec, and no spec describes a deleted role.
+**Acceptance criteria**
+
+- [ ] **AC-R9.1** `Skill Testing Framework/` exists; `AHGS Skill Testing Framework/` does not
+- [ ] **AC-R9.2** No live reference to the old name outside `docs/legacy/` and `TASKS.md`
+- [ ] **AC-R9.3** Every one of the 31 agents has a spec, and no spec describes a deleted role
+- [ ] **AC-R9.4** Every one of the 66 skills has a spec, or is listed in `catalog.yaml` as intentionally untested with a reason
+- [ ] **AC-R9.5** `catalog.yaml` parses as YAML and names only existing directories
+- [ ] **AC-R9.6** `quality-rubric.md` has no game-specific criterion (`grep -riE 'game|fun|player' quality-rubric.md` reviewed line by line, not by keyword count)
+
+**Smoke test**
+
+```bash
+test -d "Skill Testing Framework" && test ! -d "AHGS Skill Testing Framework" \
+  && [ -z "$(grep -rl 'AHGS Skill Testing Framework' .claude docs 2>/dev/null | grep -v '^docs/legacy/')" ] \
+  && python3 -c "import sys;d=open('Skill Testing Framework/catalog.yaml').read();assert d.strip()" \
+  && echo R9-OK
+```
+
+Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill-test`/`skill-improve` still point at the old tree.
 
 ---
 
@@ -411,12 +629,36 @@ Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No ex
 - [ ] `python3 .codex/generate_compat.py` → no diff
 - [ ] `bash -n` all hooks; `python3 -m json.tool` on `.claude/settings.json` and `.codex/hooks.json`
 - [ ] Add `.claude/scripts/check-references.py` (stdlib only) and run it: fail when (a) an agent named in a skill body is missing from `.claude/agents/`, (b) a skill named in an agent body is missing from `.claude/skills/`, (c) a `.claude/docs/templates/...` path in a skill does not resolve, (d) a name in `agent-roster.md` has no agent file; non-zero exit on any hit
-- [ ] **`docs/legacy/AC-TRACE.md`** maps all 16 Acceptance Criteria to the item that satisfies each; any criterion without a linked item becomes a new item here before this gate can pass
+- [ ] **`docs/legacy/AC-TRACE.md`** maps all 16 project Acceptance Criteria **and** every `AC-Rn.x` in this section to the item that satisfies each; any criterion without a linked item becomes a new item here before this gate can pass
 - [ ] **Isolation check:** no two apps write the same file outside `docs/registry/apps.json`
 - [ ] **Approval check:** `/release` on an app whose `approvals.json` lacks gate 4 exits non-zero
 - [ ] **`/start` smoke run in Claude Code, Codex and Hermes** (Hermes through `production/hermes-profile-mapping.json`) — each shows master request, apps and stages
 
-**Done when:** every gate above is green in a single run, and the command output is pasted into the commit message.
+**Acceptance criteria**
+
+- [ ] **AC-R10.1** The tree-wide engine grep returns 0 files
+- [ ] **AC-R10.2** All five counts match their reference docs (31 / 66 / 13 / 15 / 35)
+- [ ] **AC-R10.3** `check-references.py` exists, exits 0, and was proven to fail by pointing it at a renamed agent (negative fixture restored afterwards)
+- [ ] **AC-R10.4** `docs/legacy/AC-TRACE.md` covers 16 project criteria + every `AC-Rn.x`, with no empty mapping cell
+- [ ] **AC-R10.5** Isolation and approval negative fixtures both exit non-zero by name
+- [ ] **AC-R10.6** `/start` runs in all three harnesses; output pasted in the commit
+- [ ] **AC-R10.7** `git status --porcelain` is clean and the final commit message contains the pasted gate output
+
+**Smoke test**
+
+```bash
+! grep -rliE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md . \
+  && [ "$(ls .claude/agents/*.md | wc -l)" -eq 31 ] \
+  && [ "$(ls -d .claude/skills/*/ | wc -l)" -eq 66 ] \
+  && [ "$(ls .claude/rules/*.md | wc -l)" -eq 13 ] \
+  && [ "$(ls .claude/hooks/*.sh | wc -l)" -eq 15 ] \
+  && [ "$(ls .claude/docs/templates/*.md | wc -l)" -eq 35 ] \
+  && python3 .claude/scripts/check-references.py \
+  && test -f docs/legacy/AC-TRACE.md \
+  && echo R10-OK
+```
+
+Expected: `R10-OK`. This is the last gate; a partial pass is a failed refactor, and the project Acceptance Criteria block at the top of this file stays unticked until this line prints.
 
 ---
 
