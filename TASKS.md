@@ -2,22 +2,22 @@
 
 ## Goal
 
-Automatic multi-app pipeline that can run **multiple Shopify apps in the same repo at the same time**.
+Automatic **multi-app** pipeline that can develop, test, and release **multiple Shopify apps in the same repo at the same time**.
 
-Each app has its own isolated idea tracking, research, prototype, SDLC, test store, and release cycle — while sharing the same agent/skill infrastructure.
+Each app is fully isolated (idea, research, prototype, epics/stories, test store, release) while sharing the same agents, skills, and hooks.
 
 **Per-app Flow:**
 
-1. User submits idea for an app (tracked in `apps/<app-name>/idea.md` + `changes.md`)
-2. Research → Original idea **or** Competitor killer
-3. Generate ranked **MMMVP proposals**
+1. User submits idea → tracked in `apps/<app-name>/idea.md` + `changes.md`
+2. Research (Original idea **or** Competitor killer)
+3. Ranked MMMVP proposals
 4. Build prototype
 5. User reviews / refines
 6. Production goals defined
-7. Full SDLC (Epics + Stories) in concurrent Kanban style
+7. Full SDLC (Epics + Stories) in concurrent Kanban
 8. Create Shopify Test Store → User tests
 9. User approves → Actual release
-10. Ongoing loop (scheduled or manual): re-research → propose updates → update app + test store → user approves
+10. Ongoing loop: re-research → propose updates → update app + test store → user approves
 
 Multiple apps can be at different stages simultaneously.
 
@@ -25,67 +25,67 @@ Multiple apps can be at different stages simultaneously.
 
 ## Acceptance Criteria
 
-The refactoring is complete only when all of these pass:
-
-### Multi-app Support
-- [ ] Repo can contain multiple independent apps under `apps/`
-- [ ] Each app has its own `idea.md`, `changes.md`, epics, stories, and status
-- [ ] Pipeline commands accept an `--app <name>` parameter (or detect context)
-- [ ] Different apps can be at different stages at the same time
-- [ ] Shared agents/skills work across all apps without conflict
+### Multi-app Support (Must Pass)
+- [ ] All apps live under `apps/<app-name>/`
+- [ ] Each app has its own `idea.md`, `changes.md`, epics, stories, status, and test store config
+- [ ] Every skill accepts `--app <name>` (or auto-detects from context)
+- [ ] `/start` can list all apps + their current stage
+- [ ] `/kanban-status` can show one app or all apps
+- [ ] Different apps can run research, development, and release cycles independently
+- [ ] Shared agents/skills never mix data between apps
 
 ### Core Flow (per app)
-- [ ] Idea is tracked per app
-- [ ] Research supports two modes: Original Idea and Competitor Killer
-- [ ] System returns ranked MMMVP proposals
-- [ ] User can select an MMMVP and trigger prototype
-- [ ] Prototype can be reviewed and refined by user
-- [ ] After production goals confirmed → Epics + Stories created
-- [ ] Development runs concurrently (Kanban visible via `/kanban-status`)
-- [ ] System can create and deploy to a Shopify Test Store per app
-- [ ] Actual release is blocked until user explicitly approves
-- [ ] Ongoing research + update loop works (manual + scheduled ready)
-- [ ] All major transitions have enforced human approval gates
+- [ ] Idea tracking works per app
+- [ ] Research supports Original Idea + Competitor Killer modes
+- [ ] Ranked MMMVP proposals generated
+- [ ] Prototype build + user review
+- [ ] Epics + Stories created after production goals confirmed
+- [ ] Concurrent Kanban development
+- [ ] Test store creation & deployment per app
+- [ ] Release blocked until explicit user approval
+- [ ] Ongoing update loop works
+- [ ] Human approval gates enforced at every critical transition
 
 ---
 
-## Phase 0 – Multi-app Foundation & Idea Tracking
+## Phase 0 – Multi-app Foundation
 
-- [ ] Folder structure: `apps/<app-name>/`
+- [ ] Standard folder structure: `apps/<app-name>/`
 - [ ] `apps/<app-name>/idea.md` template
 - [ ] `apps/<app-name>/changes.md` template
-- [ ] App registry (list of active apps + current stage)
+- [ ] App registry file (e.g. `apps/registry.md` or `apps/status.json`) showing all apps + stage
+- [ ] Convention: all skills require `--app <name>` or detect current app context
 - [ ] Hook: `track-idea-changes.sh` (scoped per app)
 
 ---
 
-## Phase 1 – Research & MMMVP
+## Phase 1 – Research & MMMVP (per app)
 
 **Agents**
 - [x] `product-director`
 - [ ] `research-specialist`
 
 **Skills**
-- [x] `/start` (supports selecting or creating an app)
-- [x] `/research` (Original + Competitor Killer, scoped to app)
-- [ ] `/idea-validate`
-- [ ] `/mmmvp-proposals`
+- [x] `/start` → list apps / create new app / select app
+- [x] `/research --app <name>` (Original + Competitor Killer)
+- [ ] `/idea-validate --app <name>`
+- [ ] `/mmmvp-proposals --app <name>`
 
 ---
 
-## Phase 2 – Prototype
+## Phase 2 – Prototype (per app)
 
 **Agents**
 - [ ] `prototype-builder`
 
 **Skills**
-- [x] `/scaffold` (creates new app folder)
-- [ ] `/build-prototype`
-- [ ] `/prototype-review`
+- [x] `/scaffold --app <name>` (creates `apps/<name>/`)
+- [ ] `/build-prototype --app <name>`
+- [ ] `/prototype-review --app <name>`
 
 ---
 
-## Phase 3 – Production Planning & Concurrent SDLC
+## Phase 3 – Production Planning & Concurrent SDLC (per app)
 
 **Agents**
 - [x] `technical-director`
@@ -94,47 +94,47 @@ The refactoring is complete only when all of these pass:
 - [ ] `qa-lead`
 
 **Skills**
-- [ ] `/create-epics`
-- [ ] `/create-stories`
-- [ ] `/dev-story`
-- [ ] `/kanban-status` (can show one app or all apps)
+- [ ] `/create-epics --app <name>`
+- [ ] `/create-stories --app <name>`
+- [ ] `/dev-story --app <name>`
+- [ ] `/kanban-status` (one app or `--all`)
 
 ---
 
-## Phase 4 – Quality Gates
+## Phase 4 – Quality Gates (per app)
 
 **Agents**
 - [x] `security-specialist`
 - [x] `app-store-reviewer`
 
 **Skills**
-- [x] `/security-audit`
-- [ ] `/code-review`
-- [ ] `/app-store-checklist`
+- [x] `/security-audit --app <name>`
+- [ ] `/code-review --app <name>`
+- [ ] `/app-store-checklist --app <name>`
 
 ---
 
-## Phase 5 – Test Store & Release
+## Phase 5 – Test Store & Release (per app)
 
 **Agents**
 - [x] `release-manager`
 - [ ] `test-store-manager`
 
 **Skills**
-- [ ] `/create-test-store`
-- [ ] `/deploy-to-test-store`
-- [ ] `/release`
-- [ ] `/hotfix`
-- [ ] `/changelog`
+- [ ] `/create-test-store --app <name>`
+- [ ] `/deploy-to-test-store --app <name>`
+- [ ] `/release --app <name>`
+- [ ] `/hotfix --app <name>`
+- [ ] `/changelog --app <name>`
 
 ---
 
-## Phase 6 – Ongoing Update Loop
+## Phase 6 – Ongoing Update Loop (per app)
 
 **Skills**
-- [ ] `/update-research`
-- [ ] `/propose-updates`
-- [ ] `/apply-updates`
+- [ ] `/update-research --app <name>`
+- [ ] `/propose-updates --app <name>`
+- [ ] `/apply-updates --app <name>`
 
 ---
 
