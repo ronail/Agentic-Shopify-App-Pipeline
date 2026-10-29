@@ -45,9 +45,9 @@ Every entry, without exception:
 ```
 
 Rules:
-- No entry without evidence. "The code is messy" is not debt; "my-app
+- No entry without evidence. "The code is messy" is not debt; "order-tags
   repository builds SQL by string concatenation at
-  `apps/my-app/src/db/orders.ts:88`" is.
+  `apps/order-tags/src/db/orders.ts:88`" is.
 - No entry without interest. If it costs nothing per sprint and risks nothing,
   it is a preference, not debt.
 - `accepted-risk` requires an approver and a review date. Accepted risk expires;

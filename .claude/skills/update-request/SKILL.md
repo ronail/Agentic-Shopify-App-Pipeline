@@ -1,7 +1,7 @@
 ---
 name: update-request
 description: "Amends request.md without losing prior intent: bumps the version, writes the change, and appends a dated entry to request-history.md so superseded asks stay readable. Use when scope, success criteria, or the app list changes after the request was written."
-argument-hint: "[what changed, e.g. 'add my-app app' or 'drop multi-currency']"
+argument-hint: "[what changed, e.g. 'add order-tags app' or 'drop multi-currency']"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
@@ -36,7 +36,7 @@ change, bumps the version, and records why — so intent survives.
 ## Steps
 
 1. **State the change in one sentence**, in past tense and outcome form: "Added
-   the `my-app` app to scope" or "Removed multi-currency from success
+   the `order-tags` app to scope" or "Removed multi-currency from success
    criteria". If you cannot write that sentence, the change is not defined yet —
    ask.
 2. **Find the exact target lines** with Grep before editing. Name the section

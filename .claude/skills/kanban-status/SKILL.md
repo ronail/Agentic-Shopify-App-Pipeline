@@ -67,8 +67,8 @@ conversation.
 
 | App | Stage | Gates (1-5) | Blocked on | Next action |
 |-----|-------|-------------|------------|-------------|
-| my-app | research | ✓ - - - - | gate-2-prototype | /build-prototype |
-| other-app | research | ✓ - - - - | (none) | /research |
+| discount-bundles | research | ✓ - - - - | gate-2-prototype | /build-prototype |
+| order-tags | research | ✓ - - - - | (none) | /research |
 
 ### Flags
 - (missing-scaffold / unregistered / stale gate entries, or "none")

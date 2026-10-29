@@ -137,7 +137,7 @@ is the most damaging drift of all.
 
 | ID | Check | Severity | App | Expected | Actual | Owner | Fix |
 |----|-------|----------|-----|----------|--------|-------|-----|
-| CONS-001 | C2 | critical | my-app | gates 1,2,3 present | gate-3 without gate-2 | producer | record or remove gate-3 |
+| CONS-001 | C2 | critical | order-tags | gates 1,2,3 present | gate-3 without gate-2 | producer | record or remove gate-3 |
 
 ## Verified clean
 <list the checks that found nothing — absence of evidence matters>

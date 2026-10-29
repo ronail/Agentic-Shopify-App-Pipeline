@@ -12,7 +12,7 @@
 # with no evidence is not a pass).
 #
 # Explicit use:
-#   bash .claude/hooks/app-store-gate.sh --app my-app
+#   bash .claude/hooks/app-store-gate.sh --app order-tags
 #   bash .claude/hooks/app-store-gate.sh --checklist /tmp/fixture.md
 #   APP_STORE_CHECKLIST=/path/to/checklist.md bash .claude/hooks/app-store-gate.sh
 #
