@@ -1,96 +1,75 @@
 # Agent Roster
 
-The following agents are available. Each has a dedicated definition file in
-`.claude/agents/`. Use the agent best suited to the task at hand. When a task
-spans multiple domains, the coordinating agent (usually `producer` or the
-domain lead) should delegate to specialists.
+This is the single source of truth for the agent roster (49 → 31, ratified in
+`docs/legacy/REFACTOR-DECISIONS.md`). Every agent has a dedicated definition
+file in `.claude/agents/`. Delegate to the agent best suited to the task; when a
+task spans domains, the coordinating agent (usually `producer` or a domain
+lead) delegates to the matching specialist.
 
-## Tier 1 -- Leadership Agents (Opus)
-| Agent | Domain | When to Use |
-|-------|--------|-------------|
-| `creative-director` | High-level vision | Major creative decisions, pillar conflicts, tone/direction |
-| `technical-director` | Technical vision | Architecture decisions, tech stack choices, performance strategy |
-| `producer` | Production management | Sprint planning, milestone tracking, risk management, coordination |
+When using Hermes as the harness, subagent models come from the `delegation`
+section of the active Hermes profile, not from agent frontmatter (the
+`model:` frontmatter field is advisory). Run `/start hermes` to configure
+per-task routing through a delegation backend plugin.
 
-## Tier 2 -- Department Lead Agents (Sonnet)
-| Agent | Domain | When to Use |
-|-------|--------|-------------|
-| `game-designer` | Game design | Mechanics, systems, progression, economy, balancing |
-| `lead-programmer` | Code architecture | System design, code review, API design, refactoring |
-| `art-director` | Visual direction | Style guides, art bible, asset standards, UI/UX direction |
-| `audio-director` | Audio direction | Music direction, sound palette, audio implementation strategy |
-| `narrative-director` | Story and writing | Story arcs, world-building, character design, dialogue strategy |
-| `qa-lead` | Quality assurance | Test strategy, bug triage, release readiness, regression planning |
-| `release-manager` | Release pipeline | Build management, versioning, changelogs, deployment, rollbacks |
-| `localization-lead` | Internationalization | String externalization, translation pipeline, locale testing |
+**Column notes**
+- **Owning Rule** — the R3 rule file (`.claude/rules/`) that invokes or owns the
+  agent's domain. These rule files are created in R3; this column is a
+  forward reference resolved as R3 lands. `check-references.py` validates only
+  that agent names resolve to files, not that rule files exist.
+- **Owning Skill** — the Hermes skill slug most associated with invoking this
+  agent. Many domain specialists (GraphQL, Billing, Webhooks, etc.) are invoked
+  by *rules* rather than a skill, marked `-` (no dedicated skill). Skill slugs
+  are provisional and finalized in R4.
+- **Output paths** — each agent writes only under `apps/<app>/`, `docs/`,
+  `production/`, `src/`, `scripts/`. None reference game/engine paths.
 
-## Tier 3 -- Specialist Agents (Sonnet or Haiku)
-| Agent | Domain | Model | When to Use |
-|-------|--------|-------|-------------|
-| `systems-designer` | Systems design | Sonnet | Specific mechanic implementation, formula design, loops |
-| `level-designer` | Level design | Sonnet | Level layouts, pacing, encounter design, flow |
-| `economy-designer` | Economy/balance | Sonnet | Resource economies, loot tables, progression curves |
-| `gameplay-programmer` | Gameplay code | Sonnet | Feature implementation, gameplay systems code |
-| `engine-programmer` | Engine systems | Sonnet | Core engine, rendering, physics, memory management |
-| `ai-programmer` | AI systems | Sonnet | Behavior trees, pathfinding, NPC logic, state machines |
-| `network-programmer` | Networking | Sonnet | Netcode, replication, lag compensation, matchmaking |
-| `tools-programmer` | Dev tools | Sonnet | Editor extensions, pipeline tools, debug utilities |
-| `ui-programmer` | UI implementation | Sonnet | UI framework, screens, widgets, data binding |
-| `technical-artist` | Tech art | Sonnet | Shaders, VFX, optimization, art pipeline tools |
-| `sound-designer` | Sound design | Sonnet | SFX design docs, audio event lists, mixing notes |
-| `writer` | Dialogue/lore | Sonnet | Dialogue writing, lore entries, item descriptions |
-| `world-builder` | World/lore design | Sonnet | World rules, faction design, history, geography |
-| `qa-tester` | Test execution | Haiku | Writing test cases, bug reports, test checklists |
-| `performance-analyst` | Performance | Sonnet | Profiling, optimization recs, memory analysis |
-| `devops-engineer` | Build/deploy | Haiku | CI/CD, build scripts, version control workflow |
-| `analytics-engineer` | Telemetry | Sonnet | Event tracking, dashboards, A/B test design |
-| `ux-designer` | UX flows | Sonnet | User flows, wireframes, accessibility, input handling |
-| `prototyper` | Rapid prototyping | Sonnet | Throwaway prototypes, mechanic testing, feasibility validation |
-| `security-engineer` | Security | Sonnet | Anti-cheat, exploit prevention, save encryption, network security |
-| `accessibility-specialist` | Accessibility | Haiku | WCAG compliance, colorblind modes, remapping, text scaling |
-| `live-ops-designer` | Live operations | Sonnet | Seasons, events, battle passes, retention, live economy |
-| `community-manager` | Community | Haiku | Patch notes, player feedback, crisis comms, community health |
+## Tier 1 — Leadership Agents (Opus)
 
-## Engine-Specific Agents (use the set matching your engine)
+| Agent | Domain | Owning Rule | Owning Skill |
+|-------|--------|-------------|--------------|
+| `product-director` | Product vision; owns the master `request.md` | `design-docs` | `start` |
+| `technical-director` | Architecture, tech debt, Shopify API version policy | `design-docs` | `start` |
+| `producer` | Pipeline, kanban, milestones, scope gates | `design-docs` | `kanban-status` |
+| `lead-engineer` | Implementation lead; owns the code-review gate | `admin-embed-code` | `code-review` |
 
-### Engine Leads
+## Tier 2 — Leads & Specialists (Sonnet)
 
-| Agent | Engine | Model | When to Use |
-| ---- | ---- | ---- | ---- |
-| `unreal-specialist` | Unreal Engine 5 | Sonnet | Blueprint vs C++, GAS overview, UE subsystems, Unreal optimization |
-| `unity-specialist` | Unity | Sonnet | MonoBehaviour vs DOTS, Addressables, URP/HDRP, Unity optimization |
-| `godot-specialist` | Godot 4 | Sonnet | GDScript patterns, node/scene architecture, signals, Godot optimization |
+| Agent | Domain | Owning Rule | Owning Skill |
+|-------|--------|-------------|--------------|
+| `prototype-builder` | Throwaway merchant-facing prototypes in `apps/<app>/prototype/` | `prototype-code` | `build-prototype` |
+| `ux-lead` | Merchant UX in the embedded Polaris admin | `ui-code` | `ux-design` |
+| `polaris-specialist` | Polaris components + admin UX implementation | `admin-embed-code` | `ux-design` |
+| `qa-lead` | Test strategy + quality gates | `test-standards` | `qa-plan` |
+| `release-manager` | App Store submission, versioning, release gates | `design-docs` | `release` |
+| `devops-engineer` | Hosting, CI/CD, environments, deploy to dev store | `data-files` | `create-test-store` |
+| `research-specialist` | Market, competitor and app-ecosystem research | `design-docs` | `research` |
+| `app-architect` | Per-app architecture inside `apps/<app>/` | `admin-embed-code` | `-` |
+| `api-lead` | Admin/Storefront API surface, versioning, deprecations | `graphql-code` | `-` |
+| `growth-lead` | Install funnel, pricing/packaging, merchant acquisition | `data-files` | `-` |
+| `analytics-engineer` | Install funnel, usage events, merchant metrics | `data-files` | `-` |
+| `performance-analyst` | Admin load time, API/webhook latency, rate limits | `network-code` | `-` |
 
-### Unreal Engine Sub-Specialists
+## Tier 3 — Specialists (Sonnet)
 
-| Agent | Subsystem | Model | When to Use |
-| ---- | ---- | ---- | ---- |
-| `ue-gas-specialist` | Gameplay Ability System | Sonnet | Abilities, gameplay effects, attribute sets, tags, prediction |
-| `ue-blueprint-specialist` | Blueprint Architecture | Sonnet | BP/C++ boundary, graph standards, naming, BP optimization |
-| `ue-replication-specialist` | Networking/Replication | Sonnet | Property replication, RPCs, prediction, relevancy, bandwidth |
-| `ue-umg-specialist` | UMG/CommonUI | Sonnet | Widget hierarchy, data binding, CommonUI input, UI performance |
+| Agent | Domain | Owning Rule | Owning Skill |
+|-------|--------|-------------|--------------|
+| `graphql-specialist` | Admin GraphQL, cost-based throttling, bulk operations | `graphql-code` | `-` |
+| `webhooks-specialist` | Subscription lifecycle, HMAC verification, retries/backfill | `webhook-code` | `-` |
+| `billing-specialist` | Billing API, subscription/usage charges, plan gating | `billing-code` | `-` |
+| `auth-specialist` | OAuth, session tokens, token exchange, embedded-app security | `auth-code` | `-` |
+| `app-bridge-specialist` | App Bridge, embedded admin navigation, session/context | `ui-code` | `-` |
+| `liquid-specialist` | Liquid templates, theme app extensions, app blocks | `theme-extension-code` | `-` |
+| `checkout-specialist` | Checkout UI extensions and checkout-surface constraints | `functions-code` | `-` |
+| `security-specialist` | OAuth, session tokens, data handling, audits | `auth-code` | `-` |
+| `tools-engineer` | Shopify CLI, scripts, dev-store automation | `data-files` | `-` |
+| `localization-lead` | Storefront/extension i18n, market coverage | `theme-extension-code` | `-` |
+| `app-store-reviewer` | App Store requirements, listing review, submission blockers | `design-docs` | `app-store-checklist` |
+| `test-store-manager` | Dev/test store provisioning, seed data, store lifecycle | `data-files` | `create-test-store` |
 
-### Unity Sub-Specialists
+## Tier 3 — Execution Agents (Haiku)
 
-| Agent | Subsystem | Model | When to Use |
-| ---- | ---- | ---- | ---- |
-| `unity-dots-specialist` | DOTS/ECS | Sonnet | Entity Component System, Jobs, Burst compiler, hybrid renderer |
-| `unity-shader-specialist` | Shaders/VFX | Sonnet | Shader Graph, VFX Graph, URP/HDRP customization, post-processing |
-| `unity-addressables-specialist` | Asset Management | Sonnet | Addressable groups, async loading, memory, content delivery |
-| `unity-ui-specialist` | UI Toolkit/UGUI | Sonnet | UI Toolkit, UXML/USS, UGUI Canvas, data binding, cross-platform input |
-
-### Godot Sub-Specialists
-
-| Agent | Subsystem | Model | When to Use |
-| ---- | ---- | ---- | ---- |
-| `godot-gdscript-specialist` | GDScript | Sonnet | Static typing, design patterns, signals, coroutines, GDScript performance |
-| `godot-csharp-specialist` | C# / .NET | Sonnet | .NET patterns, [Signal] delegates, async, nullable types, type-safe node access |
-| `godot-shader-specialist` | Shaders/Rendering | Sonnet | Godot shading language, visual shaders, particles, post-processing |
-| `godot-gdextension-specialist` | GDExtension | Sonnet | C++/Rust bindings, native performance, custom nodes, build systems |
-
----
-
-When using Hermes as the harness, the Model column above is advisory only.
-Subagent models come from the `delegation` section of the active Hermes profile,
-not from agent frontmatter. Run `/start hermes` to configure per-task routing
-through a delegation backend plugin.
+| Agent | Domain | Owning Rule | Owning Skill |
+|-------|--------|-------------|--------------|
+| `qa-tester` | Manual + regression passes on dev stores | `test-standards` | `test-setup` |
+| `accessibility-specialist` | Admin UI accessibility, keyboard/screen-reader | `ui-code` | `-` |
+| `community-manager` | Merchant support, App Store review responses, changelog comms | `design-docs` | `-` |
