@@ -12,37 +12,39 @@ will be compacted or lost. Files on disk persist across compactions and session 
 Maintain `production/session-state/active.md` as a living checkpoint. Update it
 after each significant milestone:
 
-- Design section approved and written to file
+- Requirement section approved and written to file
 - Architecture decision made
 - Implementation milestone reached
 - Test results obtained
 
 The state file should contain: current task, progress checklist, key decisions
-made, files being worked on, and open questions.
+made, files being worked on, and open questions. For multi-app work, say which
+app (`apps/<app-name>/`) the state belongs to.
 
-### Status Line Block (Production+ only)
+### Status Line Block (Build and later stages)
 
-When the project is in Production, Polish, or Release stage, include a structured
-status block in `active.md` that the status line script can parse:
+When an app is in Build, Review, or Ship stage, include a structured status block
+in `active.md` that the status line script can parse:
 
 ```markdown
 <!-- STATUS -->
-Epic: Combat System
-Feature: Melee Combat
-Task: Implement hitbox detection
+Epic: Tiered Discounts
+Feature: Discount rule editor
+Task: Wire the CartDiscount mutation
 <!-- /STATUS -->
 ```
 
 - All three fields (Epic, Feature, Task) are optional — include only what applies
 - Update this block when switching focus areas
-- The status line displays it as a breadcrumb: `Combat System > Melee Combat > Hitboxes`
+- The status line displays it as a breadcrumb: `Tiered Discounts > Rule editor > CartDiscount`
 - Remove or empty the block when no active work focus exists
 
 After any disruption (compaction, crash, `/clear`), read the state file first.
 
 ### Incremental File Writing
 
-When creating multi-section documents (design docs, architecture docs, lore entries):
+When creating multi-section documents (requirement docs, ADRs, API contracts,
+App Store checklists):
 
 1. Create the file immediately with a skeleton (all section headers, empty bodies)
 2. Discuss and draft one section at a time in conversation
@@ -66,18 +68,20 @@ This keeps the context window holding only the *current* section's discussion
 ## Context Budgets by Task Type
 
 - Light (read/review): ~3k tokens startup
-- Medium (implement feature): ~8k tokens
-- Heavy (multi-system refactor): ~15k tokens
+- Medium (implement a feature): ~8k tokens
+- Heavy (multi-app refactor or full API version bump): ~15k tokens
 
 ## Subagent Delegation
 
 Use subagents for research and exploration to keep the main session clean.
 Subagents run in their own context window and return only summaries:
 
-- **Use subagents** when investigating across multiple files, exploring unfamiliar code,
-  or doing research that would consume >5k tokens of file reads
+- **Use subagents** when investigating across multiple files, exploring an
+  unfamiliar app, auditing a dependency tree, or reading a long API changelog
+  that would consume >5k tokens of file reads
 - **Use direct reads** when you know exactly which 1-2 files to check
-- Subagents do not inherit conversation history — provide full context in the prompt
+- Subagents do not inherit conversation history — provide full context in the prompt,
+  including the app path and the pinned API version
 
 ## Compaction Instructions
 
@@ -89,6 +93,7 @@ When context is compacted, preserve the following in the summary:
 - Active sprint tasks and their current status
 - Agent invocations and their outcomes (success/failure/blocked)
 - Test results (pass/fail counts, specific failures)
+- The pinned Shopify API version and any deprecation findings in play
 - Unresolved blockers or questions awaiting user input
 - The current task and what step we are on
 - Which sections of the current document are written to file vs. still in progress
@@ -104,4 +109,6 @@ If a session dies ("prompt too long") or you start a new session to continue wor
 1. The `session-start.sh` hook will detect and preview `active.md` automatically
 2. Read the full state file for context
 3. Read the partially-completed file(s) listed in the state
-4. Continue from the next incomplete section or task
+4. Re-check the pinned API version in `apps/<app>/shopify.app.toml` before
+   touching any GraphQL operation
+5. Continue from the next incomplete section or task

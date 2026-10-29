@@ -11,11 +11,12 @@ Desktop.ini
 
 # === Claude Code Local ===
 .claude/settings.local.json
+.claude/agent-memory
 CLAUDE.local.md
 production/session-logs/
+production/session-state/
 
 # === Internal Planning (not for public) ===
-
 expansions/
 
 # === Marrow (eval tooling — never commit) ===
@@ -25,75 +26,21 @@ marrow/
 # Created on first use by /consistency-check and /architecture-review
 docs/consistency-failures.md
 
+# === Dependencies ===
+node_modules/
+.npm/
+.pnpm-store/
+.yarn/cache/
+.yarn/install-state.gz
+
 # === Build Output ===
 build/
-builds/
-bin/
-obj/
-out/
 dist/
-*.exe
-*.dll
-*.so
-*.dylib
-*.app
-
-# === Engine: Godot ===
-.godot/
-*.translation
-export_presets.cfg
-# Uncomment if using Godot:
-# *.import
-# NOTE: *.uid files must NOT be ignored — commit them (see docs/architecture/ADR-godot-uid-vcs-policy.md).
-# Godot 4.4+ *.uid files are deterministic, stable resource identities referenced by
-# committed uid:// links in .tscn/.tres files; gitignoring them causes UID drift and
-# broken references across clones.
-
-# === Engine: Unity ===
-[Ll]ibrary/
-[Tt]emp/
-[Oo]bj/
-[Bb]uild/
-[Bb]uilds/
-[Ll]ogs/
-[Uu]ser[Ss]ettings/
-*.csproj
-*.unityproj
-*.sln
-*.suo
-*.tmp
-*.user
-*.userprefs
-*.pidb
-*.booproj
-*.svd
-*.pdb
-*.mdb
-*.opendb
-*.VC.db
-crashlytics-buildid.txt
-sysinfo.txt
-# Uncomment if using Unity:
-# [Aa]ssets/[Aa]sset[Ss]tore[Tt]ools/
-
-# === Engine: Unreal ===
-Binaries/
-DerivedDataCache/
-Intermediate/
-Saved/
-*.VC.opendb
-*.opensdf
-*.sdf
-*.cachefile
-*.VC.db
-# Uncomment if using Unreal:
-# *.uasset
-# *.umap
-
-# === Compiled Shaders ===
-*.spv
-*.cso
-*.dxbc
+out/
+.next/
+coverage/
+*.tsbuildinfo
+.esbuild/
 
 # === Temporary and Cache ===
 *.tmp
@@ -102,8 +49,6 @@ Saved/
 *.log
 __pycache__/
 *.pyc
-node_modules/
-.npm/
 
 # === Archives ===
 *.zip
@@ -113,27 +58,16 @@ node_modules/
 
 # === Secrets and Environment ===
 .env
-.env.local
-.env.*.local
+.env.*
+!.env.example
 *.pem
 *.key
 credentials.json
 secrets.json
 
-# === Large Binary Assets (use Git LFS instead) ===
-# Uncomment and configure with Git LFS for your project:
-# *.png
-# *.jpg
-# *.jpeg
-# *.wav
-# *.mp3
-# *.ogg
-# *.fbx
-# *.blend
-# *.psd
-# *.tga
-# *.exr
-# *.hdr
+# === Shopify CLI Local State ===
+.shopify/
+apps/*/.shopify/
 
 # === OS Generated ===
 ehthumbs.db
@@ -146,4 +80,3 @@ $RECYCLE.BIN/
 *.msm
 *.msp
 *.lnk
-.claude/agent-memory

@@ -15,7 +15,10 @@
       "Bash(dir *)",
       "Bash(python -m json.tool*)",
       "Bash(python -m pytest*)",
-      "Bash(py -m pytest*)"
+      "Bash(py -m pytest*)",
+      "Bash(npm run *)",
+      "Bash(npx vitest *)",
+      "Bash(shopify *)"
     ],
     "deny": [
       "Bash(rm -rf *)",

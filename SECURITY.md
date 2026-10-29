@@ -11,7 +11,7 @@ not supported.
 
 Use GitHub's private vulnerability reporting instead:
 
-**[Report a vulnerability →](https://github.com/ronail/Agent-Harness-Game-Studios/security/advisories/new)**
+**[Report a vulnerability →](https://github.com/ronail/Agentic-Shopify-App-Pipeline/security/advisories/new)**
 
 Include as much detail as possible:
 - Description of the vulnerability and what it affects
@@ -26,17 +26,27 @@ Include as much detail as possible:
 
 ## What Is In Scope
 
-AHGS is a **local development tool** — it installs shell hooks and coordinates
-AI agents that run directly on your machine. Security issues are primarily about
-contributed code that executes in users' environments without their awareness.
+This repo is a **local development tool** — it installs shell hooks and
+coordinates AI agents that run directly on your machine — plus the template
+code those agents generate for Shopify apps. Security issues fall into two
+groups: contributed code that executes in users' environments without their
+awareness, and generated app code that mishandles merchant data.
 
-### High Severity
+### High Severity — framework
 - Hooks (`.claude/hooks/*.sh`) that execute malicious or undisclosed shell
   commands on user machines
 - Skills or agents that exfiltrate environment variables, API keys, or secrets
-- Prompt injection via skill or agent definitions that causes Claude to bypass
+- Prompt injection via skill or agent definitions that causes the model to bypass
   safety measures or take unauthorized destructive actions
 - Contributions that silently alter behavior in ways users cannot audit
+
+### High Severity — generated app code
+- Access tokens or session tokens logged, stored in plaintext, or exposed to the
+  browser
+- Webhook handlers that act on payloads before HMAC verification
+- Admin API calls made with a merchant-supplied identifier without checking the
+  session's shop
+- OAuth flows that skip state/HMAC validation or accept an unverified callback
 
 ### Medium Severity
 - Skills that make undisclosed outbound network requests
@@ -44,17 +54,20 @@ contributed code that executes in users' environments without their awareness.
 - Hook patterns that behave differently across platforms to conceal behavior
 - Skills that write outside their documented scope without an explicit user
   approval step
+- Requested access scopes wider than the feature needs
 
 ### Out of Scope
 - The behavior of Claude or the Claude Code CLI itself
   (report to [Anthropic](https://www.anthropic.com/security))
 - Bugs in the user's Claude Code installation or editor extension
+- Vulnerabilities in Shopify's platform or Admin API
+  (report to [Shopify](https://hackerone.com/shopify))
 - Theoretical vulnerabilities with no realistic attack path
 - Issues requiring physical access to the user's machine
 
 ## Security Guidelines for Contributors
 
-When contributing hooks, skills, or agents:
+When contributing hooks, skills, agents, or templates:
 
 - **Hooks must be POSIX-compatible** — use `grep -E`, not `grep -P`; avoid
   platform-specific syntax that behaves differently across operating systems
@@ -64,6 +77,8 @@ When contributing hooks, skills, or agents:
   required and clearly documented in the skill's header
 - **Skills must not write outside their documented scope** without an explicit
   user confirmation step
+- **Templates must not hardcode credentials, API versions, or store domains** —
+  scaffold them from config so a reviewer can see where they come from
 
 ## Disclosure Policy
 

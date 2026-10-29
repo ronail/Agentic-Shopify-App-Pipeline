@@ -1,26 +1,23 @@
-# Agent Harness Game Studios -- Game Studio Agent Architecture
+# Agentic Shopify App Pipeline — Shopify App Studio Agent Architecture
 
-Indie game development managed through 49 coordinated Claude Code subagents.
-Each agent owns a specific domain, enforcing separation of concerns and quality.
+AI-driven research, development, release and review pipeline for Shopify apps,
+run by coordinated Claude Code subagents. Each agent owns one domain, enforces
+separation of concerns, and hands off only at a defined pipeline gate.
 
 ## Technology Stack
 
-- **Engine**: [CHOOSE: Godot 4 / Unity / Unreal Engine 5]
-- **Language**: [CHOOSE: GDScript / C# / C++ / Blueprint]
+- **Language**: TypeScript
+- **UI**: React with Polaris (embedded Shopify admin)
+- **Embedding**: App Bridge
+- **Shopify API**: GraphQL Admin API (version-pinned per app)
+- **Runtime**: Node
+- **Local Dev**: Shopify CLI
+- **Tests**: Vitest
 - **Version Control**: Git with trunk-based development
-- **Build System**: [SPECIFY after choosing engine]
-- **Asset Pipeline**: [SPECIFY after choosing engine]
-
-> **Note**: Engine-specialist agents exist for Godot, Unity, and Unreal with
-> dedicated sub-specialists. Use the set matching your engine.
 
 ## Project Structure
 
 @.claude/docs/directory-structure.md
-
-## Engine Version Reference
-
-@docs/engine-reference/godot/VERSION.md
 
 ## Technical Preferences
 
@@ -42,8 +39,9 @@ Every task follows: **Question -> Options -> Decision -> Draft -> Approval**
 
 See `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` for full protocol and examples.
 
-> **First session?** If the project has no engine configured and no game concept,
-> run `/start` to begin the guided onboarding flow.
+> **First session?** If the repo has no app scaffolded yet, run `/start` to begin
+> the guided onboarding flow: research the merchant problem worth solving, then
+> scaffold `apps/<app-name>/`.
 
 ## Coding Standards
 

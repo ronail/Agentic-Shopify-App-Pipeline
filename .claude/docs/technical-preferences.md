@@ -1,87 +1,139 @@
 # Technical Preferences
 
-<!-- Populated by /setup-engine. Updated as the user makes decisions throughout development. -->
+<!-- Written by /start during onboarding. Updated as the user makes decisions. -->
 <!-- All agents reference this file for project-specific standards and conventions. -->
 
-## Engine & Language
+## Stack & Language
 
-- **Engine**: [TO BE CONFIGURED — run /setup-engine]
-- **Language**: [TO BE CONFIGURED]
-- **Rendering**: [TO BE CONFIGURED]
-- **Physics**: [TO BE CONFIGURED]
+- **Language**: TypeScript (strict mode; no `any` in exported signatures)
+- **UI**: React 18 with Polaris components
+- **Embedding**: App Bridge (embedded admin, session tokens)
+- **Shopify API**: GraphQL Admin API, version-pinned per app
+- **Runtime**: Node 20 LTS (ES modules)
+- **Local Dev**: Shopify CLI (`shopify app dev`)
+- **Package Manager**: npm
 
-## Input & Platform
+## Hosting & Data
 
-<!-- Written by /setup-engine. Read by /ux-design, /ux-review, /test-setup, /team-ui, and /dev-story -->
-<!-- to scope interaction specs, test helpers, and implementation to the correct input methods. -->
+<!-- Read by /scaffold, /devops-engineer work, and /release-checklist -->
 
-- **Target Platforms**: [TO BE CONFIGURED — e.g., PC, Console, Mobile, Web]
-- **Input Methods**: [TO BE CONFIGURED — e.g., Keyboard/Mouse, Gamepad, Touch, Mixed]
-- **Primary Input**: [TO BE CONFIGURED — the dominant input for this game]
-- **Gamepad Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Touch Support**: [TO BE CONFIGURED — Full / Partial / None]
-- **Platform Notes**: [TO BE CONFIGURED — any platform-specific UX constraints]
+- **Hosting**: Node service on Fly.io (default). Alternatives on the same
+  contract: Render or Vercel. Requirement is a long-lived Node process with
+  HTTP access, because webhook delivery and OAuth callbacks need it.
+- **Environments**: local (Shopify CLI tunnel) → dev store → production
+- **Database**: Postgres 16 (managed by the host). Sessions, install records,
+  merchant settings, and job state.
+- **Data Access**: SQL migrations checked into `apps/<app>/db/migrations/`;
+  query layer behind a repository module, never inline in route handlers
+- **Background Jobs**: queue table in Postgres, drained by a worker process
+- **File/Object Storage**: host object storage for exports; never the app
+  filesystem
+
+## Merchant & Store Targeting
+
+<!-- Read by /research, /ux-design, /ux-review, /qa-plan, and /localize -->
+
+- **Primary Market**: [TO BE CONFIGURED — e.g., US/CA, EU, APAC]
+- **Store Sizes Served**: [TO BE CONFIGURED — e.g., solo merchant, SMB, Plus]
+- **Admin Surfaces**: embedded admin page, theme app extension, checkout
+  extension (only if the app genuinely needs checkout)
+- **Supported Languages**: English first; add locales only with a translation
+  path (see `localization-lead`)
+- **Accessibility Target**: WCAG 2.1 AA on every admin surface
 
 ## Naming Conventions
 
-- **Classes**: [TO BE CONFIGURED]
-- **Variables**: [TO BE CONFIGURED]
-- **Signals/Events**: [TO BE CONFIGURED]
-- **Files**: [TO BE CONFIGURED]
-- **Scenes/Prefabs**: [TO BE CONFIGURED]
-- **Constants**: [TO BE CONFIGURED]
+- **Types/Components**: `PascalCase` (`DiscountRuleCard`)
+- **Functions/Variables**: `camelCase`
+- **Files**: `kebab-case.ts` / `kebab-case.tsx` (`discount-rule-card.tsx`)
+- **Hooks**: `use` prefix, file matches hook name (`use-shop-context.ts`)
+- **Constants**: `SCREAMING_SNAKE_CASE`
+- **GraphQL Operations**: `PascalCase` operation names, one operation per file,
+  file named after the operation (`DiscountCreate.graphql`)
+- **Webhook Handlers**: topic in kebab-case (`orders-create.ts`)
+- **Requirement IDs**: `REQ-<AREA>-<NNN>` (`REQ-BILL-001`)
 
 ## Performance Budgets
 
-- **Target Framerate**: [TO BE CONFIGURED]
-- **Frame Budget**: [TO BE CONFIGURED]
-- **Draw Calls**: [TO BE CONFIGURED]
-- **Memory Ceiling**: [TO BE CONFIGURED]
+- **Admin Route Load (p75)**: under 1.5 s on a warm session
+- **GraphQL Cost**: stay under 50% of the leaky-bucket capacity per request
+  burst; no query above 500 requested cost without a bulk operation
+- **Webhook Handler p95**: under 500 ms, acknowledged before slow work is queued
+- **Bundle**: initial admin route under 250 KB gzipped
+- **Install Flow**: OAuth round trip completes in under 5 s on a dev store
 
 ## Testing
 
-- **Framework**: [TO BE CONFIGURED]
-- **Minimum Coverage**: [TO BE CONFIGURED]
-- **Required Tests**: Balance formulas, gameplay systems, networking (if applicable)
+- **Framework**: Vitest (unit + integration), Testing Library for components
+- **Location**: tests beside the source they cover, inside `apps/<app>/`
+  (`discount.ts` and `discount.test.ts` in the same folder)
+- **Minimum Coverage**: 80% lines on shared modules; 100% on billing and
+  webhook signature verification
+- **Required Tests**: discount/price calculations, GraphQL variable shaping,
+  webhook HMAC verification, billing plan gating, OAuth callback handling
+- **Not Automated**: Polaris visual fidelity, App Store listing copy, real
+  merchant install flows (covered by dev-store walkthroughs)
 
 ## Forbidden Patterns
 
-<!-- Add patterns that should never appear in this project's codebase -->
-- Gitignoring `*.uid` files (Godot). `.uid` files must always be committed to git, same as `.import` files — see [ADR-godot-uid-vcs-policy.md](../../docs/architecture/ADR-godot-uid-vcs-policy.md). Gitignoring them causes UID drift between clones and breaks `uid://` references committed in scenes/resources.
+<!-- Patterns that must never appear in this project's codebase -->
+- Calling the Admin API from the browser — every call goes through the app
+  server with a session token check
+- Storing access tokens in plaintext columns or logs
+- Hardcoding an API version string in more than one place per app; it lives in
+  `shopify.app.toml` and the ADR, and is read from config
+- Unverified webhook payloads — HMAC check before any parsing side effect
+- `any` in exported TypeScript signatures
+- Mutating a merchant's data inside a GET route
 
 ## Allowed Libraries / Addons
 
-<!-- Add approved third-party dependencies here -->
-- [None configured yet — add as dependencies are approved]
+<!-- Approved third-party dependencies -->
+- `@shopify/shopify-app-remix` — auth, session storage, webhook registration
+- `@shopify/polaris` — admin UI components
+- `@shopify/app-bridge-react` — embedded navigation and context
+- `zod` — runtime validation at API and webhook boundaries
+- `vitest` + `@testing-library/react` — tests
+- [Add further dependencies only after `technical-director` review]
 
 ## Architecture Decisions Log
 
-<!-- Quick reference linking to full ADRs in docs/architecture/ -->
+<!-- Quick reference linking to full ADRs in docs/architecture/apps/<app>/ -->
 - [No ADRs yet — use /architecture-decision to create one]
 
-## Engine Specialists
+## Shopify Specialists
 
-<!-- Written by /setup-engine when engine is configured. -->
-<!-- Read by /code-review, /architecture-decision, /architecture-review, and team skills -->
-<!-- to know which specialist to spawn for engine-specific validation. -->
+<!-- Read by /code-review, /architecture-decision, /architecture-review -->
+<!-- to know which specialist to spawn for domain-specific validation. -->
 
-- **Primary**: [TO BE CONFIGURED — run /setup-engine]
-- **Language/Code Specialist**: [TO BE CONFIGURED]
-- **Shader Specialist**: [TO BE CONFIGURED]
-- **UI Specialist**: [TO BE CONFIGURED]
-- **Additional Specialists**: [TO BE CONFIGURED]
-- **Routing Notes**: [TO BE CONFIGURED]
+- **Primary / Review Gate**: `lead-engineer`
+- **Architecture**: `app-architect`
+- **API Surface & Versioning**: `api-lead`
+- **Admin UI**: `polaris-specialist`
+- **GraphQL Operations**: `graphql-specialist`
+- **Webhooks**: `webhooks-specialist`
+- **Billing**: `billing-specialist`
+- **Auth / Sessions**: `auth-specialist`
+- **Embedded Context**: `app-bridge-specialist`
+- **Liquid / Theme Extensions**: `liquid-specialist`
+- **Checkout Extensions**: `checkout-specialist`
+- **Security Audit**: `security-specialist`
 
-### File Extension Routing
+### File Type Routing
 
 <!-- Skills use this table to select the right specialist per file type. -->
-<!-- If a row says [TO BE CONFIGURED], fall back to Primary for that file type. -->
+<!-- If a row is blank, fall back to `lead-engineer` for that file type. -->
 
 | File Extension / Type | Specialist to Spawn |
 |-----------------------|---------------------|
-| Game code (primary language) | [TO BE CONFIGURED] |
-| Shader / material files | [TO BE CONFIGURED] |
-| UI / screen files | [TO BE CONFIGURED] |
-| Scene / prefab / level files | [TO BE CONFIGURED] |
-| Native extension / plugin files | [TO BE CONFIGURED] |
-| General architecture review | Primary |
+| `*.ts`, `*.tsx` (app logic) | `lead-engineer` |
+| `*.tsx` (Polaris components, routes) | `polaris-specialist` |
+| `*.graphql`, query/mutation modules | `graphql-specialist` |
+| Webhook route handlers | `webhooks-specialist` |
+| Billing / plan gating modules | `billing-specialist` |
+| OAuth, session, token modules | `auth-specialist` |
+| `shopify.app.toml`, App Bridge setup | `app-bridge-specialist` |
+| `*.liquid`, theme app extension blocks | `liquid-specialist` |
+| Checkout extension files | `checkout-specialist` |
+| Migrations, schema, infra config | `devops-engineer` |
+| General architecture review | `app-architect` |

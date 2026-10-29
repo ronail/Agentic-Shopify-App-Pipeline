@@ -1,36 +1,58 @@
 # Source Directory
 
-When writing or editing game code in this directory, follow these standards.
+When writing or editing app code in this directory, follow these standards.
 
-## Engine Version Warning
+## Shopify API Version Warning
 
-The LLM's training data predates the pinned engine version.
-**Always check `docs/engine-reference/` before using any engine API.**
-Do not guess at post-cutoff API signatures — look them up first.
+The LLM's training data predates the pinned Shopify API version.
+**Always check `docs/shopify-api-reference/` before using any Admin GraphQL
+query, mutation, or webhook payload.**
+Do not guess at field names, mutation arguments, or deprecation status — look
+them up in the pinned snapshot first.
 
 ## Coding Standards
 
-- All public APIs require doc comments
-- Gameplay values must be **data-driven** (external config files), never hardcoded
-- Prefer dependency injection over singletons for testability
-- Every new system needs a corresponding ADR in `docs/architecture/`
-- Commits must reference the relevant story ID or design document
+- TypeScript everywhere; React components for the embedded admin surface
+- All public APIs require doc comments (exported functions, types, hooks)
+- Merchant-visible values must be **data-driven** (external config), never
+  hardcoded in components
+- Prefer dependency injection over module-level singletons for testability
+- Every new subsystem needs a corresponding ADR in `docs/architecture/apps/<app>/`
+- Commits must reference the relevant story ID or requirement ID
 
 ## File Routing
 
-Match the engine-specialist agent to the file type being written.
-See `CLAUDE.md` → Technical Preferences → Engine Specialists → File Extension Routing.
+Match the specialist to the file type being written:
 
-When in doubt, use the primary engine specialist configured in `CLAUDE.md`.
+| File type | Specialist |
+|-----------|-----------|
+| React / Polaris admin UI | `polaris-specialist` |
+| GraphQL queries, mutations, bulk ops | `graphql-specialist` |
+| Webhook handlers and subscriptions | `webhooks-specialist` |
+| Billing and plan gating | `billing-specialist` |
+| OAuth, session tokens, App Bridge | `auth-specialist` |
+| Liquid, theme app extensions, app blocks | `liquid-specialist` |
+| Checkout UI extensions | `checkout-specialist` |
+
+When in doubt, use `lead-engineer`, which owns the code review gate.
+
+## Layout
+
+App code lives under `apps/<app-name>/`. Shared libraries stay in `src/`.
+There is no top-level `tests/` directory.
 
 ## Tests
 
-Tests live in `tests/` — not in `src/`.
-Run `/test-setup` to scaffold the test framework if it doesn't exist yet.
-Every gameplay system should have unit tests covering its formulas and edge cases.
+Tests live **beside the source they cover**, inside `apps/<app-name>/`:
+`discount.ts` and `discount.test.ts` in the same folder. Vitest picks them up by
+glob; there is no separate test tree to keep in sync.
+
+Every non-trivial module needs unit tests covering its calculations, edge cases,
+and error paths. GraphQL calls and webhook handlers are tested against recorded
+fixtures, not a live store.
 
 ## Verification-Driven Development
 
-Write tests first when adding gameplay systems.
-For UI changes, verify with screenshots.
+Write tests first when adding a subsystem.
+For admin UI changes, verify with Polaris screenshots or an interaction test.
 Compare expected output to actual output before marking work complete.

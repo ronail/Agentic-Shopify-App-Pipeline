@@ -1,4 +1,4 @@
-# Project-local Codex defaults for Claude Code Game Studios.
+# Project-local Codex defaults for the Agentic Shopify App Pipeline.
 #
 # Keep command approvals interactive and limit writes/network access to the
 # trusted workspace. The project must be trusted before Codex loads this file.
@@ -8,7 +8,7 @@ sandbox_mode = "workspace-write"
 # The Claude-compatible skill and agent frontmatter uses three model tiers:
 # haiku, sonnet, and opus. Their Codex model IDs are defined in
 # .codex/agent-models.toml. Codex must pass the resolved ID explicitly when
-# spawning a studio agent; this setting is only the project-wide fallback.
+# spawning a pipeline agent; this setting is only the project-wide fallback.
 model = "gpt-6.1-terra"
 
 [features]
