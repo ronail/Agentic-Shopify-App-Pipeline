@@ -131,14 +131,14 @@ Every interaction follows:
 
             It traces to REQ-BUNDLE-003, 004, 007 and 009.
 
-            May I write docs/architecture/apps/discount-bundles/
+            May I write docs/architecture/apps/my-app/
             ADR-0001-bundle-cart-transform.md?"
 
     User: "Yes."  ← only now is the file created
 
 11. AGENT WRITES FILE
     Agent: [writes]
-           "Created. Next: /architecture-review discount-bundles once ADR-0002
+           "Created. Next: /architecture-review my-app once ADR-0002
             lands, since that ADR owns REQ-BUNDLE-001 and 002."
 ```
 
@@ -148,12 +148,12 @@ Every interaction follows:
 
 ### 🎨 Product and Design Tasks
 
-**Example:** "Design the rule builder for `order-tags`"
+**Example:** "Design the rule builder for `my-app`"
 
 ```
 ❌ WRONG (Autonomous):
 User: "Design the rule builder"
-Agent: [writes apps/order-tags/design/ux/rule-builder.md with a full spec]
+Agent: [writes apps/my-app/design/ux/rule-builder.md with a full spec]
 Agent: "Done."
 
 ✅ RIGHT (Collaborative):
@@ -316,7 +316,7 @@ producer: "Three options, and I want to be honest about each:
 
 ✅ **Constrained options with trade-offs:**
 ```
-"Plan structure for order-tags:
+"Plan structure for my-app:
  1. Flat monthly (simple; no usage anxiety; you eat the heavy users)
  2. Monthly + tag-write allowance (aligns cost with value; needs metering UI)
  3. Per-seat (irrelevant here — one merchant team per shop)
@@ -472,7 +472,7 @@ conversation.
 
 ```
 1. Agent creates the file with the section skeleton.
-   Agent: "May I create apps/discount-bundles/design/ux/bundle-editor.md with
+   Agent: "May I create apps/my-app/design/ux/bundle-editor.md with
            the section skeleton?"
    User: "Yes"
 
@@ -483,7 +483,7 @@ conversation.
    Agent: "May I write this section?"
    User: "Yes"
    Agent: [writes section, appends progress to
-           production/apps/discount-bundles/session-state/active.md]
+           production/apps/my-app/session-state/active.md]
    ─── this section's context can now be compacted ───
    ─── the decisions are in the file ───
 
@@ -503,7 +503,7 @@ at 3–5k tokens because completed sections live on disk.
 Agent: "This change touches 3 files:
        1. app/queue/drain.ts        the write path
        2. app/queue/__tests__/drain.test.ts
-       3. docs/architecture/apps/order-tags/requirements.yaml  (no — this is
+       3. docs/architecture/apps/my-app/requirements.yaml  (no — this is
           append-only and only /architecture-review writes it)
 
        So: 2 files. Should I:

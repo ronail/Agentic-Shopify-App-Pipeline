@@ -33,7 +33,7 @@ From the repository root, run:
 For example:
 
 ```bash
-./.claude/scripts/setup-worktree-agent-memory.sh ./.claude/worktrees/discount-bundles-billing
+./.claude/scripts/setup-worktree-agent-memory.sh ./.claude/worktrees/my-app-billing
 ```
 
 The script validates both paths, preserves an existing symlink, warns before
