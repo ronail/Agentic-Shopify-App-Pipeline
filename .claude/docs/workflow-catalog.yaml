@@ -1,31 +1,37 @@
-# Workflow Catalog
-# Used by /help to determine where a user is and what comes next.
+# Workflow Catalog — Shopify app pipeline
+# Read by /help (and /start) to locate the user in the pipeline and name the
+# next step. The catalog is the only source of phase ids, names and step order.
 #
-# Artifact checks:
-#   glob: file glob pattern — complete if >=1 file matches (or min_count)
-#   pattern: text pattern that must appear in the file (checked after glob)
-#   min_count: minimum matching files required (default: 1)
-#   note: human-readable fallback when completion can't be auto-detected
+# Top-level `phases` is an ordered list, ids 0-5. Each step id is a directory
+# name under .claude/skills/ and its command is /<id>.
 #
-# required: true  -> blocks progression to next phase (shown as REQUIRED)
-# required: false -> optional enhancement (shown as OPTIONAL)
-# repeatable: true -> runs multiple times (one per app, story, etc.)
+# Step fields:
+#   id          skill directory under .claude/skills/ (also the /command)
+#   name        human label
+#   command     /<skill>
+#   required    true  -> blocks progression to the next phase (shown REQUIRED)
+#               false -> optional enhancement (OPTIONAL)
+#   repeatable  runs once per app / epic / story / sprint
+#   artifact    completion evidence for /help:
+#                 glob + min_count (default 1) + optional pattern
+#                 note  -> MANUAL, cannot be auto-detected
+#               no artifact -> UNKNOWN, not trackable
 #
-# Phase gates (/gate-check): verdicts are ADVISORY — they guide the decision
-# but never hard-block advancement. The user always decides whether to proceed.
-#
-# Every `command: /<skill>` and every step `id` below is a directory name that
-# exists under .claude/skills/ (the 66-skill canonical set).
-# Pipeline stage ladder: research -> architecture -> prototype -> scope ->
-# build -> test -> release -> update. Gates: gate-1-research,
-# gate-2-prototype, gate-3-scope, gate-4-release, gate-5-update.
+# Gates are the only place pipeline state changes. A gate step's id is the gate
+# id and its command is /gate-check. The verdict is advisory; the approver's
+# record in apps/<app>/approvals.json is what unlocks the next phase.
+# Gate ids and approvers: gate-1-research (product-director),
+# gate-2-prototype (technical-director),
+# gate-3-scope (product-director + technical-director),
+# gate-4-release (release-manager + technical-director),
+# gate-5-update (product-director).
 
 phases:
 
-  intake:
-    label: "Request"
-    description: "Capture and shape what is being built, then route to research"
-    next_phase: research
+  - id: 0
+    name: Research
+    description: "Decide whether the merchant problem is worth an app, and which Shopify surface it needs"
+    next_phase: 1
     steps:
       - id: start
         name: "Pipeline Dashboard"
@@ -33,13 +39,40 @@ phases:
         required: true
         artifact:
           glob: "docs/registry/apps.json"
-        description: "Read the master request, every app's status, and the pipeline stage; route to the next skill. Supports /start claude|codex|hermes for model routing."
+        description: "Read the master request, every app's status and the pipeline stage; route to the next skill."
 
       - id: update-request
         name: "Update Request"
         command: /update-request
         required: false
         description: "Amend request.md without losing prior intent (history appended to request-history.md)."
+
+      - id: feature-request
+        name: "Feature Request"
+        command: /feature-request
+        required: false
+        repeatable: true
+        description: "Structure a raw merchant request into a problem statement before research."
+
+      - id: brainstorm
+        name: "Brainstorm"
+        command: /brainstorm
+        required: false
+        description: "Diverge on solution shapes for the merchant problem before committing to one."
+
+      - id: research
+        name: "Merchant Problem / Competitor Research"
+        command: /research
+        required: true
+        artifact:
+          note: "Check docs/research/ or the app's research notes."
+        description: "State the merchant problem, who has it, and the Admin API surface (operations, objects, scopes) it needs."
+
+      - id: update-research
+        name: "Update Research"
+        command: /update-research
+        required: false
+        description: "Refresh market/competitor research inputs without discarding the prior round."
 
       - id: mmmvp-proposals
         name: "M.V.P. Proposals"
@@ -59,23 +92,6 @@ phases:
         required: false
         description: "Review a design spec for completeness, Polaris/accessibility, and implementability."
 
-  research:
-    label: "Research"
-    description: "Original and competitor-killer research; UX grounding"
-    next_phase: architecture
-    steps:
-      - id: research
-        name: "Original / Competitor Research"
-        command: /research
-        required: true
-        description: "Original vs Competitor-Killer research, consuming current request.md."
-
-      - id: update-research
-        name: "Update Research"
-        command: /update-research
-        required: false
-        description: "Refresh market/competitor research inputs."
-
       - id: ux-design
         name: "UX Specs"
         command: /ux-design
@@ -83,25 +99,77 @@ phases:
         repeatable: true
         artifact:
           glob: "apps/*/design/ux/*.md"
-          min_count: 3
         description: "Author per-screen admin (Polaris) UX specs; WCAG 2.1 AA."
 
-      - id: ux-review
-        name: "UX Review"
-        command: /ux-review
-        required: true
-        description: "Validate UX specs against Polaris, App Bridge, and accessibility tier."
-
       - id: gate-1-research
-        name: "Gate 1 (Research)"
+        name: "Gate 1 — Research"
         command: /gate-check
         required: true
-        description: "Verify gate-1-research is approved in apps/<app>/approvals.json."
+        description: "Record gate-1-research (product-director) in apps/<app>/approvals.json before scaffolding."
 
-  architecture:
-    label: "Architecture"
-    description: "Architectural decisions, control manifest, and requirements registry"
-    next_phase: prototype
+  - id: 1
+    name: Scaffold
+    description: "Stand the app up on a dev store and de-risk the risky part with a throwaway prototype"
+    next_phase: 2
+    steps:
+      - id: scaffold
+        name: "Scaffold App"
+        command: /scaffold
+        required: true
+        artifact:
+          glob: "apps/*/shopify.app.toml"
+        description: "Create apps/<app-name>/ from the Remix template, pin the Admin API version, register it in docs/registry/apps.json."
+
+      - id: adopt
+        name: "Adopt (Brownfield)"
+        command: /adopt
+        required: false
+        description: "Audit an existing app's structure and produce a migration plan into the pipeline layout."
+
+      - id: create-test-store
+        name: "Create Test Store"
+        command: /create-test-store
+        required: false
+        description: "Provision a dev/test store for an app."
+
+      - id: build-prototype
+        name: "Build Prototype"
+        command: /build-prototype
+        required: false
+        repeatable: true
+        artifact:
+          note: "Check apps/<app>/prototype/ for the throwaway merchant-facing prototype."
+        description: "Build a throwaway prototype under apps/<app>/prototype/ to answer one open question."
+
+      - id: prototype
+        name: "Prototype Scaffold"
+        command: /prototype
+        required: false
+        description: "Scaffold or replace a throwaway prototype under apps/<app>/prototype/."
+
+      - id: prototype-review
+        name: "Prototype Review"
+        command: /prototype-review
+        required: false
+        description: "Review a prototype against the request before committing to a build."
+
+      - id: deploy-to-test-store
+        name: "Deploy to Test Store"
+        command: /deploy-to-test-store
+        required: false
+        repeatable: true
+        description: "Deploy a build to the dev store for merchant-flow validation."
+
+      - id: gate-2-prototype
+        name: "Gate 2 — Prototype"
+        command: /gate-check
+        required: true
+        description: "Record gate-2-prototype (technical-director) before committing to architecture."
+
+  - id: 2
+    name: Plan
+    description: "Architecture, control manifest, epics and stories, sized and sprint-ready"
+    next_phase: 3
     steps:
       - id: create-architecture
         name: "Architecture Document"
@@ -118,9 +186,8 @@ phases:
         repeatable: true
         artifact:
           glob: "docs/architecture/apps/*/adr-*.md"
-          min_count: 3
           pattern: "Accepted"
-        description: "Document key decisions as ADRs (Shopify API Surface + App Requirements Addressed)."
+        description: "Document key decisions as ADRs (Shopify API surface + app requirements addressed)."
 
       - id: architecture-review
         name: "Architecture Review"
@@ -136,53 +203,6 @@ phases:
           glob: "docs/architecture/apps/*/control-manifest.md"
         description: "Flat Required/Forbidden/Guardrails sheet per layer (admin UI, app server, webhooks, theme ext, checkout ext, data)."
 
-  prototype:
-    label: "Prototype"
-    description: "Throwaway prototypes to de-risk a feature"
-    next_phase: scope
-    steps:
-      - id: build-prototype
-        name: "Build Prototype"
-        command: /build-prototype
-        required: false
-        repeatable: true
-        artifact:
-          note: "Check apps/<app>/prototype/ for the throwaway merchant-facing prototype."
-        description: "Build a throwaway prototype under apps/<app>/prototype/."
-
-      - id: prototype-review
-        name: "Prototype Review"
-        command: /prototype-review
-        required: false
-        description: "Review a prototype against the request before committing to a build."
-
-      - id: prototype
-        name: "Prototype Scaffold"
-        command: /prototype
-        required: false
-        description: "Scaffold/replace a throwaway prototype under apps/<app>/prototype/."
-
-      - id: gate-2-prototype
-        name: "Gate 2 (Prototype)"
-        command: /gate-check
-        required: true
-        description: "Verify gate-2-prototype is approved in apps/<app>/approvals.json."
-
-  scope:
-    label: "Scope & Plan"
-    description: "Turn architecture + prototypes into epics and a sprint-ready backlog"
-    next_phase: build
-    steps:
-      - id: scope-check
-        name: "Scope Check"
-        command: /scope-check
-        required: false
-        repeatable: true
-        artifact:
-          glob: "production/sprints/sprint-*.md"
-          note: "Run when stories are added mid-sprint, or before sprint retrospectives"
-        description: "Detect scope creep by comparing to request.md."
-
       - id: create-epics
         name: "Create Epics"
         command: /create-epics
@@ -190,7 +210,6 @@ phases:
         repeatable: true
         artifact:
           glob: "production/epics/*/EPIC.md"
-          min_count: 1
         description: "Translate ADRs + requirements into epics (one per architectural module)."
 
       - id: create-stories
@@ -201,7 +220,13 @@ phases:
         artifact:
           glob: "production/epics/**/*.md"
           min_count: 2
-        description: "Break each epic into implementable story files."
+        description: "Break each epic into implementable story files with acceptance criteria."
+
+      - id: estimate
+        name: "Estimate"
+        command: /estimate
+        required: true
+        description: "Size stories (story points) from production/epics/."
 
       - id: sprint-plan
         name: "Sprint Plan"
@@ -210,14 +235,7 @@ phases:
         repeatable: true
         artifact:
           glob: "production/sprints/sprint-*.md"
-          min_count: 1
         description: "Plan the current sprint with prioritized, ready stories."
-
-      - id: estimate
-        name: "Estimate"
-        command: /estimate
-        required: true
-        description: "Size stories (story points) from production/epics/."
 
       - id: story-readiness
         name: "Story Readiness"
@@ -225,30 +243,49 @@ phases:
         required: false
         description: "Validate a story is implementation-ready before a developer picks it up."
 
+      - id: scope-check
+        name: "Scope Check"
+        command: /scope-check
+        required: false
+        repeatable: true
+        description: "Detect scope creep by comparing stories to request.md."
+
       - id: gate-3-scope
-        name: "Gate 3 (Scope)"
+        name: "Gate 3 — Scope"
         command: /gate-check
         required: true
-        description: "Verify gate-3-scope is approved in apps/<app>/approvals.json."
+        description: "Record gate-3-scope (product-director + technical-director) before the first story is built."
 
-  build:
-    label: "Build"
-    description: "Implement stories with review and done gates"
-    next_phase: test
+  - id: 3
+    name: Build
+    description: "Implement stories with code review and a done gate"
+    next_phase: 4
     steps:
+      - id: test-setup
+        name: "Test Framework Setup"
+        command: /test-setup
+        required: false
+        description: "Scaffold Vitest once before the first sprint; tests live beside source in apps/<app>/."
+
+      - id: test-helpers
+        name: "Test Helpers"
+        command: /test-helpers
+        required: false
+        description: "Generate shared test fixtures for GraphQL/webhook scenarios."
+
       - id: dev-story
         name: "Implement Story"
         command: /dev-story
         required: true
         repeatable: true
         artifact:
-          note: "Check src/ and production/epics/**/*.md for In Progress stories."
-        description: "Pick the next ready story and implement it; route to the right programmer agent."
+          note: "Check production/epics/**/*.md for stories still In Progress."
+        description: "Pick the next ready story and implement it; route to the right specialist agent."
 
       - id: code-review
         name: "Code Review"
         command: /code-review
-        required: false
+        required: true
         repeatable: true
         description: "Architectural code review after each story, before story-done."
 
@@ -266,36 +303,43 @@ phases:
         repeatable: true
         description: "Generate a QA plan per epic or sprint; feeds /smoke-check and /regression-suite."
 
-  test:
-    label: "Test"
-    description: "Frameworks, fixtures, and verification"
-    next_phase: store
-    steps:
-      - id: test-setup
-        name: "Test Framework Setup"
-        command: /test-setup
+      - id: sprint-status
+        name: "Sprint Status"
+        command: /sprint-status
         required: false
-        description: "Scaffold Vitest once before the first sprint (tests live beside source in apps/<app>/)."
+        repeatable: true
+        description: "30-line snapshot of sprint progress."
 
-      - id: test-helpers
-        name: "Test Helpers"
-        command: /test-helpers
-        required: false
-        description: "Generate shared test fixtures for GraphQL/webhook scenarios."
+  - id: 4
+    name: Review
+    description: "QA, security and UX passes on a feature-complete build"
+    next_phase: 5
+    steps:
+      - id: test-evidence-review
+        name: "Test Evidence Review"
+        command: /test-evidence-review
+        required: true
+        description: "Confirm each closed story carries real test evidence, not an assertion."
 
       - id: smoke-check
         name: "Smoke Check"
         command: /smoke-check
-        required: false
+        required: true
         repeatable: true
-        description: "Post-change smoke on the test store (critical merchant flows)."
+        description: "Post-change smoke on the dev store (install, core merchant flows, webhooks)."
 
       - id: regression-suite
         name: "Regression Suite"
         command: /regression-suite
-        required: false
+        required: true
         repeatable: true
         description: "Run regression suites across apps (Vitest, recorded fixtures)."
+
+      - id: test-flakiness
+        name: "Test Flakiness"
+        command: /test-flakiness
+        required: false
+        description: "Hunt and fix flaky tests before the release evidence is trusted."
 
       - id: soak-test
         name: "Soak Test"
@@ -312,40 +356,19 @@ phases:
       - id: security-audit
         name: "Security Audit"
         command: /security-audit
-        required: false
+        required: true
         description: "OAuth/session/HMAC/PII/scope review with compliance webhooks."
 
-  store:
-    label: "Store"
-    description: "Provision and deploy to a test store"
-    next_phase: release
-    steps:
-      - id: scaffold
-        name: "Scaffold App"
-        command: /scaffold
+      - id: ux-review
+        name: "UX Review"
+        command: /ux-review
         required: true
-        artifact:
-          glob: "apps/*/"
-          min_count: 1
-        description: "Create apps/<app-name>/ skeleton; register in docs/registry/apps.json."
+        description: "Validate the shipped admin UX against Polaris, App Bridge, and the accessibility tier."
 
-      - id: create-test-store
-        name: "Create Test Store"
-        command: /create-test-store
-        required: false
-        description: "Provision a dev/test store for an app."
-
-      - id: deploy-to-test-store
-        name: "Deploy to Test Store"
-        command: /deploy-to-test-store
-        required: false
-        repeatable: true
-        description: "Deploy a build to the test store for validation."
-
-  release:
-    label: "Release"
-    description: "Submission readiness and ship"
-    next_phase: operate
+  - id: 5
+    name: Ship
+    description: "App Store submission, release, and the post-ship update loop"
+    next_phase: null
     steps:
       - id: release-checklist
         name: "Release Checklist"
@@ -357,14 +380,23 @@ phases:
         name: "App Store Checklist"
         command: /app-store-checklist
         required: true
-        description: "Final App Store submission gate."
+        artifact:
+          glob: "production/apps/*/app-store-checklist.md"
+          pattern: "Verdict: ready"
+        description: "Final App Store submission checklist; app-store-gate.sh refuses /release unless it reads ready."
+
+      - id: gate-4-release
+        name: "Gate 4 — Release"
+        command: /gate-check
+        required: true
+        description: "Record gate-4-release (release-manager + technical-director) before cutting the release."
 
       - id: release
         name: "Release"
         command: /release
         required: true
         repeatable: true
-        description: "Cut a versioned release for App Store submission."
+        description: "Cut a versioned release and submit it for App Store review."
 
       - id: launch-checklist
         name: "Launch Checklist"
@@ -384,17 +416,6 @@ phases:
         required: false
         description: "Merchant-facing release notes."
 
-      - id: gate-4-release
-        name: "Gate 4 (Release)"
-        command: /gate-check
-        required: true
-        description: "Verify gate-4-release is approved in apps/<app>/approvals.json."
-
-  operate:
-    label: "Operate"
-    description: "Run, iterate, and improve the shipped app"
-    next_phase: null
-    steps:
       - id: hotfix
         name: "Hotfix"
         command: /hotfix
@@ -402,96 +423,12 @@ phases:
         repeatable: true
         description: "Production incident hotfix (branch, minimal fix, test, redeploy)."
 
-      - id: tech-debt
-        name: "Tech Debt"
-        command: /tech-debt
-        required: false
-        description: "Maintain and prioritize a tech-debt log."
-
-      - id: reverse-document
-        name: "Reverse Document"
-        command: /reverse-document
-        required: false
-        description: "Document existing app code into docs/architecture/apps/<app>/."
-
-      - id: localize
-        name: "Localize"
-        command: /localize
-        required: false
-        description: "Merchant-facing localization (Markets, translations, locale formatting)."
-
-      - id: milestone-review
-        name: "Milestone Review"
-        command: /milestone-review
-        required: false
-        repeatable: true
-        description: "Review a milestone for an app."
-
-      - id: consistency-check
-        name: "Consistency Check"
-        command: /consistency-check
-        required: false
-        description: "Cross-app and cross-doc consistency scan."
-
-      - id: propose-updates
-        name: "Propose Updates"
-        command: /propose-updates
-        required: false
-        description: "Propose framework/skill/agent updates from observed friction."
-
-      - id: apply-updates
-        name: "Apply Updates"
-        command: /apply-updates
-        required: false
-        description: "Apply ratified proposals to agents, skills, rules, and hooks."
-
-      - id: gate-5-update
-        name: "Gate 5 (Update)"
-        command: /gate-check
-        required: true
-        description: "Verify gate-5-update is approved in apps/<app>/approvals.json."
-
-  navigate:
-    label: "Navigate"
-    description: "Cross-cutting discovery, status, and workflow utilities"
-    next_phase: null
-    steps:
-      - id: help
-        name: "Help"
-        command: /help
-        required: false
-        description: "Context-aware guidance: read the current stage and surface the next required step."
-
-      - id: project-stage-detect
-        name: "Project Stage Detect"
-        command: /project-stage-detect
-        required: false
-        description: "Detect each app's pipeline stage from docs/registry/apps.json."
-
-      - id: kanban-status
-        name: "Kanban Status"
-        command: /kanban-status
-        required: false
-        description: "Render pipeline/kanban state across apps."
-
-      - id: onboard
-        name: "Onboard"
-        command: /onboard
-        required: false
-        description: "Onboard a developer or merchant to the project."
-
-      - id: adopt
-        name: "Adopt (Brownfield)"
-        command: /adopt
-        required: false
-        description: "Audit an existing app's internal structure and produce a migration plan."
-
       - id: bug-report
         name: "Bug Report"
         command: /bug-report
         required: false
         repeatable: true
-        description: "Log and structure a bug."
+        description: "Log and structure a bug found in the shipped app."
 
       - id: bug-triage
         name: "Bug Triage"
@@ -500,14 +437,72 @@ phases:
         repeatable: true
         description: "Prioritize the open bug backlog."
 
+      - id: tech-debt
+        name: "Tech Debt"
+        command: /tech-debt
+        required: false
+        description: "Maintain and prioritize a tech-debt log."
+
+      - id: localize
+        name: "Localize"
+        command: /localize
+        required: false
+        description: "Merchant-facing localization (Markets, translations, locale formatting)."
+
+      - id: reverse-document
+        name: "Reverse Document"
+        command: /reverse-document
+        required: false
+        description: "Document existing app code into docs/architecture/apps/<app>/."
+
       - id: retrospective
         name: "Retrospective"
         command: /retrospective
         required: false
+        repeatable: true
         description: "Post-sprint review to capture what worked and what to change."
 
-      - id: sprint-status
-        name: "Sprint Status"
-        command: /sprint-status
+      - id: milestone-review
+        name: "Milestone Review"
+        command: /milestone-review
         required: false
-        description: "30-line snapshot of sprint progress."
+        repeatable: true
+        description: "Review a shipped milestone: what landed, what the merchant got, what is next."
+
+      - id: consistency-check
+        name: "Consistency Check"
+        command: /consistency-check
+        required: false
+        description: "Cross-app and cross-doc consistency scan."
+
+      - id: skill-test
+        name: "Skill Test"
+        command: /skill-test
+        required: false
+        repeatable: true
+        description: "Static or live check that a changed skill still holds its contract."
+
+      - id: skill-improve
+        name: "Skill Improve"
+        command: /skill-improve
+        required: false
+        repeatable: true
+        description: "Tighten a skill after observed friction; run skill-test afterwards."
+
+      - id: propose-updates
+        name: "Propose Updates"
+        command: /propose-updates
+        required: false
+        description: "Propose framework/skill/agent updates from observed friction."
+
+      - id: gate-5-update
+        name: "Gate 5 — Update"
+        command: /gate-check
+        required: true
+        description: "Record gate-5-update (product-director) before applying changes to agents, skills, rules or hooks."
+
+      - id: apply-updates
+        name: "Apply Updates"
+        command: /apply-updates
+        required: false
+        description: "Apply ratified proposals to agents, skills, rules, and hooks."

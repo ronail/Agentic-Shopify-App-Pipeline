@@ -6,12 +6,15 @@
 ## Stack & Language
 
 - **Language**: TypeScript (strict mode; no `any` in exported signatures)
-- **UI**: React 18 with Polaris components
-- **Embedding**: App Bridge (embedded admin, session tokens)
-- **Shopify API**: GraphQL Admin API, version-pinned per app
-- **Runtime**: Node 20 LTS (ES modules)
-- **Local Dev**: Shopify CLI (`shopify app dev`)
+- **Framework**: Remix route modules (`loader` for reads, `action` for writes)
+- **UI**: React with Polaris components (function components and hooks only)
+- **Embedding**: App Bridge (embedded admin, session tokens, navigation)
+- **Shopify API**: GraphQL Admin API, pinned to **2026-10** per app
+- **Runtime**: Node LTS (ES modules)
+- **Local Dev**: Shopify CLI — `shopify app dev` (tunnel + install) and
+  `shopify app deploy` (config, scopes, extensions)
 - **Package Manager**: npm
+- **Test Runner**: Vitest
 
 ## Hosting & Data
 

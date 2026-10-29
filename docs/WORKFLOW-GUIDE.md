@@ -1,1703 +1,1210 @@
-# Agent Harness Game Studios -- Complete Workflow Guide
+# Agentic Shopify App Pipeline — Complete Workflow Guide
 
-> **How to go from zero to a shipped game using the Agent Architecture.**
+> **How to go from a merchant problem to a reviewed, released Shopify app.**
 >
-> This guide walks you through every phase of game development using the
-> 49-agent system, 73 slash commands, and 12 automated hooks. It assumes you
-> have Claude Code installed and are working from the project root.
+> This guide walks through every stage using the 31-agent roster, 66 skills, and
+> the hooks in `.claude/hooks/`. It assumes you are working from the repository
+> root, in Claude Code, Codex, or Hermes.
 >
-> The pipeline has 7 phases. Each phase has a formal gate (`/gate-check`)
-> that must pass before you advance. The authoritative phase sequence is
-> defined in `.claude/docs/workflow-catalog.yaml` and read by `/help`.
+> The pipeline has 9 stages and 5 gates (`/gate-check`). The authoritative stage
+> order lives in `.claude/docs/workflow-catalog.yaml`, which `/help` reads. Gate
+> verdicts are **advisory** — they never hard-block you. They record whether the
+> evidence exists, and that record is what every later skill trusts.
 
 ---
 
 ## Table of Contents
 
 1. [Quick Start](#quick-start)
-2. [Phase 1: Concept](#phase-1-concept)
-3. [Phase 2: Systems Design](#phase-2-systems-design)
-4. [Phase 3: Technical Setup](#phase-3-technical-setup)
-5. [Phase 4: Pre-Production](#phase-4-pre-production)
-6. [Phase 5: Production](#phase-5-production)
-7. [Phase 6: Polish](#phase-6-polish)
-8. [Phase 7: Release](#phase-7-release)
-9. [Cross-Cutting Concerns](#cross-cutting-concerns)
-10. [Appendix A: Agent Quick-Reference](#appendix-a-agent-quick-reference)
-11. [Appendix B: Slash Command Quick-Reference](#appendix-b-slash-command-quick-reference)
-12. [Appendix C: Common Workflows](#appendix-c-common-workflows)
+2. [Stage 1: Request](#stage-1-request)
+3. [Stage 2: Research](#stage-2-research)
+4. [Stage 3: Architecture](#stage-3-architecture)
+5. [Stage 4: Prototype](#stage-4-prototype)
+6. [Stage 5: Scope](#stage-5-scope)
+7. [Stage 6: Build](#stage-6-build)
+8. [Stage 7: Test](#stage-7-test)
+9. [Stage 8: Release](#stage-8-release)
+10. [Stage 9: Update](#stage-9-update)
+11. [Cross-Cutting Concerns](#cross-cutting-concerns)
+12. [Appendix A: Agent Quick-Reference](#appendix-a-agent-quick-reference)
+13. [Appendix B: Skill Quick-Reference](#appendix-b-skill-quick-reference)
+14. [Appendix C: Common Workflows](#appendix-c-common-workflows)
 
 ---
 
 ## Quick Start
 
-### What You Need
+### What you need
 
-Before you start, make sure you have:
+- **Claude Code**, **Codex**, or **Hermes** (`/start claude|codex|hermes` routes)
+- **Git**
+- **Node 20 LTS** and **npm**
+- **Shopify CLI** (`shopify app dev`, `shopify app deploy`)
+- **A dev store** you control — see `/create-test-store`
 
-- **Claude Code** installed and working
-- **Git** with Git Bash (Windows) or standard terminal (Mac/Linux)
-- **jq** (optional but recommended -- hooks fall back to `grep` if missing)
-- **Python 3** (optional -- some hooks use it for JSON validation)
-
-### Step 1: Clone and Open
+### Step 1: Clone and open
 
 ```bash
-git clone <repo-url> my-game
-cd my-game
+git clone https://github.com/ronail/Agentic-Shopify-App-Pipeline.git my-pipeline
+cd my-pipeline
 ```
 
-### Step 2: Run /start
-
-If this is your first session:
+### Step 2: Run `/start`
 
 ```
 /start
 ```
 
-This guided onboarding asks where you are and routes you to the right phase:
+`/start` reads `docs/registry/apps.json`, `request.md`, and each app's `status.md`
+plus `approvals.json`, then routes you:
 
-- **Path A** -- No idea yet: routes to `/brainstorm`
-- **Path B** -- Vague idea: routes to `/brainstorm` with seed
-- **Path C** -- Clear concept: routes to `/setup-engine` and `/map-systems`
-- **Path D1** -- Existing project, few artifacts: normal flow
-- **Path D2** -- Existing project, GDDs/ADRs exist: runs `/project-stage-detect`
-  then `/adopt` for brownfield migration
+- **No idea yet** → `/brainstorm`
+- **A rough idea** → `/research`
+- **A written spec** → `/update-request`, then `/research`
+- **An existing app** → `/project-stage-detect`, then `/adopt`
 
-### Step 3: Verify Hooks Are Working
+### Step 3: Verify the session context hook
 
-Start a new Claude Code session. You should see output from the
-`session-start.sh` hook:
+Start a new session; `session-start.sh` should print branch, commits and pipeline
+state:
 
 ```
-=== Agent Harness Game Studios -- Session Context ===
+=== Agentic Shopify App Pipeline — Session Context ===
 Branch: main
 Recent commits:
-  abc1234 Initial commit
-===================================
+  ea78fa4 refactor(r6): hooks layer hardening ...
+Apps: discount-bundles (research), order-tags (research)
+=====================================================
 ```
 
-If you see this, hooks are working. If not, check `.claude/settings.json` to
-make sure the hook paths are correct for your OS.
+If it does not appear, check `.claude/settings.json` — hooks are registered there.
 
-### Step 4: Ask for Help Anytime
-
-At any point, run:
+### Step 4: Ask for help any time
 
 ```
 /help
 ```
 
-This reads your current phase from `production/stage.txt`, checks which
-artifacts exist, and tells you exactly what to do next. It distinguishes
-between REQUIRED next steps and OPTIONAL opportunities.
+`/help` reads the current stage, checks which artefacts exist, and names the next
+REQUIRED and OPTIONAL steps.
 
-### Step 5: Create Your Directory Structure
-
-Directories are created as needed. The system expects this layout:
+### Step 5: Know the layout
 
 ```
-src/                  # Game source code
-  core/               # Engine/framework code
-  gameplay/           # Gameplay systems
-  ai/                 # AI systems
-  networking/         # Multiplayer code
-  ui/                 # UI code
-  tools/              # Dev tools
-assets/               # Game assets
-  art/                # Sprites, models, textures
-  audio/              # Music, SFX
-  vfx/                # Particle effects
-  shaders/            # Shader files
-  data/               # JSON config/balance data
-design/               # Design documents
-  gdd/                # Game design documents
-  narrative/          # Story, lore, dialogue
-  levels/             # Level design documents
-  balance/            # Balance spreadsheets and data
-  ux/                 # UX specifications
-docs/                 # Technical documentation
-  architecture/       # Architecture Decision Records
-  api/                # API documentation
-  postmortems/        # Post-mortems
-tests/                # Test suites
-prototypes/           # Throwaway prototypes
-production/           # Sprint plans, milestones, releases
-  sprints/
-  milestones/
-  releases/
-  epics/              # Epic and story files (from /create-epics + /create-stories)
-  playtests/          # Playtest reports
-  session-state/      # Ephemeral session state (gitignored)
-  session-logs/       # Session audit trail (gitignored)
+apps/<app>/                  one app per directory — isolated config, scopes, deps
+  shopify.app.toml           pinned api_version + access scopes + webhooks
+  app/                       embedded admin routes (Polaris, App Bridge)
+  app/routes/webhooks.*.ts   webhook handlers, one per topic
+  extensions/                theme app extension, checkout extension, functions
+  db/migrations/             SQL migrations, one concern per file
+  design/                    concept, UX specs, test-store plan
+  prototype/                 throwaway prototypes, excluded from the app build
+  tests/
+docs/
+  architecture/
+    ADR-NNNN-*.md            cross-app decisions (API version policy)
+    apps/<app>/
+      requirements.yaml      stable REQ-<AREA>-NNN registry (append-only)
+      control-manifest.md    flat Required / Forbidden / Guardrails per layer
+      ADR-NNNN-*.md          that app's decisions
+  registry/
+    apps.json                the single shared mutable registry
+    architecture.yaml        cross-app index: ADRs, stances, forbidden patterns
+  shopify-api-reference/
+    VERSION.md               the pinned Admin API version
+    <version>/               immutable snapshot per version
+  examples/                  collaborative session transcripts
+production/apps/<app>/       epics, stories, sprints, session state
 ```
 
-> **Tip:** You do not need all of these on day one. Create directories as you
-> reach the phase that needs them. The important thing is to follow this
-> structure when you do create them, because the **rules system** enforces
-> standards based on file paths. Code in `src/gameplay/` gets gameplay rules,
-> code in `src/ai/` gets AI rules, and so on.
+> **Tip:** create directories when the stage needs them. The **rules system**
+> routes by path — code under `app/routes/` gets admin rules, webhook handlers get
+> webhook rules — so the path matters more than the directory existing early.
 
 ---
 
-## Phase 1: Concept
+## Stage 1: Request
 
-### What Happens in This Phase
+### What happens
 
-You go from "no idea" or "vague idea" to a structured game concept document
-with defined pillars and a player journey. This is where you figure out
-**what** you are making and **why**.
+You turn "I think merchants need X" into a written request with a goal, success
+criteria and non-goals. Everything downstream traces back to this file.
 
-### Phase 1 Pipeline
-
-```
-/brainstorm  -->  game-concept.md  -->  /design-review  -->  /setup-engine
-     |                                        |                    |
-     v                                        v                    v
-  10 concepts     Concept doc with       Validation          Engine pinned in
-  MDA analysis    pillars, MDA,          of concept          technical-preferences.md
-  Player motiv.   core loop, USP         document
-                                                                   |
-                                                                   v
-                                                             /prototype
-                                                       (concept prototype — 1-3 days)
-                                                        PROCEED ↓     PIVOT → /brainstorm
-                                                                   |
-                                                                   v (PROCEED)
-                                                             /map-systems
-                                                                   |
-                                                                   v
-                                                            systems-index.md
-                                                            (all systems, deps,
-                                                             priority tiers)
-```
-
-### Step 1.1: Brainstorm With /brainstorm
-
-This is your starting point. Run the brainstorm skill:
+### Pipeline
 
 ```
-/brainstorm
+/brainstorm  -->  request.md  -->  /mmmvp-proposals  -->  /quick-design
+   (if needed)         |                  |                    |
+                       v                  v                    v
+               goal + success      minimal viable       lightweight spec
+               criteria + gates    slices, ranked       for a small change
 ```
 
-Or with a genre hint:
+### Step 1.1: `/brainstorm` (only if you have no direction)
 
 ```
-/brainstorm roguelike deckbuilder
+/brainstorm "merchants who sell 3-packs"
 ```
 
-**What happens:** The brainstorm skill guides you through a collaborative 6-phase
-ideation process using professional studio techniques:
+Asks about your own store experience, what is broken today, and who would pay.
+Generates 8 concepts across three frames — fix an existing pain, replace a manual
+process, unlock something new. Each carries the merchant job, the Shopify surface
+it needs, build risk, and whether an existing app already owns it.
 
-1. Asks about your interests, themes, and constraints
-2. Generates 10 concept seeds with MDA (Mechanics, Dynamics, Aesthetics) analysis
-3. You pick 2-3 favorites for deep analysis
-4. Performs player motivation mapping and audience targeting
-5. You choose the winning concept
-6. Formalizes it into `design/gdd/game-concept.md`
+**You pick.** The concept document is written only after you choose.
 
-The concept document includes:
-
-- Elevator pitch (one sentence)
-- Core fantasy (what the player imagines themselves doing)
-- MDA breakdown
-- Target audience (Bartle types, demographics)
-- Core loop diagram
-- Unique selling proposition
-- Comparable titles and differentiation
-- Game pillars (3-5 non-negotiable design values)
-- Anti-pillars (things the game intentionally avoids)
-
-### Step 1.2: Review the Concept (Optional but Recommended)
+### Step 1.2: Write or amend `request.md`
 
 ```
-/design-review design/gdd/game-concept.md
+/update-request
 ```
 
-Validates structure and completeness before you proceed.
+Amends the master request without losing prior intent; history is appended to
+`request-history.md`. The `track-request-changes.sh` hook enforces that any edit to
+`request.md` has a matching history entry in the same working tree.
 
-### Step 1.3: Choose Your Engine
+`request.md` states: goal, success criteria, non-goals, apps in scope, and the five
+gate definitions.
 
-```
-/setup-engine
-```
-
-Or with a specific engine:
-
-```
-/setup-engine godot 4.6
-```
-
-**What /setup-engine does:**
-
-- Populates `.claude/docs/technical-preferences.md` with naming conventions,
-  performance budgets, and engine-specific defaults
-- Detects knowledge gaps (engine version newer than LLM training data) and
-  advises cross-referencing `docs/engine-reference/`
-- Creates version-pinned reference docs in `docs/engine-reference/`
-
-**Why this matters:** Once you set the engine, the system knows which
-engine-specialist agents to use. If you pick Godot, agents like
-`godot-specialist`, `godot-gdscript-specialist`, and `godot-shader-specialist`
-become your go-to experts.
-
-### Step 1.4: Decompose Your Concept Into Systems
-
-Before writing individual GDDs, enumerate all the systems your game needs:
+### Step 1.3: Cut the first slice with `/mmmvp-proposals`
 
 ```
-/map-systems
+/mmmvp-proposals
 ```
 
-This creates `design/gdd/systems-index.md` -- a master tracking document that:
+Proposes minimal-market-viable slices: the smallest shippable version, what it
+deliberately omits, and what the first merchant would notice. This is the cheapest
+place to kill scope — before research spends a day validating a big idea.
 
-- Lists every system your game needs (combat, movement, UI, etc.)
-- Maps dependencies between systems
-- Assigns priority tiers (MVP, Vertical Slice, Alpha, Full Vision)
-- Determines design order (Foundation > Core > Feature > Presentation > Polish)
-
-This step is **required** before proceeding to Phase 2. Research from 155 game
-postmortems confirms that skipping systems enumeration costs 5-10x more in
-production.
-
-### Phase 1 Gate
+### Step 1.4: Small changes get a quick spec
 
 ```
-/gate-check concept
+/quick-design "add a CSV export of tagged orders"
 ```
 
-**Requirements to pass:**
+Creates a lightweight spec instead of a full concept document. `/design-review`
+can still review it.
 
-- Engine configured in `technical-preferences.md`
-- `design/gdd/game-concept.md` exists with pillars
-- `design/gdd/systems-index.md` exists with dependency ordering
+### Stage 1 exit
 
-**Verdict:** PASS / CONCERNS / FAIL. CONCERNS is passable with acknowledged
-risks. FAIL blocks advancement.
+No formal gate. `request.md` is accepted when you say so; `/research` is next.
 
 ---
 
-## Phase 2: Systems Design
+## Stage 2: Research
 
-### What Happens in This Phase
+### What happens
 
-You create all the design documents that define how your game works. Nothing
-gets coded yet -- this is pure design. Each system identified in the systems
-index gets its own GDD, authored section by section, reviewed individually,
-and then all GDDs are cross-checked for consistency.
+You validate that the merchant problem is real, map the competing apps, and pick a
+wedge. You also write the admin UX specs — before any code — because gate 1 needs
+them and because accessibility is cheaper to fix in a spec than in a component.
 
-### Phase 2 Pipeline
-
-```
-/map-systems next  -->  /design-system  -->  /design-review
-       |                     |                     |
-       v                     v                     v
-  Picks next system    Section-by-section     Validates 8
-  from systems-index   GDD authoring          required sections
-                       (incremental writes)   APPROVED/NEEDS REVISION
-       |
-       |  (repeat for each MVP system)
-       v
-/review-all-gdds
-       |
-       v
-  Cross-GDD consistency + design theory review
-  PASS / CONCERNS / FAIL
-```
-
-### Step 2.1: Author System GDDs
-
-Design each system in dependency order using the guided workflow:
+### Pipeline
 
 ```
-/map-systems next
+/research  -->  research.md  -->  /ux-design (x3+)  -->  /ux-review  -->  /gate-check gate-1-research
+     |                                  |                    |
+     v                                  v                    v
+  original vs                    per-screen admin      Polaris + App Bridge
+  competitor-killer              (Polaris) specs       + WCAG 2.1 AA check
+  wedge + killed features
 ```
 
-This picks the highest-priority undesigned system and hands off to
-`/design-system`, which guides you through creating its GDD section by section.
-
-You can also design a specific system directly:
+### Step 2.1: `/research`
 
 ```
-/design-system combat-system
+/research discount-bundles
 ```
 
-**What /design-system does:**
+Two modes, chosen explicitly:
 
-1. Reads your game concept, systems index, and any upstream/downstream GDDs
-2. Runs a Technical Feasibility Pre-Check (domain mapping + feasibility brief)
-3. Walks you through each of the 8 required GDD sections one at a time
-4. Each section follows: Context > Questions > Options > Decision > Draft > Approval > Write
-5. Each section is written to file immediately after approval (survives crashes)
-6. Flags conflicts with existing approved GDDs
-7. Routes to specialist agents per category (systems-designer for math,
-   economy-designer for economy, narrative-director for story systems)
+- **Original** — you believe the problem is unaddressed; validate demand and size.
+- **Competitor-killer** — apps exist; find the specific weakness in their reviews.
 
-**The 8 required GDD sections:**
+Output: `apps/<app>/docs/research.md` with the merchant job in one sentence, a
+competitor map with review themes, the wedge, the features you are **killing** and
+why, and a pricing hypothesis.
 
-| # | Section | What Goes Here |
-|---|---------|---------------|
-| 1 | **Overview** | One-paragraph summary of the system |
-| 2 | **Player Fantasy** | What the player imagines/feels when using this system |
-| 3 | **Detailed Rules** | Unambiguous mechanical rules |
-| 4 | **Formulas** | Every calculation, with variable definitions and ranges |
-| 5 | **Edge Cases** | What happens in weird situations? Explicitly resolved. |
-| 6 | **Dependencies** | What other systems this connects to (bidirectional) |
-| 7 | **Tuning Knobs** | Which values designers can safely change, with safe ranges |
-| 8 | **Acceptance Criteria** | How do you test that this works? Specific, measurable. |
+A brief that lists ten features has not chosen a wedge.
 
-Plus a **Game Feel** section: feel reference, input responsiveness (ms/frames),
-animation feel targets (startup/active/recovery), impact moments, weight profile.
-
-### Step 2.2: Review Each GDD
-
-Before the next system starts, validate the current one:
+### Step 2.2: `/ux-design`
 
 ```
-/design-review design/gdd/combat-system.md
+/ux-design discount-bundles
 ```
 
-Checks all 8 sections for completeness, formula clarity, edge case resolution,
-bidirectional dependencies, and testable acceptance criteria.
+One spec per admin screen under `apps/<app>/design/ux/`: states (loading, empty,
+error, no-permission), Polaris components, keyboard path, failure-state copy, and
+the data each screen needs.
 
-**Verdict:** APPROVED / NEEDS REVISION / MAJOR REVISION. Only APPROVED GDDs
-should proceed.
+Gate 1 expects at least three specs. If the app has fewer screens, say so rather
+than padding.
 
-### Step 2.3: Small Changes Without Full GDDs
-
-For tuning changes, small additions, or tweaks that do not warrant a full GDD:
-
-```
-/quick-design "add 10% damage bonus for flanking attacks"
-```
-
-This creates a lightweight spec in `design/quick-specs/` instead of a full
-8-section GDD. Use it for tuning, number changes, and small additions.
-
-### Step 2.4: Cross-GDD Consistency Review
-
-After all MVP system GDDs are approved individually:
+### Step 2.3: `/ux-review`
 
 ```
-/review-all-gdds
+/ux-review discount-bundles
 ```
 
-This reads ALL GDDs simultaneously and runs two analysis phases:
+Validates the specs against Polaris, App Bridge constraints, and the accessibility
+tier (WCAG 2.1 AA by default). Findings are BLOCKING (stops handoff) or ADVISORY
+(fix during the visual pass).
 
-**Phase 1 -- Cross-GDD Consistency:**
-- Dependency bidirectionality (A references B, does B reference A?)
-- Rule contradictions between systems
-- Stale references to renamed or removed systems
-- Ownership conflicts (two systems claiming the same responsibility)
-- Formula range compatibility (does System A's output fit System B's input?)
-- Acceptance criteria cross-check
-
-**Phase 2 -- Design Theory (Game Design Holism):**
-- Competing progression loops (do two systems fight for the same reward space?)
-- Cognitive load (more than 4 active systems at once?)
-- Dominant strategies (one approach that makes all others irrelevant)
-- Economic loop analysis (sources and sinks balanced?)
-- Difficulty curve consistency across systems
-- Pillar alignment and anti-pillar violations
-- Player fantasy coherence
-
-**Output:** `design/gdd/gdd-cross-review-[date].md` with a verdict.
-
-### Step 2.5: Narrative Design (If Applicable)
-
-If your game has story, lore, or dialogue, this is when you build it:
-
-1. **World-building** -- Use `world-builder` to define factions, history,
-   geography, and rules of your world
-2. **Story structure** -- Use `narrative-director` to design story arcs,
-   character arcs, and narrative beats
-3. **Character sheets** -- Use the `narrative-character-sheet.md` template
-
-### Phase 2 Gate
+### Step 2.4: Gate 1 — research
 
 ```
-/gate-check systems-design
+/gate-check gate-1-research
 ```
 
-**Requirements to pass:**
+**Evidence required:** `apps/<app>/docs/research.md` with a named wedge; at least
+three UX specs that passed `/ux-review`; `gate-1-research` recorded in
+`apps/<app>/approvals.json`.
 
-- All MVP systems in `systems-index.md` have `Status: Approved`
-- Each MVP system has a reviewed GDD
-- Cross-GDD review report exists (`design/gdd/gdd-cross-review-*.md`)
-  with verdict of PASS or CONCERNS (not FAIL)
+**Verdict:** PASS / CONCERNS / FAIL — advisory.
+
+> An approval recorded before the artefacts exist is a *claim ahead of evidence*.
+> `/project-stage-detect` reports it and `/gate-check` will not treat it as a pass.
 
 ---
 
-## Phase 3: Technical Setup
+## Stage 3: Architecture
 
-### What Happens in This Phase
+### What happens
 
-You make key technical decisions, document them as Architecture Decision Records
-(ADRs), validate them through review, and produce a control manifest that
-gives programmers flat, actionable rules. You also establish UX foundations.
+You decide the technical shape of the app, one decision per ADR, each tracing to
+requirement IDs. Then you derive a flat control manifest that programmers read
+instead of the ADRs.
 
-### Phase 3 Pipeline
+### Pipeline
 
 ```
 /create-architecture  -->  /architecture-decision (x N)  -->  /architecture-review
-        |                          |                                   |
-        v                          v                                   v
-  Master architecture       Per-decision ADRs              Validates completeness,
-  document covering         in docs/architecture/          dependency ordering,
-  all systems               adr-*.md                       engine compatibility
-                                                                      |
-                                                                      v
-                                                         /create-control-manifest
-                                                                      |
-                                                                      v
-                                                         Flat programmer rules
-                                                         docs/architecture/
-                                                         control-manifest.md
-        Also in this phase:
-        -------------------
-        /ux-design  -->  /ux-review
-        Accessibility requirements doc
-        Interaction pattern library
+        |                            |                                |
+        v                            v                                v
+  architecture.md            apps/<app>/ADR-NNNN-*.md       dependency order,
+  per app                    + requirements.yaml           requirement coverage,
+                                                             API conflicts
+                                                                     |
+                                                                     v
+                                                        /create-control-manifest
+                                                                     |
+                                                                     v
+                                                        control-manifest.md
 ```
 
-### Step 3.1: Master Architecture Document
+### Step 3.1: Requirements first
 
-```
-/create-architecture
-```
+`docs/architecture/apps/<app>/requirements.yaml` is the spine. Stable IDs,
+append-only:
 
-Creates the overarching architecture document in `docs/architecture/architecture.md`
-covering system boundaries, data flow, and integration points.
-
-### Step 3.2: Architecture Decision Records (ADRs)
-
-For each significant technical decision:
-
-```
-/architecture-decision "State Machine vs Behavior Tree for NPC AI"
-```
-
-**What happens:** The skill guides you through creating an ADR with:
-- Context and decision drivers
-- All options with pros/cons and engine compatibility
-- Chosen option with rationale
-- Consequences (positive, negative, risks)
-- Dependencies (Depends On, Enables, Blocks, Ordering Note)
-- GDD Requirements Addressed (linked by TR-ID)
-
-ADRs go through a lifecycle: Proposed > Accepted > Superseded/Deprecated.
-
-**Minimum 3 Foundation-layer ADRs are required** before the gate check.
-
-**Retrofitting existing ADRs:** If you already have ADRs from a brownfield
-project:
-
-```
-/architecture-decision retrofit docs/architecture/adr-005.md
+```yaml
+- id: REQ-BUNDLE-004
+  area: API surface
+  requirement: >
+    In fixed-price mode the bundle's unit price is the configured bundle price,
+    allocated across components proportionally to each component's list price.
+  acceptance_criteria: [...]
+  priority: must
+  adr: ADR-0001
+  status: active
 ```
 
-This detects which template sections are missing and adds only those, never
-overwriting existing content.
+`/create-architecture` stops without it: *architecture without requirements is
+fiction*.
 
-### Step 3.3: Architecture Review
-
-```
-/architecture-review
-```
-
-Validates all ADRs together:
-- Topological sort of ADR dependencies (detects cycles)
-- Engine compatibility verification
-- GDD Revision Flags (flags GDD sections that need updates based on ADR choices)
-- TR-ID registry maintenance (`docs/architecture/tr-registry.yaml`)
-
-### Step 3.4: Control Manifest
+### Step 3.2: `/create-architecture`
 
 ```
-/create-control-manifest
+/create-architecture discount-bundles
 ```
 
-Takes all Accepted ADRs and produces a flat programmer rules sheet:
+Writes `docs/architecture/apps/<app>/architecture.md`: app boundaries, stack and
+runtime, data model, API matrix, webhook map, extension strategy, jobs, failure
+modes. Sections are written one at a time with your approval, and the document
+stays under roughly 400 lines — per-story detail belongs in the story.
+
+It reads, in order: existing ADRs (Accepted ones are constraints), the pinned API
+snapshot, the control manifest, the concept and UX specs, and
+`docs/registry/architecture.yaml` for stances other apps already depend on.
+
+### Step 3.3: `/architecture-decision`
 
 ```
-docs/architecture/control-manifest.md
+/architecture-decision "how bundles appear in the cart"
 ```
 
-This contains Required patterns, Forbidden patterns, and Guardrails organized
-by code layer. Stories created later embed the manifest version date so
-staleness can be detected.
+One decision per ADR, filed with the app: `docs/architecture/apps/<app>/ADR-0001-<slug>.md`.
 
-### Step 3.5: Accessibility Requirements
+**Required sections:** Title, Status, Date, Last Verified, Decision Makers,
+Summary, **Shopify API Surface**, ADR Dependencies, Context, Decision,
+Alternatives Considered, Consequences, Risks, Performance Implications, Migration
+Plan, Validation Criteria, **App Requirements Addressed**, Related.
 
-Create `design/accessibility-requirements.md` using the template. Commit to a
-tier (Basic / Standard / Comprehensive / Exemplary) and fill the 4-axis feature
-matrix (visual, motor, cognitive, auditory).
+- **Shopify API Surface** records the pinned Admin API version, the surface, a
+  knowledge-risk rating (LOW / MEDIUM / HIGH), what you consulted, and what must be
+  verified on a dev store. HIGH means the ADR is re-verified at each version bump.
+- **App Requirements Addressed** lists `REQ-*` IDs from the app's registry. An ADR
+  with no requirement needs a justification line.
 
-This document is required in Phase 3 because UX specs (written in Phase 4)
-reference this tier — it is a design prerequisite, not a UX deliverable.
+**Status lifecycle:** `Proposed` → `Accepted` → `Superseded`. Stories depending on
+a `Proposed` ADR are blocked, so do not leave decisions dangling.
 
-### Phase 3 Gate
+Cross-app decisions — currently only the Admin API version policy — live at
+`docs/architecture/ADR-NNNN-*.md` and are listed under `shared_adrs` in the
+registry.
+
+### Step 3.4: `/architecture-review`
 
 ```
-/gate-check technical-setup
+/architecture-review discount-bundles
 ```
 
-**Requirements to pass:**
+Modes: `full`, `coverage`, `consistency`, `api`, `rtm`.
 
-- `docs/architecture/architecture.md` exists
-- At least 3 ADRs exist and are Accepted
-- Architecture review report exists
-- `docs/architecture/control-manifest.md` exists
-- `design/accessibility-requirements.md` exists
+- topological sort of ADR dependencies (a cycle is blocking)
+- every requirement covered, partially covered, or listed as a gap
+- every operation in the architecture's API matrix resolves against
+  `docs/shopify-api-reference/<version>/`
+- deprecated fields → findings
+- registry vs ADR drift (`docs/registry/architecture.yaml` must list every ADR file)
+- control-manifest staleness
+
+Writes `apps/<app>/architecture-review-<date>.md`; may append new requirement IDs,
+never renumber.
+
+### Step 3.5: `/create-control-manifest`
+
+```
+/create-control-manifest discount-bundles
+```
+
+Extracts every Must / Never / Limit from Accepted ADRs, `.claude/rules/`,
+`technical-preferences.md` and the pinned snapshot, and organises it by layer:
+
+| Layer | Governs |
+|-------|---------|
+| Admin UI | embedded routes, Polaris, App Bridge |
+| App server | loaders/actions, Admin GraphQL, auth, billing, jobs |
+| Webhooks | subscriptions, HMAC, idempotency |
+| Theme app extensions | app blocks, Liquid, merchant settings |
+| Checkout extensions | extension targets, UI extensions, function limits |
+| Data | schema, migrations, sessions, job queue |
+
+The header carries `API Version`, `Manifest Version` (date), `Last Updated`,
+`ADRs Covered`, `Access Scopes`. **Stories embed the manifest version**;
+`/story-readiness` refuses a story whose embedded version is older and
+`/story-done` re-checks at close.
+
+### Stage 3 exit
+
+No gate here. The evidence is the ADR set plus a manifest; `gate-2-prototype` reads
+both.
 
 ---
 
-## Phase 4: Pre-Production
+## Stage 4: Prototype
 
-### What Happens in This Phase
+### What happens
 
-You create UX specs for key screens, prototype risky mechanics, turn design
-documents into implementable stories, plan your first sprint, and build a
-Vertical Slice that proves the core loop is fun.
+You build a *real* store-facing prototype — an embedded route running on a dev
+store, not a mockup — to answer the questions the ADRs could not settle.
 
-### Phase 4 Pipeline
-
-```
-/ux-design  -->  /vertical-slice  -->  /create-epics  -->  /create-stories  -->  /sprint-plan
-    |                   |                   |                   |                       |
-    v                   v                   v                   v                       v
-  UX specs       Production-quality   Epic files in       Story files in          First sprint with
-  design/ux/     end-to-end build     production/         production/             prioritized stories
-                 in prototypes/       epics/*/EPIC.md     epics/*/story-*.md      production/sprints/
-                 PROCEED/PIVOT/KILL   (one per module)    (one per behaviour)     sprint-*.md
-    |                                                          |
-    v                                                          v
- /ux-review                                             /story-readiness
- (validates specs                                       (validates each story
-  before epics)                                          before pickup)
-                                                               |
-                                                               v
-                                                           /dev-story
-                                                         (implements the story,
-                                                          routes to right agent)
-```
-
-### Step 4.1: UX Specs for Key Screens
-
-Before writing epics, create UX specs so that story authors know what screens
-exist and what player interactions they must support.
-
-**UX Specs:**
+### Pipeline
 
 ```
-/ux-design main-menu
-/ux-design core-gameplay-hud
+/build-prototype  -->  /prototype-review  -->  /gate-check gate-2-prototype
+       |                      |                        |
+       v                      v                        v
+  apps/<app>/prototype/   verdict against          gate recorded,
+  throwaway code          the research wedge        stage → scope
 ```
 
-Three modes: screen/flow, HUD, and interaction patterns. Output goes to
-`design/ux/`. Each spec includes: player need, layout zones, states,
-interaction map, data requirements, events fired, accessibility, localization.
-
-Reads your `accessibility-requirements.md` (written in Phase 3) and your
-input method config from `technical-preferences.md` to drive accessibility
-and input coverage checks — no need to re-specify them per screen.
-
-> **Tip:** `/design-system` emits a 📌 UX Flag for every system with UI
-> requirements. Use those flags as a checklist for which screens need specs.
-
-**Interaction Pattern Library:**
+### Step 4.1: `/build-prototype`
 
 ```
-/ux-design interaction-patterns
+/build-prototype discount-bundles
 ```
 
-Create `design/ux/interaction-patterns.md` — 16 standard controls plus
-game-specific patterns (inventory slot, ability icon, HUD bar, dialogue box,
-etc.) with animation and sound standards.
+The skill asks what the prototype must **prove**, then orders those questions by how
+much they could invalidate. Platform risk first (does the cart transform actually
+expand?), UX second (is the picker usable at 50 components?).
 
-**UX Review:**
+Prototype code lives in `apps/<app>/prototype/`, excluded from the app build. It
+may be ugly; it may not be fake.
 
-```
-/ux-review all
-```
-
-Validates UX specs for GDD alignment and accessibility tier compliance.
-Produces APPROVED / NEEDS REVISION / MAJOR REVISION NEEDED verdict.
-
-### Step 4.2: Build the Vertical Slice
-
-The vertical slice is the production-quality proof that you can build the full
-game loop end-to-end before committing to full Production.
+### Step 4.2: `/prototype-review`
 
 ```
-/vertical-slice
+/prototype-review apps/discount-bundles/prototype
 ```
 
-**What it proves:** Does a player, starting from nothing, experience the core
-fantasy within a few minutes, without developer guidance?
+Reviews against the research wedge and the UX specs — not against the eventual
+product. It separates:
 
-**What it builds:** A near-production-quality playable build covering at least
-one complete [start → challenge → resolution] cycle. Uses real architecture
-layers, real naming conventions, no hardcoded values — but not final art or
-audio. This is not a throwaway like the concept prototype; it demonstrates
-production pipeline feasibility.
+- **must prove this** — a platform or feasibility claim
+- **fix now** — a spec drift the prototype disproved
+- **later** — polish with no bearing on the decision
 
-**Note on concept prototyping:** If you ran `/prototype` in Phase 1 (Concept),
-you already validated the core idea is fun. The vertical slice now validates
-you can build it properly. They answer different questions. If you skipped the
-concept prototype, now is a reasonable time to run one first before investing
-in the full slice.
+A prototype finding can correct an Accepted ADR; the route is to amend it through
+`/architecture-decision`, not to diverge silently.
 
-**Verdict:** The vertical slice produces a PROCEED / PIVOT / KILL verdict.
-- **PROCEED** → move to Step 4.3 (epics and stories)
-- **PIVOT** → revise affected GDDs with `/design-system [mechanic]`, then re-run `/vertical-slice`
-- **KILL** → return to `/brainstorm` with what you learned
-
-### Step 4.3: Create Epics and Stories From Design Artifacts
+### Step 4.3: Gate 2 — prototype
 
 ```
-/create-epics layer: foundation
-/create-stories [epic-slug]   # repeat for each epic
-/create-epics layer: core
-/create-stories [epic-slug]   # repeat for each core epic
+/gate-check gate-2-prototype
 ```
 
-`/create-epics` reads your GDDs, ADRs, and architecture to define epic scope —
-one epic per architectural module. Then `/create-stories` breaks each epic into
-implementable story files in `production/epics/[slug]/`. Each story embeds:
-- GDD requirement references (TR-IDs, not quoted text -- stays fresh)
-- ADR references (only from Accepted ADRs; Proposed ADRs cause `Status: Blocked`)
-- Control manifest version date (for staleness detection)
-- Engine-specific implementation notes
-- Acceptance criteria from the GDD
+**Evidence required:** a working prototype on a dev store, a review report,
+Accepted ADRs, a current control manifest.
 
-Once stories exist, run `/dev-story [story-path]` to implement one — it routes
-automatically to the correct programmer agent.
-
-### Step 4.4: Validate Stories Before Pickup
-
-```
-/story-readiness production/epics/combat/story-combat-damage-calc.md
-```
-
-Checks: Design completeness, Architecture coverage, Scope clarity, Definition
-of Done. Verdict: READY / NEEDS WORK / BLOCKED.
-
-### Step 4.5: Effort Estimation
-
-```
-/estimate production/epics/combat/story-combat-damage-calc.md
-```
-
-Provides effort estimates with risk assessment.
-
-### Step 4.6: Plan Your First Sprint
-
-```
-/sprint-plan new
-```
-
-**What happens:** The `producer` agent collaborates on sprint planning:
-- Asks for sprint goal and available time
-- Breaks the goal into Must Have / Should Have / Nice to Have tasks
-- Identifies risks and blockers
-- Creates `production/sprints/sprint-01.md`
-- Populates `production/sprint-status.yaml` (machine-readable story tracking)
-
-### Step 4.7: Vertical Slice (Hard Gate)
-
-Before advancing to Production, you must build and playtest a Vertical Slice:
-
-- One complete end-to-end core loop, playable from start to finish
-- Representative quality (not placeholder everything)
-- Played unguided in at least 3 sessions
-- Playtest report written (`/playtest-report`)
-
-This is a **hard gate** -- `/gate-check` will auto-FAIL if a human has not
-played the build unguided.
-
-### Phase 4 Gate
-
-```
-/gate-check pre-production
-```
-
-**Requirements to pass:**
-
-- At least 1 UX spec reviewed in `design/ux/`
-- UX review completed (APPROVED or NEEDS REVISION with documented risks)
-- At least 1 prototype with README
-- Story files exist in `production/epics/[epic-slug]/`
-- At least 1 sprint plan exists
-- At least 1 playtest report exists (Vertical Slice played in 3+ sessions)
+**Verdict:** PASS / CONCERNS / FAIL. CONCERNS is normal — a named, understood risk
+is passable; an open product question is not.
 
 ---
 
-## Phase 5: Production
+## Stage 5: Scope
 
-### What Happens in This Phase
+### What happens
 
-This is the core production loop. You work in sprints (typically 1-2 weeks),
-implementing features story by story, tracking progress, and closing stories
-through a structured completion review. This phase repeats until your game
-is content-complete.
+You freeze what this version will do, decompose it into epics and stories that trace
+to requirements, estimate, and plan the first sprint.
 
-### Phase 5 Pipeline (Per Sprint)
+### Pipeline
 
 ```
-/sprint-plan new  -->  /story-readiness  -->  implement  -->  /story-done
-       |                     |                    |                |
-       v                     v                    v                v
-  Sprint created       Story validated      Code written     8-phase review:
-  sprint-status.yaml   READY verdict        Tests pass       verify criteria,
-  populated                                                  check deviations,
-                                                             update story status
-       |
-       |  (repeat per story until sprint complete)
-       v
-  /sprint-status  (quick 30-line snapshot anytime)
-  /scope-check    (if scope is growing)
-  /retrospective  (at sprint end)
+/scope-check  -->  /create-epics  -->  /create-stories  -->  /estimate
+      |                  |                    |                  |
+      v                  v                    v                  v
+  in / out of       epics with           stories with        effort per
+  scope vs          ADR + REQ refs       criteria from       story
+  request.md                             requirements.yaml
+                                                       |
+                                                       v
+                                              /sprint-plan  -->  /story-readiness
+                                                       |                    |
+                                                       v                    v
+                                              sprint file            READY / BLOCKED
+                                                       |
+                                                       v
+                                              /gate-check gate-3-scope
 ```
 
-### Step 5.1: The Story Lifecycle
-
-The production phase centers on the **story lifecycle**:
+### Step 5.1: `/scope-check`
 
 ```
-/story-readiness  -->  implement  -->  /story-done  -->  next story
+/scope-check discount-bundles
 ```
 
-**1. Story Readiness:** Before picking up a story, validate it:
+Classifies every work item as **in scope** (traced to a requirement), **not yet
+traced** (a gap), or **out of scope** (killed during research). Untraced work is
+named, not scheduled.
+
+### Step 5.2: `/create-epics` and `/create-stories`
 
 ```
-/story-readiness production/epics/combat/story-combat-damage-calc.md
+/create-epics discount-bundles
+/create-stories order-tags epic-1-rule-engine
 ```
 
-This checks design completeness, architecture coverage, ADR status (blocks
-if ADR is still Proposed), control manifest version (warns if stale), and
-scope clarity. Verdict: READY / NEEDS WORK / BLOCKED.
+Epics list governing ADRs and traced vs untraced requirements. Stories carry:
 
-**2. Implementation:** Work with the appropriate agents:
+- **Requirement ID** — from `requirements.yaml`; if a criterion has no ID, append
+  one first
+- **Governing ADR** — a `Proposed` ADR forces `Status: Blocked`
+- **Control Manifest rules** for the story's layer, plus the embedded manifest
+  version
+- **Acceptance criteria** copied from the requirement, not paraphrased
+- **Test plan**, and the QA readiness check
 
-- `gameplay-programmer` for gameplay systems
-- `engine-programmer` for core engine work
-- `ai-programmer` for AI behavior
-- `network-programmer` for multiplayer
-- `ui-programmer` for UI code
-- `tools-programmer` for dev tools
-
-All agents follow the collaborative protocol: they read the design doc, ask
-clarifying questions, present architectural options, get your approval, then
-implement.
-
-**3. Story Completion:** When a story is done:
+### Step 5.3: `/estimate` and `/sprint-plan`
 
 ```
-/story-done production/epics/combat/story-combat-damage-calc.md
+/estimate
+/sprint-plan
 ```
 
-This runs an 8-phase completion review:
-1. Find and read the story file
-2. Load referenced GDD, ADRs, and control manifest
-3. Verify acceptance criteria (auto-checkable, manual, deferred)
-4. Check for GDD/ADR deviations (BLOCKING / ADVISORY / OUT OF SCOPE)
-5. Prompt for code review
-6. Generate completion report (COMPLETE / COMPLETE WITH NOTES / BLOCKED)
-7. Update story `Status: Complete` with completion notes
-8. Surface the next ready story
+`/estimate` gives relative effort per story with risk. `/sprint-plan` builds the
+sprint file with Must Have / Should Have priorities and a capacity check;
+`/sprint-status` reports progress later.
 
-Tech debt discovered during review is logged to `docs/tech-debt-register.md`.
-
-### Step 5.2: Sprint Tracking
-
-Check progress anytime:
+### Step 5.4: `/story-readiness`
 
 ```
-/sprint-status
+/story-readiness story-003
 ```
 
-Quick 30-line snapshot reading from `production/sprint-status.yaml`.
+The last cheap checkpoint before code: requirement ID, ADR status, manifest
+version, measurability of criteria, dependencies, test plan. Verdict READY or
+BLOCKED with reasons.
 
-If scope is growing:
-
-```
-/scope-check production/sprints/sprint-03.md
-```
-
-This compares current scope against the original plan and flags scope increase,
-recommends cuts.
-
-### Step 5.3: Content Tracking
+### Step 5.5: Gate 3 — scope
 
 ```
-/content-audit
+/gate-check gate-3-scope
 ```
 
-Compares GDD-specified content against what has been implemented. Catches
-content gaps early.
-
-### Step 5.4: Design Change Propagation
-
-When a GDD changes after stories have been created:
-
-```
-/propagate-design-change design/gdd/combat-system.md
-```
-
-Git-diffs the GDD, finds affected ADRs, generates an impact report, and
-walks you through Superseded/update/keep decisions.
-
-### Step 5.5: Multi-System Features (Team Orchestration)
-
-For features spanning multiple domains, use team skills:
-
-```
-/team-combat "healing ability with HoT and cleanse"
-/team-narrative "Act 2 story content"
-/team-ui "inventory screen redesign"
-/team-level "forest dungeon level"
-/team-audio "combat audio pass"
-```
-
-Each team skill coordinates a 6-phase collaborative workflow:
-1. **Design** -- game-designer asks questions, presents options
-2. **Architecture** -- lead-programmer proposes code structure
-3. **Parallel Implementation** -- specialists work simultaneously
-4. **Integration** -- gameplay-programmer wires everything together
-5. **Validation** -- qa-tester runs against acceptance criteria
-6. **Report** -- coordinator summarizes status
-
-The orchestration is automated, but **decision points stay with you**.
-
-### Step 5.6: Sprint Review and Next Sprint
-
-At the end of a sprint:
-
-```
-/retrospective
-```
-
-Analyzes planned vs. completed, velocity, blockers, and actionable improvements.
-
-Then plan the next sprint:
-
-```
-/sprint-plan new
-```
-
-### Step 5.7: Milestone Reviews
-
-At milestone checkpoints:
-
-```
-/milestone-review "alpha"
-```
-
-Produces feature completeness, quality metrics, risk assessment, and go/no-go
-recommendation.
-
-### Phase 5 Gate
-
-```
-/gate-check production
-```
-
-**Requirements to pass:**
-
-- All MVP stories complete
-- Playtesting: 3 sessions covering new player, mid-game, and difficulty curve
-- Fun hypothesis validated
-- No confusion loops in playtest data
+**Evidence required:** epics and stories exist, every governing ADR is Accepted,
+stories pass readiness, a sprint is planned, and `gate-3-scope` is recorded.
 
 ---
 
-## Phase 6: Polish
+## Stage 6: Build
 
-### What Happens in This Phase
+### What happens
 
-Your game is feature-complete. Now you make it good. This phase focuses on
-performance, balance, accessibility, audio, visual polish, and playtesting.
+Stories are implemented against the pinned snapshot, test-first, with the control
+manifest as the rulebook.
 
-### Phase 6 Pipeline
-
-```
-/perf-profile  -->  /balance-check  -->  /asset-audit  -->  /playtest-report (x3)
-       |                  |                    |                    |
-       v                  v                    v                    v
-  Profile CPU/GPU    Analyze formulas     Verify naming,      Cover: new player,
-  memory, optimize   and data for         formats, sizes      mid-game, difficulty
-  bottlenecks        broken progressions                      curve
-
-  /tech-debt  -->  /team-polish
-       |                |
-       v                v
-  Track and        Coordinated pass:
-  prioritize       performance + art +
-  debt items       audio + UX + QA
-```
-
-### Step 6.1: Performance Profiling
+### Pipeline
 
 ```
+/story-readiness  -->  /dev-story  -->  /code-review  -->  /story-done
+      |                    |                 |                |
+      v                    v                 v                v
+   READY              tests first,      blocking vs      criteria verified,
+                      then module       advisory         notes recorded
+```
+
+### Step 6.1: `/dev-story`
+
+```
+/dev-story story-003
+```
+
+Reads the story, the governing ADR (Decision + Implementation Guidelines), the
+control manifest for the story's layer, and the relevant page of
+`docs/shopify-api-reference/<version>/`.
+
+Rules it enforces:
+
+- Admin GraphQL, never REST
+- shop-scoped queries by session shop
+- session tokens for admin requests; no cookie session
+- webhook handlers verify HMAC on the raw body, then enqueue
+- no floating-point money
+- no hardcoded API version outside `shopify.app.toml`
+
+Tests are written before the module. A story with no testable path is a story that
+should be smaller.
+
+### Step 6.2: `/code-review`
+
+```
+/code-review
+```
+
+Reviews the diff against the control manifest, the governing ADR and the snapshot.
+Findings are **BLOCKING** (citing the rule: forbidden pattern, guardrail, scope) or
+**ADVISORY**. `lead-engineer` owns this gate.
+
+### Step 6.3: `/story-done`
+
+```
+/story-done story-003
+```
+
+Verifies each acceptance criterion, re-checks the embedded manifest version,
+records deferred criteria with a named owner (COMPLETE WITH NOTES, never a silent
+pass), updates sprint status, and surfaces the next ready story.
+
+### Step 6.4: Mid-build changes
+
+| Situation | Skill |
+|-----------|-------|
+| Small tweak inside a story | just change it, keep criteria honest |
+| Small change that needs a spec | `/quick-design` |
+| New behaviour nobody asked for | `/feature-request` → `/scope-check` |
+| Existing behaviour must change | `/update-request` |
+| Something broke in production | `/bug-report` → `/bug-triage` → `/hotfix` |
+| Cross-app inconsistency | `/consistency-check` |
+
+---
+
+## Stage 7: Test
+
+### What happens
+
+Quality is planned, not discovered. This stage turns per-story tests into a suite
+that can be trusted before release.
+
+### Pipeline
+
+```
+/qa-plan  -->  /test-setup  -->  /test-helpers  -->  /smoke-check
+    |              |                  |                 |
+    v              v                  v                 v
+ test strategy  runners +          factories         real-store
+ per surface    fixtures           from REQ IDs      pass
+                                                        |
+                              /regression-suite + /soak-test + /perf-profile
+```
+
+### Step 7.1: `/qa-plan`
+
+```
+/qa-plan discount-bundles
+```
+
+Test strategy per surface: unit for pure logic, integration for the queue and
+webhook path, dev-store smoke for anything that touches a real cart or order.
+
+### Step 7.2: `/test-setup` and `/test-helpers`
+
+Runners, fixtures and factories. Helpers derive from requirement prefixes
+(`REQ-TAG-*` → tag factories), so tests speak the registry's language.
+
+### Step 7.3: `/smoke-check`
+
+```
+/smoke-check discount-bundles
+```
+
+Exercises the app on a **dev store**: install, create the object the app manages,
+verify the real platform behaviour, uninstall. This is the only check that catches
+a wrong mutation name against a live API.
+
+### Step 7.4: Regression, soak and performance
+
+```
+/regression-suite
+/soak-test
 /perf-profile
 ```
 
-Guides you through structured performance profiling:
-- Establish targets (FPS, memory, platform)
-- Identify bottlenecks ranked by impact
-- Generate actionable optimization tasks with code locations and expected gains
+`/regression-suite` re-runs the suite before release. `/soak-test` runs the queue
+for a sustained period to catch leaks and backoff bugs. `/perf-profile` measures the
+budgets in `technical-preferences.md` (admin route p75 < 1.5 s, GraphQL cost < 500,
+webhook p95 < 500 ms).
 
-### Step 6.2: Balance Analysis
-
-```
-/balance-check assets/data/combat_damage.json
-```
-
-Analyzes balance data for statistical outliers, broken progression curves,
-degenerate strategies, and economy imbalances.
-
-### Step 6.3: Asset Audit
+### Step 7.5: `/security-audit`
 
 ```
-/asset-audit
+/security-audit discount-bundles
 ```
 
-Verifies naming conventions, file format standards, and size budgets across
-all assets.
-
-### Step 6.4: Playtesting (Required: 3 Sessions)
-
-```
-/playtest-report
-```
-
-Generates structured playtest reports. Three sessions are required, covering:
-- New player experience
-- Mid-game systems
-- Difficulty curve
-
-### Step 6.5: Technical Debt Assessment
-
-```
-/tech-debt
-```
-
-Scans for TODO/FIXME/HACK comments, code duplication, overly complex functions,
-missing tests, and outdated dependencies. Each item categorized and prioritized.
-
-### Step 6.6: Coordinated Polish Pass
-
-```
-/team-polish "combat system"
-```
-
-Coordinates 4 specialists in parallel:
-1. Performance optimization (performance-analyst)
-2. Visual polish (technical-artist)
-3. Audio polish (sound-designer)
-4. Feel/juice (gameplay-programmer + technical-artist)
-
-You set priorities; the team executes with your approval at each step.
-
-### Step 6.7: Localization and Accessibility
-
-```
-/localize src/
-```
-
-Scans for hardcoded strings, concatenation that breaks translation, text that
-does not account for expansion, and missing locale files.
-
-Accessibility is audited against the tier committed in Phase 3's accessibility
-requirements document.
-
-### Phase 6 Gate
-
-```
-/gate-check polish
-```
-
-**Requirements to pass:**
-
-- At least 3 playtest reports exist
-- Coordinated polish pass completed (`/team-polish`)
-- No blocking performance issues
-- Accessibility tier requirements met
+OAuth and session tokens, scope minimality, webhook verification, token storage,
+log hygiene, protected-customer-data handling. Findings are triaged by
+exploitability, not by severity label.
 
 ---
 
-## Phase 7: Release
+## Stage 8: Release
 
-### What Happens in This Phase
+### What happens
 
-Your game is polished, tested, and ready. Now you ship it.
+Submission as a checklist, with every claim proven on a dev store.
 
-### Phase 7 Pipeline
-
-```
-/release-checklist  -->  /launch-checklist  -->  /team-release
-        |                       |                      |
-        v                       v                      v
-  Pre-release             Full cross-department    Coordinate:
-  validation across       validation (Go/No-Go     build, QA sign-off,
-  code, content,          per department)           deployment, launch
-  store, legal
-                    Also: /changelog, /patch-notes, /hotfix
-```
-
-### Step 7.1: Release Checklist
+### Pipeline
 
 ```
-/release-checklist v1.0.0
+/release-checklist  -->  /app-store-checklist  -->  /release  -->  /changelog
+        |                         |                     |              |
+        v                         v                     v              v
+  build, architecture,      listing, scopes,      deploy version,   merchant +
+  compliance, scopes        screenshots,          tag, record       patch notes
+                            billing               gate-4-release
+                                                         |
+                                                         v
+                                              /launch-checklist  -->  /gate-check gate-4-release
 ```
 
-Generates a comprehensive pre-release checklist covering:
-- Build verification (all platforms compile and run)
-- Certification requirements (platform-specific)
-- Store metadata (descriptions, screenshots, trailers)
-- Legal compliance (EULA, privacy policy, ratings)
-- Save game compatibility
-- Analytics verification
-
-### Step 7.2: Launch Readiness (Full Validation)
+### Step 8.1: `/release-checklist`
 
 ```
-/launch-checklist
+/release-checklist discount-bundles
 ```
 
-Complete cross-department validation:
+Checks the repo, not your memory: tests pass, functions build, ADRs Accepted,
+manifest current, **mandatory compliance webhooks proven** (`shop/redact`,
+`customers/data_request`, `customers/redact`), scopes minimal, smoke test on a clean
+store for this exact version.
 
-| Department | What Is Checked |
-|-----------|---------------|
-| **Engineering** | Build stability, crash rates, memory leaks, load times |
-| **Design** | Feature completeness, tutorial flow, difficulty curve |
-| **Art** | Asset quality, missing textures, LOD levels |
-| **Audio** | Missing sounds, mixing levels, spatial audio |
-| **QA** | Open bug count by severity, regression suite pass rate |
-| **Narrative** | Dialogue completeness, lore consistency, typos |
-| **Localization** | All strings translated, no truncation, locale testing |
-| **Accessibility** | Compliance checklist, assistive feature testing |
-| **Store** | Metadata complete, screenshots approved, pricing set |
-| **Marketing** | Press kit ready, launch trailer, social media scheduled |
-| **Community** | Patch notes draft, FAQ prepared, support channels ready |
-| **Infrastructure** | Servers scaled, CDN configured, monitoring active |
-| **Legal** | EULA finalized, privacy policy, COPPA/GDPR compliance |
+A handler that returns 200 is not evidence that redaction works.
 
-Each item gets a **Go / No-Go** status. All must be Go to ship.
-
-### Step 7.3: Generate Player-Facing Content
+### Step 8.2: `/app-store-checklist`
 
 ```
-/patch-notes v1.0.0
+/app-store-checklist discount-bundles
 ```
 
-Generates player-friendly patch notes from git history and sprint data.
-Translates developer language into player language.
+Listing title and description matching what the app actually does, scope
+justifications, screenshots from the current build, privacy policy matching the
+schema, billing configured through Shopify (no external payment links).
+
+### Step 8.3: `/release` and `/launch-checklist`
 
 ```
-/changelog v1.0.0
+/release discount-bundles 1.0.0
+/launch-checklist discount-bundles
 ```
 
-Generates an internal changelog (more technical, for the team).
+`/release` deploys the app version (bundling functions and extensions), tags the
+commit, writes the changelog entry, and records `gate-4-release`. Submission in the
+Partner Dashboard stays with you — deploy, tag and record are reversible;
+submission is not.
 
-### Step 7.4: Coordinate the Release
+`/launch-checklist` is the post-deploy pass: install flow on a clean store, webhook
+delivery, uninstall/reinstall, support link.
 
-```
-/team-release
-```
+### Step 8.4: `/changelog` and `/patch-notes`
 
-Coordinates release-manager, QA, and DevOps through:
-1. Pre-release validation
-2. Build management
-3. Final QA sign-off
-4. Deployment preparation
-5. Go/No-Go decision
+Merchant-facing notes trace each line to a requirement ID, so support can answer
+"why did this change?". `/patch-notes` writes the shorter in-app variant.
 
-### Step 7.5: Ship
-
-The `validate-push` hook will warn you when pushing to `main` or `develop`.
-This is intentional -- release pushes should be deliberate:
-
-```bash
-git tag v1.0.0
-git push origin main --tags
-```
-
-### Step 7.6: Post-Launch
-
-**Hotfix workflow** for critical production bugs:
+### Step 8.5: Gate 4 — release
 
 ```
-/hotfix "Players losing save data when inventory exceeds 99 items"
+/gate-check gate-4-release
 ```
 
-Bypasses normal sprint processes with a full audit trail:
-1. Creates a hotfix branch
-2. Implements the fix
-3. Ensures backport to development branch
-4. Documents the incident
+**Evidence required:** release checklist complete, App Store checklist complete, a
+deployed version, and `gate-4-release` recorded with approver and timestamp.
 
-**Post-mortem** after launch stabilizes:
+---
+
+## Stage 9: Update
+
+### What happens
+
+The app lives. Shopify ships a new API version every quarter, merchants ask for
+changes, and things break.
+
+### Pipeline
 
 ```
-Ask Claude to create a post-mortem using the template at
-.claude/docs/templates/post-mortem.md
+/update-research  -->  /apply-updates + /propose-updates  -->  /gate-check gate-5-update
+        |                          |
+        v                          v
+ refreshed market/competitor   accepted update set,
+ inputs                        applied with changelog
+                     |
+                     +--> /tech-debt, /hotfix, /retrospective, /milestone-review
 ```
+
+### Step 9.1: Quarterly API version bump
+
+```
+/update-research
+/architecture-review <app> api
+```
+
+Read `docs/shopify-api-reference/VERSION.md`, add the new snapshot directory (never
+edit the old one), bump `shopify.app.toml` and extension manifests in one story, fix
+deprecated-field findings, regenerate the control manifest, then smoke test.
+
+### Step 9.2: Merchant-requested changes
+
+```
+/feature-request  →  /scope-check  →  (research if needed)  →  build
+/update-request   →  the change is a change of intent, not a bug
+```
+
+### Step 9.3: Incidents
+
+```
+/bug-report  →  /bug-triage  →  /hotfix  →  /retrospective
+```
+
+`/hotfix` is the only path that may skip a sprint; it still needs a test that fails
+before the fix and passes after.
+
+### Step 9.4: Debt and consistency
+
+```
+/tech-debt           record and prioritise debt with a named risk
+/consistency-check   registry vs ADR vs manifest drift
+/propose-updates     batch upstream/agent-definition changes for review
+/apply-updates       apply an approved update set
+```
+
+### Step 9.5: Gate 5 — update
+
+```
+/gate-check gate-5-update
+```
+
+**Evidence required:** an approved update set, the applied changes, an updated
+changelog, and `gate-5-update` recorded.
 
 ---
 
 ## Cross-Cutting Concerns
 
-These topics apply across all phases.
+### Director review modes
 
-### Director Review Modes
+Reviews run in one of three modes, resolved from `.claude/docs/director-gates.md`,
+then `production/review-mode.txt`, else default `lean`:
 
-Director gates are specialist agents that review your work at key workflow steps.
-By default they run at every checkpoint. You can control how much review you get.
+| Mode | Behaviour |
+|------|-----------|
+| `solo` | Directors skipped; you are the reviewer |
+| `lean` | Directors skipped, findings summarised by the skill |
+| `full` | Directors spawned for the gate in question |
 
-**Set your review intensity once during `/start`.** Saved to `production/review-mode.txt`.
+Override per invocation with `--review full|lean|solo`.
 
-| Mode | What runs | Best for |
-|------|-----------|----------|
-| `full` | All director gates at every step | New projects, learning the system |
-| `lean` | Directors only at phase transitions (`/gate-check`) | Experienced devs |
-| `solo` | No director reviews | Game jams, prototypes, maximum speed |
+### The collaboration protocol
 
-**Override for a single run** without changing your global setting:
+Every agent follows **Question → Options → Decision → Draft → Approval** and asks
+before writing files. Full text:
+[COLLABORATIVE-DESIGN-PRINCIPLE.md](COLLABORATIVE-DESIGN-PRINCIPLE.md).
 
-```
-/brainstorm space horror --review full
-/architecture-decision --review solo
-```
+### The AskUserQuestion tool
 
-The `--review` flag works on all gate-using skills. Change the global mode at any
-time by editing `production/review-mode.txt` directly or re-running `/start`.
+Decision points are presented as a structured picker (2–4 options, short labels,
+one-sentence descriptions) *after* the full reasoning is written out in
+conversation — the "Explain → Capture" pattern. On harnesses without the tool,
+agents fall back to numbered options in text.
 
-Full gate definitions and check pattern: `.claude/docs/director-gates.md`
-
----
-
-### The Collaboration Protocol
-
-This system is **user-driven collaborative**, not autonomous.
-
-**Pattern:** Question > Options > Decision > Draft > Approval
-
-Every agent interaction follows this pattern:
-1. Agent asks clarifying questions
-2. Agent presents 2-4 options with trade-offs and reasoning
-3. You decide
-4. Agent drafts based on your decision
-5. You review and refine
-6. Agent asks "May I write this to [filepath]?" before writing
-
-See `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` for the full protocol with
-examples.
-
-### The AskUserQuestion Tool
-
-Agents use the `AskUserQuestion` tool for structured option presentation.
-The pattern is Explain then Capture: full analysis in conversation text first,
-then a clean UI picker for the decision. Use it for design choices,
-architecture decisions, and strategic questions. Do not use it for open-ended
-discovery questions or simple yes/no confirmations.
-
-### Agent Coordination (3-Tier Hierarchy)
+### Agent coordination (3 tiers)
 
 ```
-Tier 1 (Directors):    creative-director, technical-director, producer
-                                          |
-Tier 2 (Leads):        game-designer, lead-programmer, art-director,
-                       audio-director, narrative-director, qa-lead,
-                       release-manager, localization-lead
-                                          |
-Tier 3 (Specialists):  gameplay-programmer, engine-programmer,
-                       ai-programmer, network-programmer, ui-programmer,
-                       tools-programmer, systems-designer, level-designer,
-                       economy-designer, world-builder, writer,
-                       technical-artist, sound-designer, ux-designer,
-                       qa-tester, performance-analyst, devops-engineer,
-                       analytics-engineer, accessibility-specialist,
-                       live-ops-designer, prototyper, security-engineer,
-                       community-manager, godot-specialist,
-                       godot-gdscript-specialist, godot-shader-specialist,
-                       godot-csharp-specialist, godot-gdextension-specialist,
-                       unity-specialist, unity-dots-specialist,
-                       unity-shader-specialist, unity-addressables-specialist,
-                       unity-ui-specialist, unreal-specialist,
-                       ue-blueprint-specialist, ue-gas-specialist,
-                       ue-replication-specialist, ue-umg-specialist
+Tier 1 (Leadership):  product-director, technical-director, producer, lead-engineer
+                                        |
+Tier 2 (Leads):       research-specialist, app-architect, api-lead, ux-lead,
+                      polaris-specialist, qa-lead, release-manager,
+                      devops-engineer, prototype-builder, growth-lead,
+                      analytics-engineer, performance-analyst
+                                        |
+Tier 3 (Specialists): graphql, webhooks, billing, auth, App Bridge, Liquid,
+                      checkout, security, tools, localization, App Store review,
+                      test stores, QA execution, accessibility, merchant comms
 ```
 
 **Coordination rules:**
-- Vertical delegation: Directors > Leads > Specialists. Never skip tiers for
+
+- Vertical delegation: directors → leads → specialists. Do not skip tiers for
   complex decisions.
-- Horizontal consultation: Agents at the same tier may consult each other but
-  must not make binding decisions outside their domain.
-- Conflict resolution: Design conflicts go to `creative-director`. Technical
-  conflicts go to `technical-director`. Scope conflicts go to `producer`.
+- Horizontal consultation: same-tier agents may consult each other but must not make
+  binding decisions outside their domain.
+- Conflict resolution: product conflicts → `product-director`; technical conflicts →
+  `technical-director`; scope conflicts → `producer`; code-quality conflicts →
+  `lead-engineer`.
 - No unilateral cross-domain changes.
 
-### Automated Hooks (Safety Net)
+Full roster: [`.claude/docs/agent-roster.md`](../.claude/docs/agent-roster.md).
 
-The system has 12 hooks that run automatically:
+### Automated hooks (safety net)
 
-| Hook | Trigger | What It Does |
-|------|---------|-------------|
-| `session-start.sh` | Session start | Shows branch, recent commits, detects active.md for recovery |
-| `detect-gaps.sh` | Session start | Detects fresh projects (no engine, no concept) and suggests `/start` |
-| `pre-compact.sh` | Before compaction | Dumps session state into conversation for auto-recovery |
-| `post-compact.sh` | After compaction | Reminds Claude to restore session state from `active.md` |
-| `notify.sh` | Notification event | Shows Windows toast notification via PowerShell |
-| `validate-commit.sh` | Before commit | Checks for design doc references, valid JSON, no hardcoded values |
-| `validate-push.sh` | Before push | Warns on pushes to main/develop |
-| `validate-assets.sh` | Before commit | Checks asset naming and size |
-| `validate-skill-change.sh` | Skill file written | Advises running `/skill-test` after `.claude/skills/` changes |
-| `log-agent.sh` | Agent start | Logs agent invocations for audit trail |
-| `log-agent-stop.sh` | Agent stop | Completes agent audit trail (start + stop) |
+`.claude/hooks/` provides the guardrails:
+
+| Hook | Trigger | What it does |
+|------|---------|--------------|
+| `session-start.sh` | Session start | Branch, recent commits, pipeline state |
+| `detect-gaps.sh` | Session start | Flags missing stage artefacts |
+| `approval-gate.sh` | Write / progress | Blocks on an unrecorded required gate |
+| `app-store-gate.sh` | Release work | Blocks with open submission blockers |
+| `validate-commit.sh` | Before commit | Commit message and content checks |
+| `validate-push.sh` | Before push | Warns on pushes to `main`/`develop` |
+| `validate-skill-frontmatter.sh` | Skill file written | Skill frontmatter schema |
+| `validate-skill-change.sh` | Skill file written | Advises `/skill-test` after skill edits |
+| `track-request-changes.sh` | `request.md` edit | Requires a `request-history.md` entry |
+| `pre-compact.sh` / `post-compact.sh` | Compaction | Preserve and restore session state |
+| `log-agent.sh` / `log-agent-stop.sh` | Agent start/stop | Audit trail per invocation |
+| `notify.sh` | Notification | Desktop notification on completion |
 | `session-stop.sh` | Session end | Final session logging |
 
-### Context Resilience
+Hooks are advisory where judgement is involved and hard where data loss is at stake
+(commit validation, request tracking).
 
-**Session state file:** `production/session-state/active.md` is a living
-checkpoint. Update it after each significant milestone. After any disruption
-(compaction, crash, `/clear`), read this file first.
+### Context resilience
 
-**Incremental writing:** When creating multi-section documents, write each
-section to file immediately after approval. This means completed sections
-survive crashes and context compactions. Previous discussion about written
-sections can be safely compacted.
+**Session state:** `production/apps/<app>/session-state/active.md` is a living
+checkpoint. Update it after each milestone; read it first after any disruption
+(compaction, crash, `/clear`).
 
-**Automatic recovery:** The `session-start.sh` hook detects and previews
-`active.md` automatically. The `pre-compact.sh` hook dumps state into the
-conversation before compaction.
+**Incremental writing:** write each approved section to disk immediately, so
+decisions survive compaction and the conversation can be safely shortened.
 
-**Sprint status tracking:** `production/sprint-status.yaml` is the
-machine-readable story tracker. Written by `/sprint-plan` (init) and
-`/story-done` (status updates). Read by `/sprint-status`, `/help`, and
-`/story-done` (next story). Eliminates fragile markdown scanning.
+**Sprint tracking:** `production/sprint-status.yaml` is the machine-readable story
+tracker — written by `/sprint-plan` and `/story-done`, read by `/sprint-status`,
+`/help` and `/story-done`. No fragile markdown scanning.
 
-### Brownfield Adoption
-
-For existing projects that already have some artifacts:
+### Brownfield adoption
 
 ```
-/adopt
+/project-stage-detect   → what exists, what is claimed, what is missing
+/adopt                  → format audit, gaps by severity, ordered migration plan
+/reverse-document       → docs inferred from existing code
 ```
 
-Or targeted:
+`/adopt` distinguishes "file exists" from "file has the required internal
+structure", classifies gaps BLOCKING / HIGH / MEDIUM / LOW, and writes
+`docs/adoption-plan-<date>.md`. Migration, not replacement: it fills gaps and never
+regenerates existing work. Individual skills support retrofit mode too —
 
 ```
-/adopt gdds
-/adopt adrs
-/adopt stories
-/adopt infra
+/architecture-decision retrofit docs/architecture/apps/<app>/ADR-0003-old.md
 ```
 
-This audits existing artifacts for **format** (not existence), classifies gaps
-as BLOCKING/HIGH/MEDIUM/LOW, builds an ordered migration plan, and writes
-`docs/adoption-plan-[date].md`. Core principle: MIGRATION not REPLACEMENT --
-it never regenerates existing work, only fills gaps.
+### Gate system
 
-Individual skills also support retrofit mode:
+Five gates, recorded in `apps/<app>/approvals.json`:
 
-```
-/design-system retrofit design/gdd/combat-system.md
-/architecture-decision retrofit docs/architecture/adr-005.md
-```
+| Gate | Judged at the end of |
+|------|----------------------|
+| `gate-1-research` | research + UX specs |
+| `gate-2-prototype` | prototype review |
+| `gate-3-scope` | epics, stories, sprint |
+| `gate-4-release` | release + App Store checklists |
+| `gate-5-update` | applied update set |
 
-These detect which sections are present vs. missing and fill only the gaps.
+**Verdicts:** PASS / CONCERNS / FAIL, all advisory — you decide whether to proceed.
+An unrecorded gate is not an approved gate: `/project-stage-detect` and `/help` read
+`approvals.json`, not your memory.
 
-### Gate System
-
-Phase gates are formal checkpoints. Run `/gate-check` with the transition name:
-
-```
-/gate-check concept              # Concept -> Systems Design
-/gate-check systems-design       # Systems Design -> Technical Setup
-/gate-check technical-setup      # Technical Setup -> Pre-Production
-/gate-check pre-production       # Pre-Production -> Production
-/gate-check production           # Production -> Polish
-/gate-check polish               # Polish -> Release
-```
-
-**Verdicts:**
-- **PASS** -- all requirements met, advance to next phase
-- **CONCERNS** -- requirements met with acknowledged risks, passable
-- **FAIL** -- requirements not met, blocks advancement with specific remediation
-
-When a gate passes, `production/stage.txt` is updated (only then), which
-controls the status line and `/help` behavior.
-
-### Reverse Documentation
-
-For code that exists without design docs (common after brownfield adoption):
+### Reverse documentation
 
 ```
-/reverse-document src/gameplay/combat/
+/reverse-document apps/order-tags
 ```
 
-Reads existing code and generates GDD-format design documentation from it.
+For code that exists without docs: reads the implementation, infers intent, asks
+about the ambiguous decisions, and writes the missing design doc or ADR. It never
+invents a rationale — it asks.
 
 ---
 
 ## Appendix A: Agent Quick-Reference
 
-### "I need to do X -- which agent do I use?"
+### "I need X — which agent?"
 
-| I need to... | Agent | Tier |
-|-------------|-------|------|
-| Come up with a game idea | `/brainstorm` skill | -- |
-| Design a game mechanic | `game-designer` | 2 |
-| Design specific formulas/numbers | `systems-designer` | 3 |
-| Design a game level | `level-designer` | 3 |
-| Design loot tables / economy | `economy-designer` | 3 |
-| Build world lore | `world-builder` | 3 |
-| Write dialogue | `writer` | 3 |
-| Plan the story | `narrative-director` | 2 |
-| Plan a sprint | `producer` | 1 |
-| Make a creative decision | `creative-director` | 1 |
-| Make a technical decision | `technical-director` | 1 |
-| Implement gameplay code | `gameplay-programmer` | 3 |
-| Implement core engine systems | `engine-programmer` | 3 |
-| Implement AI behavior | `ai-programmer` | 3 |
-| Implement multiplayer | `network-programmer` | 3 |
-| Implement UI | `ui-programmer` | 3 |
-| Build dev tools | `tools-programmer` | 3 |
-| Review code architecture | `lead-programmer` | 2 |
-| Create shaders / VFX | `technical-artist` | 3 |
-| Define visual style | `art-director` | 2 |
-| Define audio style | `audio-director` | 2 |
-| Design sound effects | `sound-designer` | 3 |
-| Design UX flows | `ux-designer` | 3 |
-| Write test cases | `qa-tester` | 3 |
-| Plan test strategy | `qa-lead` | 2 |
-| Profile performance | `performance-analyst` | 3 |
-| Set up CI/CD | `devops-engineer` | 3 |
-| Design analytics | `analytics-engineer` | 3 |
-| Check accessibility | `accessibility-specialist` | 3 |
-| Plan live operations | `live-ops-designer` | 3 |
-| Manage a release | `release-manager` | 2 |
-| Manage localization | `localization-lead` | 2 |
-| Prototype quickly | `prototyper` | 3 |
-| Audit security | `security-engineer` | 3 |
-| Communicate with players | `community-manager` | 3 |
-| Godot-specific help | `godot-specialist` | 3 |
-| GDScript-specific help | `godot-gdscript-specialist` | 3 |
-| Godot shader help | `godot-shader-specialist` | 3 |
-| GDExtension modules | `godot-gdextension-specialist` | 3 |
-| Unity-specific help | `unity-specialist` | 3 |
-| Unity DOTS/ECS | `unity-dots-specialist` | 3 |
-| Unity shaders/VFX | `unity-shader-specialist` | 3 |
-| Unity Addressables | `unity-addressables-specialist` | 3 |
-| Unity UI Toolkit | `unity-ui-specialist` | 3 |
-| Unreal-specific help | `unreal-specialist` | 3 |
-| Unreal GAS | `ue-gas-specialist` | 3 |
-| Unreal Blueprints | `ue-blueprint-specialist` | 3 |
-| Unreal replication | `ue-replication-specialist` | 3 |
-| Unreal UMG/CommonUI | `ue-umg-specialist` | 3 |
+| I need to... | Agent |
+|--------------|-------|
+| Decide what to build next | `product-director` |
+| Decide how to build it | `technical-director` |
+| Plan the pipeline, gates, milestones | `producer` |
+| Implement and review code | `lead-engineer` |
+| Market and competitor research | `research-specialist` |
+| App architecture, data model, boundaries | `app-architect` |
+| Admin API surface, versions, deprecations | `api-lead` |
+| GraphQL cost, pagination, bulk operations | `graphql-specialist` |
+| Webhook subscriptions, HMAC, retries | `webhooks-specialist` |
+| OAuth, session tokens, embedded security | `auth-specialist` |
+| Billing API, plans, gating | `billing-specialist` |
+| Polaris components, admin UX build | `polaris-specialist` |
+| Admin UX design and review | `ux-lead` |
+| App Bridge, embedded navigation | `app-bridge-specialist` |
+| Theme app extension, Liquid, app blocks | `liquid-specialist` |
+| Checkout UI extensions, function limits | `checkout-specialist` |
+| Accessibility on admin surfaces | `accessibility-specialist` |
+| Security review, data handling | `security-specialist` |
+| Performance, latency, rate limits | `performance-analyst` |
+| Test strategy, quality gates | `qa-lead` |
+| Run tests on a dev store | `qa-tester` |
+| Dev test store setup and seed data | `test-store-manager` |
+| Hosting, CI/CD, environments | `devops-engineer` |
+| Durable prototypes | `prototype-builder` |
+| Release, versioning, submission | `release-manager` |
+| App Store requirements, listing review | `app-store-reviewer` |
+| Pricing, packaging, install funnel | `growth-lead` |
+| Usage events and merchant metrics | `analytics-engineer` |
+| Localization and markets | `localization-lead` |
+| CLI scripts, dev-store automation | `tools-engineer` |
+| Merchant comms, review responses | `community-manager` |
 
-### Agent Hierarchy
+### Roster by tier
 
-```
-                    creative-director / technical-director / producer
-                                         |
-          ---------------------------------------------------------------
-          |            |           |           |          |        |       |
-    game-designer  lead-prog  art-dir  audio-dir  narr-dir  qa-lead  release-mgr
-          |            |           |           |          |        |        |
-     specialists  programmers  tech-art  snd-design  writer   qa-tester  devops
-     (systems,    (gameplay,             (sound)     (world-  (perf,     (analytics,
-      economy,     engine,                           builder)  access.)   security)
-      level)       ai, net,
-                   ui, tools)
-```
+**Tier 1 (4):** `product-director`, `technical-director`, `producer`, `lead-engineer`
 
-**Escalation rule:** If two agents disagree, go up. Design conflicts go to
-`creative-director`. Technical conflicts go to `technical-director`. Scope
-conflicts go to `producer`.
+**Tier 2 (12):** `research-specialist`, `app-architect`, `api-lead`, `ux-lead`,
+`polaris-specialist`, `qa-lead`, `release-manager`, `devops-engineer`,
+`prototype-builder`, `growth-lead`, `analytics-engineer`, `performance-analyst`
+
+**Tier 3 specialists (12):** `graphql-specialist`, `webhooks-specialist`,
+`billing-specialist`, `auth-specialist`, `app-bridge-specialist`,
+`liquid-specialist`, `checkout-specialist`, `security-specialist`,
+`tools-engineer`, `localization-lead`, `app-store-reviewer`, `test-store-manager`
+
+**Tier 3 execution (3):** `qa-tester`, `accessibility-specialist`,
+`community-manager`
+
+### Model tiers
+
+Agent frontmatter declares `haiku`, `sonnet` or `opus`. Codex maps these through
+`.codex/agent-models.toml`; Hermes resolves them from the active profile's
+`delegation` section. The mapping changes *execution*, never the instructions.
 
 ---
 
-## Appendix B: Slash Command Quick-Reference
+## Appendix B: Skill Quick-Reference
 
-### All 73 Commands by Category
+66 skills, each a directory under `.claude/skills/`.
 
-#### Onboarding and Navigation (6)
+### Onboarding and navigation (7)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/start` | Guided onboarding, routes to right workflow | Any (first session) |
-| `/help` | Context-aware "what do I do next?" | Any |
-| `/project-stage-detect` | Full project audit to determine current phase | Any |
-| `/setup-engine` | Configure engine, pin version, set preferences | 1 |
-| `/adopt` | Brownfield audit and migration plan | Any (existing projects) |
-| `/skill-improve` | Improve a skill via test-fix-retest loop | Any |
+`start`, `help`, `project-stage-detect`, `kanban-status`, `onboard`, `adopt`,
+`brainstorm`
 
-#### Game Design (6)
+### Request and scope (7)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/brainstorm` | Collaborative ideation with MDA analysis | 1 |
-| `/map-systems` | Decompose concept into systems index | 1-2 |
-| `/design-system` | Guided section-by-section GDD authoring | 2 |
-| `/quick-design` | Lightweight spec for small changes | 2+ |
-| `/review-all-gdds` | Cross-GDD consistency and design theory review | 2 |
-| `/propagate-design-change` | Find ADRs/stories affected by GDD changes | 5 |
+`update-request`, `mmmvp-proposals`, `quick-design`, `design-review`, `scope-check`,
+`feature-request`, `bug-report`
 
-#### UX and Interface (2)
+### Research and UX (5)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/ux-design` | Author UX specs (screen/flow, HUD, patterns) | 4 |
-| `/ux-review` | Validate UX specs for accessibility and GDD alignment | 4 |
+`research`, `update-research`, `ux-design`, `ux-review`, `localize`
 
-#### Architecture (4)
+### Architecture (5)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/create-architecture` | Master architecture document | 3 |
-| `/architecture-decision` | Create or retrofit an ADR | 3 |
-| `/architecture-review` | Validate all ADRs, dependency ordering | 3 |
-| `/create-control-manifest` | Flat programmer rules from Accepted ADRs | 3 |
+`create-architecture`, `architecture-decision`, `architecture-review`,
+`create-control-manifest`, `consistency-check`
 
-#### Stories and Sprints (8)
+### Prototype (3)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/create-epics` | Translate GDDs + ADRs into epics (one per module) | 4 |
-| `/create-stories` | Break a single epic into story files | 4 |
-| `/dev-story` | Implement a story — routes to the correct programmer agent | 5 |
-| `/sprint-plan` | Create or manage sprint plans | 4-5 |
-| `/sprint-status` | Quick 30-line sprint snapshot | 5 |
-| `/story-readiness` | Validate story is implementation-ready | 4-5 |
-| `/story-done` | 8-phase story completion review | 5 |
-| `/estimate` | Effort estimation with risk assessment | 4-5 |
+`prototype`, `build-prototype`, `prototype-review`
 
-#### Reviews and Analysis (13)
+### Planning (6)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/design-review` | Validate GDD against 8-section standard | 1-2 |
-| `/code-review` | Architectural code review | 5+ |
-| `/balance-check` | Game balance formula analysis | 5-6 |
-| `/asset-audit` | Asset naming, format, size verification | 6 |
-| `/asset-spec` | Per-asset visual specs and AI generation prompts | 5-6 |
-| `/content-audit` | GDD-specified content vs. implemented | 5 |
-| `/consistency-check` | Cross-GDD entity and formula inconsistency scan | 2+ |
-| `/scope-check` | Scope creep detection | 5 |
-| `/perf-profile` | Performance profiling workflow | 6 |
-| `/tech-debt` | Tech debt scanning and prioritization | 6 |
-| `/gate-check` | Formal phase gate with PASS/CONCERNS/FAIL | All transitions |
-| `/reverse-document` | Generate design docs from existing code | Any |
-| `/security-audit` | Security vulnerability audit (save, network, input) | 6-7 |
+`create-epics`, `create-stories`, `estimate`, `sprint-plan`, `sprint-status`,
+`milestone-review`
 
-#### QA and Testing (9)
+### Build (5)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/qa-plan` | Generate QA test plan for a sprint or feature | 5 |
-| `/smoke-check` | Critical path smoke test gate before QA hand-off | 5-6 |
-| `/soak-test` | Soak test protocol for extended play sessions | 6 |
-| `/regression-suite` | Map test coverage, identify fixed bugs lacking regression tests | 5-6 |
-| `/test-setup` | Scaffold test framework and CI/CD pipeline | 4 |
-| `/test-helpers` | Generate engine-specific test helper libraries | 4-5 |
-| `/test-evidence-review` | Quality review of test files and manual evidence | 5 |
-| `/test-flakiness` | Detect non-deterministic tests from CI logs | 5-6 |
-| `/skill-test` | Validate skill files for structural and behavioral correctness | Any |
+`dev-story`, `code-review`, `story-done`, `story-readiness`, `bug-triage`
 
-#### Production Management (6)
+### Test and quality (11)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/milestone-review` | Milestone progress and go/no-go | 5 |
-| `/retrospective` | Sprint retrospective analysis | 5 |
-| `/bug-report` | Structured bug report creation | 5+ |
-| `/bug-triage` | Re-evaluate open bugs for priority, severity, and owner | 5+ |
-| `/playtest-report` | Structured playtest session report | 4-6 |
-| `/onboard` | Onboard a new team member | Any |
+`qa-plan`, `test-setup`, `test-helpers`, `test-evidence-review`, `test-flakiness`,
+`smoke-check`, `regression-suite`, `soak-test`, `perf-profile`, `security-audit`,
+`retrospective`
 
-#### Release (6)
+### Test store and release (9)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/release-checklist` | Pre-release validation | 7 |
-| `/launch-checklist` | Full cross-department launch readiness | 7 |
-| `/changelog` | Auto-generate internal changelog | 7 |
-| `/patch-notes` | Player-facing patch notes | 7 |
-| `/hotfix` | Emergency fix workflow | 7+ |
-| `/day-one-patch` | Scoped patch for issues found after gold master | 7+ |
+`create-test-store`, `deploy-to-test-store`, `release-checklist`,
+`app-store-checklist`, `release`, `launch-checklist`, `changelog`, `patch-notes`,
+`hotfix`
 
-#### Creative (4)
+### Scaffolding and maintenance (8)
 
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/prototype` | Concept prototype — validate core idea before GDDs | 1 |
-| `/art-bible` | Guided Art Bible authoring — visual identity spec | 1-2 |
-| `/vertical-slice` | Production-quality end-to-end build before Production | 4 |
-| `/localize` | String extraction and validation | 6-7 |
-
-#### Team Orchestration (9)
-
-| Command | Purpose | Phase |
-|---------|---------|-------|
-| `/team-combat` | Combat feature: design through implementation | 5 |
-| `/team-narrative` | Narrative content: structure through dialogue | 5 |
-| `/team-ui` | UI feature: UX spec through polished implementation | 5 |
-| `/team-level` | Level: layout through dressed encounters | 5 |
-| `/team-audio` | Audio: direction through implemented events | 5-6 |
-| `/team-polish` | Coordinated polish: perf + art + audio + QA | 6 |
-| `/team-release` | Release coordination: build + QA + deployment | 7 |
-| `/team-live-ops` | Live-ops planning: seasonal events, battle pass, retention | 7+ |
-| `/team-qa` | Full QA cycle: strategy, execution, coverage, sign-off | 6-7 |
+`scaffold`, `tech-debt`, `reverse-document`, `apply-updates`, `propose-updates`,
+`gate-check`, `skill-improve`, `skill-test`
 
 ---
 
 ## Appendix C: Common Workflows
 
-### Workflow 1: "I just started and have no game idea"
+### Workflow 1: "I have no app idea"
 
 ```
-1. /start (routes you based on where you are)
-2. /brainstorm (collaborative ideation, pick a concept)
-3. /setup-engine (pin engine and version)
-4. /design-review on concept doc (optional, recommended)
-5. /map-systems (decompose concept into systems with deps and priorities)
-6. /gate-check concept (verify you're ready for Systems Design)
-7. /design-system per system (guided GDD authoring)
+1. /start
+2. /brainstorm            pick a concept
+3. /update-request        write it into request.md
+4. /research
+5. /ux-design, /ux-review
+6. /gate-check gate-1-research
 ```
 
-### Workflow 2: "I have designs and want to start coding"
+### Workflow 2: "I have an idea and want to start building"
 
 ```
-1. /design-review on each GDD (make sure they're solid)
-2. /review-all-gdds (cross-GDD consistency)
-3. /gate-check systems-design
-4. /create-architecture + /architecture-decision (per major decision)
-5. /architecture-review
-6. /create-control-manifest
-7. /gate-check technical-setup
-8. /create-epics layer: foundation + /create-stories [slug] (define epics, break into stories)
-9. /sprint-plan new
-10. /story-readiness -> implement -> /story-done (story lifecycle)
+1. /update-request
+2. /research → /ux-design → /ux-review → gate-1
+3. /scaffold
+4. /create-architecture + /architecture-decision (per decision)
+5. /create-control-manifest → /architecture-review
+6. /build-prototype → /prototype-review → gate-2
 ```
 
-### Workflow 3: "I need to add a complex feature mid-production"
+### Workflow 3: "I have a prototype and want to ship it"
 
 ```
-1. /design-system or /quick-design (depending on scope)
-2. /design-review to validate
-3. /propagate-design-change if modifying existing GDDs
-4. /estimate for effort and risk
-5. /team-combat, /team-narrative, /team-ui, etc. (appropriate team skill)
-6. /story-done when complete
-7. /balance-check if it affects game balance
+1. /prototype-review → gate-2
+2. /scope-check
+3. /create-epics → /create-stories → /estimate
+4. /sprint-plan → /story-readiness → gate-3
+5. /dev-story → /code-review → /story-done
+6. /qa-plan → /smoke-check → /security-audit
+7. /release-checklist → /app-store-checklist → /release → gate-4
 ```
 
 ### Workflow 4: "Something broke in production"
 
 ```
-1. /hotfix "description of the issue"
-2. Fix is implemented on hotfix branch
-3. /code-review the fix
-4. Run tests
-5. /release-checklist for hotfix build
-6. Deploy and backport
+1. /bug-report "duplicate tags after a replayed webhook"
+2. /bug-triage
+3. /hotfix            branch, failing test, fix, release note
+4. /smoke-check
+5. /retrospective
 ```
 
-### Workflow 5: "I have an existing project and want to use this system"
+`/hotfix` skips the sprint, never the test.
+
+### Workflow 5: "I have an existing Shopify app and want to use this pipeline"
 
 ```
-1. /start (choose Path D -- existing work)
-2. /project-stage-detect (determines current phase)
-3. /adopt (audits existing artifacts, builds migration plan)
-4. /design-system retrofit [path] (fill GDD gaps)
-5. /architecture-decision retrofit [path] (fill ADR gaps)
-6. /gate-check at appropriate transition
+1. /project-stage-detect
+2. /adopt                 format audit + ordered migration plan
+3. /reverse-document      docs from existing code
+4. /architecture-review <app>
+5. /gate-check at the gate you believe you are at
 ```
 
 ### Workflow 6: "Starting a new sprint"
 
 ```
-1. /retrospective (review last sprint)
-2. /sprint-plan new (create next sprint)
-3. /scope-check (ensure scope is manageable)
-4. /story-readiness per story before pickup
-5. Implement stories
-6. /story-done per completed story
-7. /sprint-status for quick progress checks
+1. /retrospective
+2. /sprint-plan
+3. /scope-check
+4. /story-readiness       per story, before pickup
+5. /dev-story → /code-review → /story-done
+6. /sprint-status         quick progress snapshot
 ```
 
-### Workflow 7: "Shipping the game"
+### Workflow 7: "Shipping a version"
 
 ```
-1. /gate-check polish (verify Polish phase is complete)
-2. /tech-debt (decide what's acceptable at launch)
-3. /localize (final localization pass)
-4. /release-checklist v1.0.0
-5. /launch-checklist (full cross-department validation)
-6. /team-release (coordinate the release)
-7. /patch-notes and /changelog
-8. Ship!
-9. /hotfix if anything breaks post-launch
-10. Post-mortem after launch stabilizes
+1. /release-checklist
+2. /app-store-checklist
+3. /security-audit
+4. /release <app> <version>
+5. /changelog + /patch-notes
+6. /launch-checklist
+7. /gate-check gate-4-release
 ```
 
-### Workflow 8: "I'm lost / don't know what to do next"
+### Workflow 8: "Shopify released a new API version"
 
 ```
-1. /help (reads your phase, checks artifacts, tells you what's next)
-2. If /help doesn't help: /project-stage-detect (full audit)
-3. If stage seems wrong: /gate-check at the transition you think you're at
+1. /update-research
+2. add docs/shopify-api-reference/<new-version>/ (never edit the old one)
+3. /architecture-decision "bump admin API to <new-version>"
+4. /architecture-review <app> api
+5. /create-control-manifest <app> update
+6. /smoke-check → /release
+7. /gate-check gate-5-update
+```
+
+### Workflow 9: "I'm lost"
+
+```
+1. /help                      reads the stage, names the next action
+2. /project-stage-detect      full audit when /help disagrees with reality
 ```
 
 ---
 
 ## Tips for Getting the Most Out of the System
 
-1. **Always start with design, then implement.** The agent system is built
-   around the assumption that a design document exists before code is written.
-   Agents reference GDDs constantly.
-
-2. **Use team skills for cross-cutting features.** Do not try to manually
-   coordinate 4 agents yourself -- let `/team-combat`, `/team-narrative`,
-   etc. handle the orchestration.
-
-3. **Trust the rules system.** When a rule flags something in your code, fix
-   it. The rules encode hard-won game development wisdom (data-driven values,
-   delta time, accessibility, etc.).
-
-4. **Compact proactively.** At ~65-70% context usage, compact or `/clear`.
-   The pre-compact hook saves your progress. Do not wait until you are at the
-   limit.
-
-5. **Use the right tier of agent.** Do not ask `creative-director` to write a
-   shader. Do not ask `qa-tester` to make design decisions. The hierarchy
-   exists for a reason.
-
-6. **Run /help when uncertain.** It reads your actual project state and tells
-   you the single most important next step.
-
-7. **Run `/design-review` before handing designs to programmers.** This
-   catches incomplete specs early, saving rework.
-
-8. **Run `/code-review` after every major feature.** Catch architectural
-   issues before they propagate.
-
-9. **Prototype risky mechanics first.** A day of prototyping can save a week
-   of production on a mechanic that does not work.
-
-10. **Keep your sprint plans honest.** Use `/scope-check` regularly. Scope
-    creep is the number one killer of indie games.
-
-11. **Document decisions with ADRs.** Future-you will thank present-you for
-    recording *why* things were built the way they were.
-
-12. **Use the story lifecycle religiously.** `/story-readiness` before pickup,
-    `/story-done` after completion. This catches deviations early and keeps
-    the pipeline honest.
-
-13. **Write to files early and often.** Incremental section writing means your
-    design decisions survive crashes and compactions. The file is the memory,
-    not the conversation.
+1. **Run `/help` before asking a question.** It usually answers "what next?".
+2. **Read the pinned snapshot, not your model's memory.**
+   `docs/shopify-api-reference/` exists because training data is older than the API
+   version you ship against.
+3. **Let readiness block you.** A story that fails `/story-readiness` fails review
+   more expensively later.
+4. **Record gates explicitly.** `approvals.json` is the only record later skills
+   trust.
+5. **Keep requirement IDs flowing.** Story → test → commit message → changelog. That
+   chain is what makes `/architecture-review rtm` useful.
+6. **Prefer deleting scope over adding time.** The research brief's killed-features
+   list exists for exactly this conversation.
+7. **Verify on a dev store.** A passing unit test against a mock proves the mock.
+8. **Fix the rule, not the line.** When a rule flags a hardcoded API version, the
+   fix is to read it from config — not to move the literal.
+9. **Write ADRs for the "why".** Future-you needs the rejected alternatives more
+   than the chosen one.
+10. **Compact proactively.** Around 65–70% context usage, compact or `/clear`. The
+    pre-compact hook saves progress; do not wait for the limit.
+11. **Use the right tier of agent.** Do not ask `product-director` to fix a webhook
+    handler; do not ask `qa-tester` to make a scope decision.
+12. **Write to disk early.** The file is the memory, not the conversation.

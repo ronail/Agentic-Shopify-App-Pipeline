@@ -7,6 +7,9 @@ once for Claude Code in `.claude/settings.json`, once for Codex in
 own profile config (`~/.hermes/config.yaml`, machine-global — not auto-applied
 from the repo). One script copy, three hosts.
 
+Each row below has its own note in `.claude/docs/hooks-reference/`, named after
+the hook without the `.sh` suffix.
+
 | Hook | Event | Trigger | Action | Blocks? |
 | ---- | ----- | ------- | ------ | ------- |
 | `session-start.sh` | SessionStart | Session begins | Prints the pipeline dashboard `/start` renders: `docs/registry/apps.json` + every `apps/<slug>/status.md` (stage, last gate, prototype, pipeline files, next skill, drift, blockers) | no (read-only) |
@@ -30,23 +33,35 @@ from the repo). One script copy, three hosts.
 - **Exit codes.** `exit 0` allows. In Claude Code, Codex and Hermes only `exit 2`
   blocks — and only on the pre-tool event (the stderr message is shown to the
   model). `exit 1` is a *non-blocking* error: the tool call proceeds. PostToolUse
-  hooks (`validate-skill-frontmatter.sh`, `track-request-changes.sh`) therefore
-  also use `exit 2` to report an error by name, but the write has already landed:
-  they are advisory, not gates.
-- **Gates name their hook.** Every rejection starts with `BLOCKED
-  [<hook>.sh]:` and states the file and the required record, so a failed gate is
-  never mistaken for a generic error.
+  hooks therefore also use `exit 2` to report an error by name, but the write has
+  already landed: they are advisory, not gates.
+- **A gate names itself.** Every rejection starts with `BLOCKED [<hook>]:` and
+  states the file and the required record, so a failed gate is never mistaken for
+  a generic error.
 - **No hard dependencies.** Every hook runs with `bash` alone. `jq` and
   `python3` are used when present and skipped when absent (grep/sed fallbacks);
   a missing parser degrades to a warning, never a crash.
-- **Read-before-write.** `session-start.sh`, `detect-gaps.sh` and
-  `session-stop.sh` read app state; they never create an app directory or edit
-  `docs/registry/apps.json`.
+- **Read-before-write.** The session hooks read app state; they never create an
+  app directory or edit `docs/registry/apps.json`.
 
-## Schema and per-hook notes
+## Payload shapes
 
-- `.claude/docs/hooks-reference/hook-input-schemas.md` — payload for each event
-- `.claude/docs/hooks-reference/approval-gate.md` — gate ids, mapping and fixtures
-- `.claude/docs/hooks-reference/app-store-gate.md` — checklist contract and fixtures
-- `.claude/docs/hooks-reference/pre-commit-code-quality.md` — commit-time checks
-- `.claude/docs/hooks-reference/pre-push-test-gate.md` — push-time checks
+Every hook reads one JSON object on stdin. The keys each event carries:
+
+| Event | Keys used |
+| ----- | --------- |
+| PreToolUse (Bash) | `tool_name`, `tool_input.command` |
+| PreToolUse (Write/Edit) | `tool_name`, `tool_input.file_path`, `tool_input.content` |
+| PostToolUse (Write/Edit) | `tool_name`, `tool_input.file_path` |
+| SessionStart / SessionEnd / PreCompact / PostCompact | `session_id`, `cwd` |
+| SubagentStart / SubagentStop | `session_id`, `agent_id`, `agent_type` |
+| Notification | `session_id`, `message` |
+
+A hook that receives no payload (run by hand) must still exit 0 and do something
+sensible — every one here does.
+
+## Per-hook notes
+
+- `.claude/docs/hooks-reference/approval-gate.md` — gate ids, mapping and the failing fixture
+- `.claude/docs/hooks-reference/app-store-gate.md` — checklist contract and the failing fixture
+- every other hook has a one-page note at `.claude/docs/hooks-reference/<hook-name-without-.sh>.md`

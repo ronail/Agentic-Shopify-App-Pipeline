@@ -1,6 +1,8 @@
 # Context Management
 
-Context is the most critical resource in a Claude Code session. Manage it actively.
+Context is the most critical resource in a session. Manage it actively. The
+pipeline runs up to 31 agents; each subagent invocation spends tokens, so state
+lives in files, not in the conversation.
 
 ## File-Backed State (Primary Strategy)
 

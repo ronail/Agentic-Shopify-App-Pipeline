@@ -514,25 +514,25 @@ Expected: `R6-OK`, then the two negative fixtures recorded in the commit (gate r
 
 `agent-roster.md` is owned by R2 and `skills-reference.md` by R4 — this phase cross-checks them, it does not rewrite them.
 
-- [ ] `agent-coordination-map.md`, `coordination-rules.md`, `director-gates.md` — rebuilt for the 31-agent roster and the five approval gates above
-- [ ] `rules-reference.md`, `hooks-reference.md` + `hooks-reference/` — rebuilt, 1:1 with disk
-- [ ] `.claude/docs/workflow-catalog.yaml` — **this phase owns the file**: phases 0–5 (not game production phases); R4 only re-points `step` ids at surviving skills
-- [ ] `quick-start.md`, `setup-requirements.md` — Shopify CLI / Partner account / dev store / pinned API version prerequisites; drop engine SDK setup
-- [ ] `agent-memory-setup.md`, `settings-local-template.md`, `CLAUDE-local-template.md` — rebrand, keep the mechanics
-- [ ] `review-workflow.md` — code / security / UX / App Store review passes
-- [ ] Replace `docs/engine-reference/{godot,unity,unreal,threejs}` (plus its `README.md`) with `docs/shopify-api-reference/` — version-pinned Admin API snapshot + `VERSION.md`
-- [ ] `docs/architecture/` — rebuild ADRs for Shopify, including `tr-registry.yaml` → per-app requirements registry and `control-manifest.md` → per-app manifest
-- [ ] `docs/registry/`, `docs/examples/` — rebuild for Shopify; delete engine examples
-- [ ] `docs/WORKFLOW-GUIDE.md`, `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` — keep the principles, swap every example
+- [x] `agent-coordination-map.md`, `coordination-rules.md`, `director-gates.md` — rebuilt for the 31-agent roster and the five approval gates above
+- [x] `rules-reference.md`, `hooks-reference.md` + `hooks-reference/` — rebuilt, 1:1 with disk
+- [x] `.claude/docs/workflow-catalog.yaml` — **this phase owns the file**: phases 0–5 (not game production phases); R4 only re-points `step` ids at surviving skills
+- [x] `quick-start.md`, `setup-requirements.md` — Shopify CLI / Partner account / dev store / pinned API version prerequisites; drop engine SDK setup
+- [x] `agent-memory-setup.md`, `settings-local-template.md`, `CLAUDE-local-template.md` — rebrand, keep the mechanics
+- [x] `review-workflow.md` — code / security / UX / App Store review passes
+- [x] Replace `docs/engine-reference/{godot,unity,unreal,threejs}` (plus its `README.md`) with `docs/shopify-api-reference/` — version-pinned Admin API snapshot + `VERSION.md`
+- [x] `docs/architecture/` — rebuild ADRs for Shopify, including `tr-registry.yaml` → per-app requirements registry and `control-manifest.md` → per-app manifest
+- [x] `docs/registry/`, `docs/examples/` — rebuild for Shopify; delete engine examples
+- [x] `docs/WORKFLOW-GUIDE.md`, `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md` — keep the principles, swap every example
 
 **Acceptance criteria**
 
-- [ ] **AC-R7.1** `docs/engine-reference/` no longer exists; `docs/shopify-api-reference/VERSION.md` does and pins a concrete API version
-- [ ] **AC-R7.2** No game-engine string under `.claude/docs/` or `docs/` outside `docs/legacy/` (`godot|unity|unreal|threejs|gdscript`)
-- [ ] **AC-R7.3** Every reference doc that enumerates a set (roster, skills, rules, hooks) is 1:1 with disk
-- [ ] **AC-R7.4** `workflow-catalog.yaml` parses as YAML and its top-level phases are 0–5
-- [ ] **AC-R7.5** `quick-start.md` boots a fresh reader: Partner account → dev store → `shopify app dev` → `/start`, with no engine step
-- [ ] **AC-R7.6** Every path referenced from `CLAUDE.md`, agents and skills resolves
+- [x] **AC-R7.1** `docs/engine-reference/` no longer exists; `docs/shopify-api-reference/VERSION.md` does and pins a concrete API version
+- [x] **AC-R7.2** No game-engine string under `.claude/docs/` or `docs/` outside `docs/legacy/` (`godot|unity|unreal|threejs|gdscript`)
+- [x] **AC-R7.3** Every reference doc that enumerates a set (roster, skills, rules, hooks) is 1:1 with disk
+- [x] **AC-R7.4** `workflow-catalog.yaml` parses as YAML and its top-level phases are 0–5
+- [x] **AC-R7.5** `quick-start.md` boots a fresh reader: Partner account → dev store → `shopify app dev` → `/start`, with no engine step
+- [x] **AC-R7.6** Every path referenced from `CLAUDE.md`, agents and skills resolves
 
 **Smoke test**
 

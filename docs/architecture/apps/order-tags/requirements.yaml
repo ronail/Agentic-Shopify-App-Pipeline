@@ -1,0 +1,175 @@
+# Requirements Registry — order-tags
+#
+# Stable IDs used by stories, epics and the ADR "App Requirements Addressed"
+# section. Append-only: never renumber, never delete — set status: deprecated.
+# Updated by /architecture-review (Phase 2 extract, Phase 8 write).
+#
+# Fields
+#   id                  REQ-<AREA>-NNN
+#   area                Data model | API surface | Scopes | Webhooks | Billing |
+#                       Admin UI | Theme extension | Checkout extension |
+#                       Auth/sessions | Jobs | Performance | Isolation/compliance
+#   requirement         one sentence, testable
+#   acceptance_criteria the criteria a story copies into its checklist
+#   edge_cases          situations the implementation must resolve explicitly
+#   priority            must | should | could
+#   adr                 governing ADR, or "" when still a gap
+#   status              active | deprecated
+
+version: 1
+app: order-tags
+pinned_admin_api_version: "2026-10"
+last_updated: "2026-10-29"
+
+requirements:
+  - id: REQ-TAG-001
+    area: Admin UI
+    requirement: >
+      A merchant can define tag rules in the embedded admin: one or more
+      conditions (order total, existing tag, discount code, shipping country,
+      customer tag) map to one or more tags to add.
+    acceptance_criteria:
+      - Rules list shows name, condition count, tags applied and enabled state.
+      - A rule with zero conditions is rejected at save with a field-level error.
+      - Rule order is explicit and shown; first-matching-wins is documented in the UI.
+    edge_cases:
+      - Two rules add the same tag to one order — the tag is added once.
+      - A rule references a discount code that no longer exists.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-002
+    area: Webhooks
+    requirement: >
+      A new order matching an enabled rule is tagged within 60 seconds (p95)
+      of creation, and re-tagged when a later update makes it match.
+    acceptance_criteria:
+      - orders/create delivery produces the tag on the order in the admin.
+      - orders/updated re-evaluates only rules whose conditions could have changed.
+      - Handler p95 < 500 ms; tagging itself runs in the background.
+    edge_cases:
+      - Order created while the app is being installed.
+      - Duplicate delivery of the same order version.
+      - Order created and cancelled inside the same minute.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-003
+    area: API surface
+    requirement: >
+      Tags are written with `tagsAdd`/`tagsRemove` only; existing merchant tags
+      are never replaced or reordered.
+    acceptance_criteria:
+      - A tagged order keeps its pre-existing tags after the app runs.
+      - Removal uses tagsRemove and never writes the full tag array.
+      - A tag already present is a no-op (no duplicate, no API write).
+    edge_cases:
+      - Merchant removes an app tag manually — the app does not re-add it until the rule re-matches.
+      - Tag string longer than the platform limit — rule save rejects it with the limit stated.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-004
+    area: Jobs
+    requirement: >
+      A merchant can backfill tags over up to 250k historical orders per shop,
+      resumable, without exceeding the GraphQL cost budget.
+    acceptance_criteria:
+      - Backfill uses a bulk operation for the read and batched mutations for the write.
+      - Progress is visible in the admin (processed / matched / remaining).
+      - Interrupting the worker (deploy, crash) resumes without re-writing completed orders.
+    edge_cases:
+      - Bulk operation fails mid-run — retry once, then surface the failure with the last checkpoint.
+      - 250k-order shop where no order matches — job completes with 0 writes.
+    priority: should
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-005
+    area: Data model
+    requirement: >
+      Rules and the tag-application log are stored per shop; the log keeps
+      order id, rule id, tags written and timestamp for 90 days.
+    acceptance_criteria:
+      - Every row carries shop_domain; no cross-shop query exists.
+      - Log retention job deletes rows older than 90 days nightly.
+      - Deleting a rule keeps its historical log rows (rule id only, no PII).
+    edge_cases:
+      - Reinstall inside 90 days — log continues, rules restored.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-006
+    area: Isolation/compliance
+    requirement: >
+      No customer personal data is stored: the app keeps order ids, tags and rule
+      matches only, and honours shop/redact and customers/redact.
+    acceptance_criteria:
+      - Schema contains no customer name, email, phone, address or note column.
+      - customers/redact removes log rows referencing that customer's orders.
+      - shop/redact erases all rows within 30 days of the request.
+    edge_cases:
+      - Redact arrives while a backfill is running — the job stops and cannot resume.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-007
+    area: Scopes
+    requirement: >
+      The app requests read_orders and write_orders, and stores the
+      protected-customer-data approval state it needs for order access.
+    acceptance_criteria:
+      - shopify.app.toml declares exactly read_orders and write_orders.
+      - No read_customers scope; customer tags, if used, come from the order payload.
+      - App Store listing states why order scope is required.
+    edge_cases:
+      - A shop without protected-customer-data approval — the app requests access and explains the wait.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-008
+    area: Performance
+    requirement: >
+      Tag writes stay inside the GraphQL cost budget and recover from throttling
+      without dropping work or reordering writes for one order.
+    acceptance_criteria:
+      - Requested cost per mutation batch ≤ 250.
+      - On THROTTLED, back off using the returned cost/throttle status, retry the same batch.
+      - Writes for one order are serialised; different orders run in parallel.
+    edge_cases:
+      - A flash sale producing hundreds of orders per minute.
+      - API outage lasting longer than the retry window — work stays queued, not lost.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-TAG-009
+    area: Billing
+    requirement: >
+      Tag-write volume is gated by plan: a monthly allowance per shop, with
+      writes continuing until the allowance is exhausted and then pausing with a
+      clear admin notice (never silently dropping tags).
+    acceptance_criteria:
+      - Usage counted per successful tag write and shown in the admin.
+      - At 100% allowance, rules stop writing and the admin shows an upgrade path.
+      - A downgrade does not delete historical logs.
+    edge_cases:
+      - Allowance reached mid-backfill — the job pauses at a checkpoint and resumes after upgrade.
+    priority: should
+    adr: ""
+    status: active
+    added: "2026-10-29"

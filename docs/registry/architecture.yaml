@@ -1,181 +1,271 @@
-# Architecture Decision Registry
+# Architecture Registry
 #
-# PURPOSE: Single source of truth for key architectural stances that all ADRs
-# must agree on. Skills check this before writing new ADRs to detect conflicts
-# at authoring time — before stories are created against contradictory decisions.
+# PURPOSE: cross-app index and stance list for the Shopify apps in this repo.
+# ADRs are per app (docs/architecture/apps/<app>/ADR-*.md); this file is the one
+# place that shows all of them side by side, plus the stances every app must
+# agree on.
 #
 # RULES:
-#   - Register a stance when it constrains how OTHER systems must be built.
-#     An internal implementation detail that affects only one ADR does not need
-#     to be registered.
-#   - Never delete entries — set status: superseded_by: ADR-NNNN instead.
-#   - When a stance changes: update the entry, set revised: to today's date,
-#     add a comment with the old value, and run /architecture-review to check
-#     what ADRs are now invalidated.
-#   - adr: is the authoritative source. All other ADRs that depend on this
-#     stance list themselves in referenced_by.
+#   - Register a stance when it constrains how ANOTHER app must be built. A
+#     detail that affects only one app lives in that app's ADR, not here.
+#   - Never delete an entry — set status: superseded_by: ADR-NNNN instead.
+#   - The ADR is authoritative. Every entry names the ADR that owns it and the
+#     apps it binds.
+#   - An app's `adrs` list must match the files in its directory; a missing file
+#     is a blocking finding for /architecture-review.
 #
-# WRITTEN BY: /architecture-decision (Phase 5 — after ADR is approved)
-# READ BY:    /architecture-decision (Step 2 — before authoring begins)
-#             /architecture-review (Phase 4 — cross-ADR conflict baseline)
-#             /create-stories (to embed architectural constraints in stories)
-#             /dev-story (to check implementation against accepted stances)
+# WRITTEN BY: /architecture-decision (after an ADR is Accepted)
+#             /architecture-review (Phase 8, when requirements or ADRs change)
+# READ BY:    /architecture-decision (before authoring, to avoid contradictions)
+#             /architecture-review (cross-app conflict baseline)
+#             /create-architecture (shared stances)
+#             /create-stories (architectural constraints to embed)
+#             /consistency-check (registry vs ADR drift)
 #
-# SEARCH PATTERNS (for skills using Grep):
-#   All state owners:       Grep pattern="^  - state:" path="docs/registry/architecture.yaml"
-#   Who owns player_health: Grep pattern="state: player_health"
-#   All signal contracts:   Grep pattern="pattern: signal"
-#   Budget for combat:      Grep pattern="system: combat"
-#   All forbidden patterns: Grep pattern="^  - pattern:" (forbidden_patterns section)
-#   Superseded entries:     Grep pattern="status: superseded"
+# SEARCH PATTERNS:
+#   Apps and pins:        ^  [a-z].*:$  /  pinned_admin_api_version
+#   Stances for one app:  app: discount-bundles
+#   All forbidden:        ^  - pattern:
+#   Superseded entries:   status: superseded
 
-version: 1
-last_updated: ""
+version: 2
+last_updated: "2026-10-29"
+pinned_admin_api_version: "2026-10"
+api_version_policy: docs/architecture/ADR-0001-admin-api-version-policy.md
 
-# ─── STATE OWNERSHIP ─────────────────────────────────────────────────────────
-# Who is the authoritative owner of each piece of shared game state.
-# Conflicts: two ADRs claiming to own the same state = data race / authority bug.
-#
-# Register state when it is READ or WRITTEN by more than one system.
-# Internal-only state (never accessed by another system) does not need to be registered.
-#
-# Required fields: state, owner_system, adr, interface, referenced_by[], added
-# interface: how other systems access this state (read-only property, method call,
-#   signal, shared resource, etc.) — this is the contract other ADRs depend on.
+# ─── APP INDEX ───────────────────────────────────────────────────────────────
+# One entry per app directory under apps/. Paths are relative to repo root.
+# control_manifest_version must equal the Manifest Version in that manifest.
 
-state_ownership: []
+apps:
+  discount-bundles:
+    purpose: "Create and manage product bundle discounts."
+    stage: research
+    architecture_dir: docs/architecture/apps/discount-bundles/
+    requirements: docs/architecture/apps/discount-bundles/requirements.yaml
+    control_manifest: docs/architecture/apps/discount-bundles/control-manifest.md
+    control_manifest_version: "2026-10-29"
+    pinned_admin_api_version: "2026-10"
+    access_scopes:
+      - read_products
+      - write_products
+    surfaces:
+      - admin-ui
+      - app-server
+      - webhooks
+      - theme-extension
+      - cart-transform-function
+    webhook_topics:
+      - products/create
+      - products/update
+      - products/delete
+      - app/uninstalled
+      - shop/redact
+      - customers/data_request
+      - customers/redact
+    adrs:
+      - file: docs/architecture/apps/discount-bundles/ADR-0001-bundle-cart-transform.md
+        title: "Bundle expansion and pricing in a cart transform function"
+        status: Accepted
+      - file: docs/architecture/apps/discount-bundles/ADR-0002-bundle-catalog-reconciliation.md
+        title: "Bundle catalogue reconciliation from product webhooks"
+        status: Accepted
 
-# Example:
-#
-# state_ownership:
-#   - state: player_health
-#     status: active           # active | superseded_by: ADR-NNNN
-#     owner_system: health-system
-#     adr: docs/architecture/adr-0001-health-system.md
-#     interface: "HealthComponent.current_health (read-only float, range 0–max_health)"
-#     write_access: health-system-only   # only owner can write; others read
-#     referenced_by:
-#       - docs/architecture/adr-0001-health-system.md
-#       - docs/architecture/adr-0003-combat-system.md   # reads to apply damage
-#       - docs/architecture/adr-0007-ui-system.md       # reads to display HUD
-#     added: 2026-03-26
-#     revised: ""
+  order-tags:
+    purpose: "Apply and manage tags on orders in bulk."
+    stage: research
+    architecture_dir: docs/architecture/apps/order-tags/
+    requirements: docs/architecture/apps/order-tags/requirements.yaml
+    control_manifest: docs/architecture/apps/order-tags/control-manifest.md
+    control_manifest_version: "2026-10-29"
+    pinned_admin_api_version: "2026-10"
+    access_scopes:
+      - read_orders
+      - write_orders
+    surfaces:
+      - admin-ui
+      - app-server
+      - webhooks
+      - jobs
+    webhook_topics:
+      - orders/create
+      - orders/updated
+      - orders/cancelled
+      - app/uninstalled
+      - shop/redact
+      - customers/data_request
+      - customers/redact
+    adrs:
+      - file: docs/architecture/apps/order-tags/ADR-0001-order-tag-write-path.md
+        title: "Order tag writes through tagsAdd/tagsRemove with a per-order queue"
+        status: Accepted
+      - file: docs/architecture/apps/order-tags/ADR-0002-order-tag-webhooks-backfill.md
+        title: "Order webhooks for live tagging and bulk backfill"
+        status: Accepted
 
+# ─── SHARED ADRs ─────────────────────────────────────────────────────────────
+# Decisions that bind every app. An app that depends on one lists it under
+# `Depends On` in its own ADR.
 
-# ─── INTERFACE CONTRACTS ──────────────────────────────────────────────────────
-# How systems are required to communicate with each other.
-# Conflicts: one ADR expects signal, another expects direct call = integration bug.
-#
-# Register a contract when the communication pattern between two systems is
-# explicitly decided in an ADR and other systems must follow the same pattern.
-#
-# pattern options: signal | direct_call | event_bus | shared_resource | rpc | none
+shared_adrs:
+  - id: shared/ADR-0001
+    file: docs/architecture/ADR-0001-admin-api-version-policy.md
+    title: "Cross-app Admin API version pinning and upgrade policy"
+    status: Accepted
+    app: all
+    depends_on: []
+    binds:
+      - "every app declares api_version once in shopify.app.toml"
+      - "extensions repeat the pin; code never holds a literal"
+      - "a version bump is a scheduled, reviewed story"
 
-interfaces: []
+# ─── STANCES ─────────────────────────────────────────────────────────────────
+# How shared concerns are handled across apps. A conflict here is an
+# integration bug: two apps choosing differently for the same concern means one
+# is wrong.
 
-# Example:
-#
-# interfaces:
-#   - contract: damage_delivery
-#     status: active
-#     pattern: signal          # how the producer notifies consumers
-#     producer: combat-system
-#     consumers:
-#       - health-system        # receives damage_dealt signal, applies to health
-#       - ui-system            # receives damage_dealt signal, shows damage number
-#       - audio-system         # receives damage_dealt signal, plays SFX
-#     adr: docs/architecture/adr-0003-combat-system.md
-#     signal_signature: "damage_dealt(amount: float, target: Node, is_crit: bool)"
-#     referenced_by:
-#       - docs/architecture/adr-0003-combat-system.md
-#       - docs/architecture/adr-0001-health-system.md
-#     added: 2026-03-26
-#     revised: ""
+stances:
+  - concern: admin_api_version
+    status: active
+    stance: "One pin per app in shopify.app.toml, declared 2026-10; upgraded only through a reviewed bump story."
+    adr: shared/ADR-0001
+    apps: [discount-bundles, order-tags]
 
+  - concern: admin_api_transport
+    status: active
+    stance: "Admin GraphQL only. The REST Admin API is retired for these apps; no new REST call may be added."
+    adr: shared/ADR-0001
+    apps: [discount-bundles, order-tags]
 
-# ─── PERFORMANCE BUDGETS ──────────────────────────────────────────────────────
-# Frame time allocations per system, against a defined total frame budget.
-# Conflicts: allocations that sum to more than the total budget = unshippable.
-#
-# Register a budget when an ADR explicitly claims a frame time allocation.
-# The registry lets /architecture-review verify the total doesn't exceed the target.
+  - concern: tenancy
+    status: active
+    stance: "Every row carries shop_domain; every query is scoped to the session shop. No cross-shop read, aggregate or job."
+    adr: apps/discount-bundles/ADR-0002, apps/order-tags/ADR-0002
+    apps: [discount-bundles, order-tags]
 
-performance_budgets: []
+  - concern: webhook_ingress
+    status: active
+    stance: "Raw-body HMAC verification, dedupe on (shop, topic, payload.id, payload.updated_at); handlers enqueue and return, a worker does the work."
+    adr: apps/discount-bundles/ADR-0002, apps/order-tags/ADR-0002
+    apps: [discount-bundles, order-tags]
 
-# Example:
-#
-# performance_budgets:
-#   - target_fps: 60
-#     total_frame_budget_ms: 16.6
-#     platform: PC             # PC | Console | Mobile | All
-#     adr: docs/architecture/adr-0000-performance-targets.md
-#     added: 2026-03-26
-#     revised: ""
-#
-#   - system: combat
-#     status: active
-#     budget_ms: 2.0
-#     adr: docs/architecture/adr-0003-combat-system.md
-#     notes: "Includes physics queries, hitbox evaluation, and damage calculation"
-#     referenced_by:
-#       - docs/architecture/adr-0003-combat-system.md
-#     added: 2026-03-26
-#     revised: ""
+  - concern: data_minimisation
+    status: active
+    stance: "No customer PII in either schema — identifiers (order id, variant id) and tags only. Redaction is transactional."
+    adr: apps/discount-bundles/ADR-0002, apps/order-tags/ADR-0002
+    apps: [discount-bundles, order-tags]
 
+  - concern: money_representation
+    status: active
+    stance: "Integer minor units with an explicit ISO currency code. No floating-point money anywhere."
+    adr: apps/discount-bundles/ADR-0001
+    apps: [discount-bundles]
 
-# ─── API DECISIONS ───────────────────────────────────────────────────────────
-# Which engine APIs are chosen for which purpose across the project.
-# Conflicts: two ADRs using different APIs for the same purpose = inconsistent
-# implementation that breaks when one system expects the other's API.
-#
-# Register an API decision when the choice is non-obvious and other ADRs might
-# make a different choice for the same purpose without knowing this was decided.
+  - concern: tag_writes
+    status: active
+    stance: "tagsAdd/tagsRemove only. Never write the full tags array; an existing tag is a no-op."
+    adr: apps/order-tags/ADR-0001
+    apps: [order-tags]
 
-api_decisions: []
+# ─── INTERFACE CONTRACTS ─────────────────────────────────────────────────────
+# Contracts that cross a boundary inside one app, or that a second
+# implementation must follow. Registered so a later ADR cannot quietly diverge.
 
-# Example:
-#
-# api_decisions:
-#   - purpose: physics_raycast
-#     status: active
-#     api: PhysicsServer3D.space_get_direct_state()
-#     not: RayCast3D node     # explicitly banned for this purpose
-#     adr: docs/architecture/adr-0002-physics-architecture.md
-#     reason: "Direct server calls avoid per-frame node overhead; 3× faster in profiling"
-#     referenced_by:
-#       - docs/architecture/adr-0002-physics-architecture.md
-#       - docs/architecture/adr-0003-combat-system.md
-#     added: 2026-03-26
-#     revised: ""
+interfaces:
+  - contract: bundle_expansion
+    status: active
+    pattern: function_input
+    producer: apps/discount-bundles/ADR-0002
+    consumers:
+      - apps/discount-bundles/ADR-0001
+    contract_detail: "$app:bundle/config metafield, version 1: {bundleId, pricingMode, bundlePrice, components[]}"
+    adr: apps/discount-bundles/ADR-0002
 
+  - contract: order_tag_write
+    status: active
+    pattern: job_queue
+    producer: apps/order-tags/ADR-0002
+    consumers:
+      - apps/order-tags/ADR-0001
+    contract_detail: "TagWrite {shopDomain, orderId, add[], remove[], ruleId}; per-order serialisation"
+    adr: apps/order-tags/ADR-0001
+
+  - contract: catalog_reconciliation
+    status: active
+    pattern: event_bus
+    producer: apps/discount-bundles/ADR-0002
+    consumers:
+      - apps/discount-bundles/ADR-0002
+    contract_detail: "webhook → sync_job(unique shop+kind+target) → reconcile pass; idempotent, 5 minute target"
+    adr: apps/discount-bundles/ADR-0002
+
+# ─── BUDGETS ─────────────────────────────────────────────────────────────────
+# Limits every app inherits. A per-app ADR may tighten one, never loosen it.
+
+budgets:
+  admin_route_p75_ms: 1500
+  graphql_request_cost_max: 500
+  webhook_handler_p95_ms: 500
+  db_query_p95_ms: 50
+  cart_transform_ms: 5
 
 # ─── FORBIDDEN PATTERNS ──────────────────────────────────────────────────────
-# Architecture anti-patterns explicitly banned by accepted ADRs.
-# When writing a new ADR, check this list — if the proposed approach matches
-# a forbidden pattern, it must be reworked before the ADR can be Accepted.
-#
-# Register a pattern when an ADR explicitly bans it AND other ADRs might
-# unknowingly use it (i.e., it's a tempting but wrong approach for this project).
+# Approaches an accepted ADR banned. A new ADR proposing one of these must be
+# reworked before it can be Accepted.
 
-forbidden_patterns: []
+forbidden_patterns:
+  - pattern: rest_admin_api
+    status: active
+    description: "Calling the REST Admin API from app code or scripts."
+    why: "Two transports means two deprecation calendars and two error shapes; the pinned GraphQL snapshot is the only verified contract."
+    adr: shared/ADR-0001
+    apps: [discount-bundles, order-tags]
 
-# Example:
-#
-# forbidden_patterns:
-#   - pattern: autoload_singleton_coupling
-#     status: active
-#     description: "Systems must not directly reference Autoload singletons by name.
-#       Use dependency injection or signals instead."
-#     why: "Tight coupling to Autoloads makes systems untestable in isolation and
-#       creates hidden dependencies that break when Autoload load order changes."
-#     adr: docs/architecture/adr-0001-health-system.md
-#     added: 2026-03-26
-#
-#   - pattern: direct_cross_system_state_write
-#     status: active
-#     description: "A system must never write to state owned by another system.
-#       Use signals or method calls on the owner instead."
-#     why: "Direct state writes create race conditions and break the state
-#       ownership model. The owning system must be the sole writer."
-#     adr: docs/architecture/adr-0000-architecture-principles.md
-#     added: 2026-03-26
+  - pattern: hardcoded_api_version
+    status: active
+    description: "A literal API version string outside shopify.app.toml."
+    why: "A second pin drifts silently, and the boot assertion cannot catch a literal it does not own."
+    adr: shared/ADR-0001
+    apps: [discount-bundles, order-tags]
+
+  - pattern: inline_webhook_processing
+    status: active
+    description: "Doing Admin API work inside a webhook handler before responding."
+    why: "Handlers must answer within 500 ms p95; slow handling triggers retries and duplicate work."
+    adr: apps/order-tags/ADR-0002
+    apps: [discount-bundles, order-tags]
+
+  - pattern: unverified_webhook
+    status: active
+    description: "Parsing a webhook body before verifying the HMAC on the raw body."
+    why: "An unverified handler is an unauthenticated Admin API write reachable by anyone."
+    adr: apps/order-tags/ADR-0002
+    apps: [discount-bundles, order-tags]
+
+  - pattern: full_tag_array_write
+    status: active
+    description: "Reading an order's tags and writing the whole array back."
+    why: "Loses concurrent merchant edits and can reorder tags that automations match on."
+    adr: apps/order-tags/ADR-0001
+    apps: [order-tags]
+
+  - pattern: bundle_via_draft_orders_or_cart_mutation
+    status: active
+    description: "Building a bundle with draft orders, script tags, or checkout line-item mutation."
+    why: "These bypass the cart transform contract, desync component inventory, and are not serviced on current storefronts."
+    adr: apps/discount-bundles/ADR-0001
+    apps: [discount-bundles]
+
+  - pattern: floating_point_money
+    status: active
+    description: "Storing or computing prices as floats."
+    why: "Rounding drift makes the bundle total disagree with the configured price by a cent."
+    adr: apps/discount-bundles/ADR-0001
+    apps: [discount-bundles]
+
+  - pattern: cross_shop_query
+    status: active
+    description: "Any query, job or aggregate that spans more than one shop."
+    why: "Data isolation is a compliance requirement, not a performance preference."
+    adr: apps/discount-bundles/ADR-0002
+    apps: [discount-bundles, order-tags]

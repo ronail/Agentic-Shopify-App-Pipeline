@@ -1,5 +1,9 @@
 # Coding Standards
 
+- **Pinned API first**: before using any Admin GraphQL query, mutation, or
+  webhook payload, read `docs/shopify-api-reference/2026-10/`. The LLM's training
+  data predates the pinned version — never guess field names, mutation arguments,
+  or deprecation status
 - All app code must include doc comments on public APIs (exported functions,
   types, hooks)
 - Every subsystem must have a corresponding architecture decision record in
@@ -19,6 +23,9 @@
 - **TypeScript**: `strict` on. No `any` in exported signatures — use `unknown`
   plus a parser at the boundary. Types are shared from `apps/<app>/types/`, not
   duplicated per module.
+- **Remix**: one route module per admin screen, with `loader` for reads and
+  `action` for writes. Authenticate in the loader/action, never in the component.
+  Mutations run server-side; the browser never holds an access token.
 - **React**: function components and hooks only. Server data enters through
   loaders; components do not call the Admin API directly. Every interactive
   control must be keyboard reachable and labelled for screen readers.

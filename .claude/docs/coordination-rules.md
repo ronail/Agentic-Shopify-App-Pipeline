@@ -1,89 +1,179 @@
 # Agent Coordination Rules
 
-1. **Vertical Delegation**: Leadership agents delegate to department leads, who
-   delegate to specialists. Never skip a tier for complex decisions.
-2. **Horizontal Consultation**: Agents at the same tier may consult each other
-   but must not make binding decisions outside their domain.
-3. **Conflict Resolution**: When two agents disagree, escalate to the shared
-   parent. If no shared parent, escalate to `creative-director` for design
-   conflicts or `technical-director` for technical conflicts.
-4. **Change Propagation**: When a design change affects multiple domains, the
-   `producer` agent coordinates the propagation.
-5. **No Unilateral Cross-Domain Changes**: An agent must never modify files
-   outside its designated directories without explicit delegation.
+The protocol every agent follows when working with another agent or a human.
+These are behavioural rules; the handoff graph is in
+`agent-coordination-map.md`, the gate definitions in `director-gates.md`, and
+the review passes in `review-workflow.md`.
 
-## Model Tier Assignment
+---
 
-Skills and agents are assigned to model tiers based on task complexity:
+## 1. The collaboration loop
 
-| Tier | Claude model | Codex model | When to use |
-|------|--------------|-------------|-------------|
-| **Haiku** | `claude-haiku-5-5` | `gpt-6-luna` | Read-only status checks, formatting, simple lookups — no creative judgment needed |
-| **Sonnet** | `claude-sonnet-5-5` | `gpt-6.1-terra` | Implementation, design authoring, analysis of individual systems — default for most work |
-| **Opus** | `claude-opus-5-5` | `gpt-6.1-sol` | Multi-document synthesis, high-stakes phase gate verdicts, cross-system holistic review |
+Every task that produces a durable artifact (a file, an approval, a stage
+change) runs the same five steps. No step may be skipped, and no step may be
+compressed into "I just did it".
 
-Skills with `model: haiku`: `/help`, `/sprint-status`, `/story-readiness`, `/scope-check`,
-`/project-stage-detect`, `/changelog`, `/patch-notes`, `/onboard`
+1. **Question** — state the decision in one sentence, and what is actually at
+   stake (merchant value, App Store risk, review score, engineering days).
+2. **Options** — 2–3 real options. For each: what ships concretely, who it
+   serves, what it costs, what it forecloses. No strawmen.
+3. **Decision** — one recommendation with reasoning and evidence. Name the
+   trade-off out loud.
+4. **Draft** — write it down before implementing: files, structure, diff
+   summary, or the exact document text.
+5. **Approval** — ask explicitly ("May I write these files?") and wait. A
+   leading question is not an approval; silence is not an approval.
 
-Skills with `model: opus`: `/review-all-gdds`, `/architecture-review`, `/gate-check`
+Read-only work (a status check, a grep, a research read) is exempt. Anything
+that writes, gates, or changes stage runs the loop.
 
-All other skills default to Sonnet. When creating new skills, assign Haiku if the
-skill only reads and formats; assign Opus if it must synthesize 5+ documents with
-high-stakes output; otherwise leave unset (Sonnet).
+## 2. Authority and delegation
 
-> **Hermes Model Routing (optional)**: When using Hermes as the harness, model
-> tier assignments in skill/agent frontmatter are advisory only. Subagent models
-> come from the `delegation` section of the active Hermes profile, and
-> `delegation.backend` picks the mode — `default`, or `model_map` /
-> `profile_routes` from the official `advanced-delegation` plugin, which route
-> each child per task. Run `/start hermes` during onboarding to set up the
-> routing. See `.claude/docs/quick-start.md` → Optional: Hermes Model Routing.
+- **The human decides product, scope, pricing, and release timing.** Agents
+  recommend; they do not ratify their own recommendations.
+- **Delegate downward only.** Directors → leads → specialists. A specialist
+  escalates rather than negotiating upward past its lead.
+- **Assignment ≠ decision.** A `producer` may assign work to any agent, but may
+  not decide architecture (that is `technical-director`) or scope (that is
+  `product-director`).
+- **One owner per artifact.** Each file under `docs/`, `production/`, `apps/`,
+  `src/`, `scripts/` has an owning agent for the duration of a task. A second
+  agent edits it only with the owner's explicit handoff.
 
-> **Codex Model Setup**: When using Codex as the harness, the `model:` fields
-> in skill/agent frontmatter remain the shared tier labels. The project-local
-> `.codex/config.toml` sets only the standard GPT fallback. Before spawning a
-> studio agent, read `.codex/agent-models.toml`, resolve the target definition's
-> `model:` tier, and pass the resulting GPT model explicitly. Run `/start codex`
-> during onboarding to verify this setup. For example, `model: opus` must spawn
-> with `gpt-6.1-sol`, even when the project default is Sonnet.
+## 3. Handoffs
 
-## Subagents vs Agent Teams
+- A handoff is an artifact plus a named receiver. "QA will look at it" is not a
+  handoff; a test plan path is.
+- The receiver confirms the artifact exists and answers the question it was
+  meant to answer, or returns it. Silent acceptance of a bad handoff is the most
+  expensive failure mode in this pipeline.
+- Blocked work is surfaced immediately with the blocker named. Never silently
+  drop a workstream; produce a partial report naming what completed and what
+  blocked.
+- Parallel dispatch is allowed only when inputs are independent. If B needs A's
+  output, run A first — do not parallelise and reconcile later.
 
-This project uses two distinct multi-agent patterns:
+## 4. Conflict resolution
 
-### Subagents (current, always active)
-Spawned via `Task` within a single Claude Code session. Used by all `team-*` skills
-and orchestration skills. Subagents share the session's permission context, run
-sequentially or in parallel within the session, and return results to the parent.
+| Conflict | Resolve in |
+|---|---|
+| Two specialists, same module | `lead-engineer` |
+| Implementation vs architecture | `technical-director` |
+| Merchant value vs engineering cost | `product-director` + `technical-director`, `producer` frames the trade |
+| Scope vs deadline | `product-director` decides scope, `producer` re-plans |
+| Security vs delivery pressure | `security-specialist` finding stands until `technical-director` records a waiver |
+| Quality vs release date | `qa-lead` verdict stands; only a written waiver advances the gate |
+| Two directors disagree | surface both positions to the human, one recommendation each |
 
-**When to spawn in parallel**: If two subagents' inputs are independent (neither
-needs the other's output to begin), spawn both Task calls simultaneously rather
-than waiting. Example: `/review-all-gdds` Phase 1 (consistency) and Phase 2
-(design theory) are independent — spawn both at the same time.
+A resolution is written into `request.md`, an ADR, or a tech-debt record. A
+conflict "resolved" in chat only will be re-litigated in the next sprint.
 
-### Agent Teams (experimental — opt-in)
-Multiple independent Claude Code *sessions* running simultaneously, coordinated
-via a shared task list. Each session has its own context window and token budget.
-Requires `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` environment variable.
+## 5. Gate discipline
 
-**Use agent teams when**:
-- Work spans multiple subsystems that will not touch the same files
-- Each workstream would take >30 minutes and benefits from true parallelism
-- A senior agent (technical-director, producer) needs to coordinate 3+ specialist
-  sessions working on different epics simultaneously
+- Gates close stages: `gate-1-research`, `gate-2-prototype`, `gate-3-scope`,
+  `gate-4-release`, `gate-5-update`. There are no others; an unrecognised id is
+  a typo and is refused.
+- Nothing advances a stage except a recorded approval in
+  `apps/<app>/approvals.json` with `id`, `timestamp`, and `approver`.
+- Gate verdicts are binary: READY, NOT READY, BLOCKED. "Ready with notes" is
+  NOT READY.
+- Gate evidence must be on the commit being judged. Evidence from an earlier
+  commit is a finding, not a pass.
+- Waivers are per-criterion, written by the named approver, with a compensating
+  control and an expiry. Never waive a security Critical, an unverified webhook
+  path, or a cross-tenant data issue — escalate instead.
 
-**Do not use agent teams when**:
-- One session's output is required as input for another (use sequential subagents)
-- The task fits in a single session's context (use subagents instead)
-- Cost is a concern — each team member burns tokens independently
+## 6. Cross-domain change propagation
 
-**Current status**: Opt-in via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`. Document first usage here when adopted.
+When a change crosses domains, the owner notifies before the change lands:
 
-## Parallel Task Protocol
+| Change | Who notifies | Whom |
+|---|---|---|
+| Scope / `request.md` | `product-director` | `producer`, `technical-director`, `ux-lead` |
+| ADR added or revised | `technical-director` | `lead-engineer`, `app-architect`, affected specialists, `qa-lead` |
+| API version or deprecation | `api-lead` | `app-architect`, `graphql-specialist`, `webhooks-specialist` |
+| Polaris / flow change | `ux-lead` | `polaris-specialist`, `accessibility-specialist`, `qa-lead` |
+| Schema or migration | `app-architect` | `lead-engineer`, `devops-engineer`, `test-store-manager` |
+| Billing or pricing change | `billing-specialist` + `growth-lead` | `release-manager`, `app-store-reviewer`, `community-manager` |
+| Locale or market coverage | `localization-lead` | `polaris-specialist`, `liquid-specialist`, `release-manager` |
 
-When an orchestration skill spawns multiple independent agents:
+## 7. File and data boundaries
 
-1. Issue all independent Task calls before waiting for any result
-2. Collect all results before proceeding to dependent phases
-3. If any agent is BLOCKED, surface it immediately — do not silently skip
-4. Always produce a partial report if some agents complete and others block
+- Write only inside the paths your rule owns: `apps/<app>/`, `docs/`,
+  `production/`, `src/`, `scripts/`. Never `docs/legacy/`.
+- `docs/registry/apps.json` is the one shared mutable registry. Only `stage` and
+  `last_approved_gate` for your own app's entry may change; never reorder or
+  rewrite other entries.
+- Merchant data never lands in fixtures, logs, or test seeds. Use synthetic
+  data from `test-store-manager`.
+- Secrets are read from the environment; never written to a file, a doc, or a
+  commit.
+
+## 8. Review modes
+
+Gate intensity is resolved once per skill run: `--review [full|lean|solo]`
+overrides, else `production/review-mode.txt`, else `lean`.
+
+| Mode | Runs |
+|---|---|
+| `full` | every skill gate plus the phase-gate panel |
+| `lean` | phase-gate panel only (the default) |
+| `solo` | no director gates; the recorded verdicts must say so |
+
+Skipping a gate is a recorded note, never a silent omission. Solo mode does not
+skip security review or the App Store checklist — those are gate evidence, not
+director opinions.
+
+## 9. Model tiers
+
+Agent frontmatter `model:` is the shared tier label. On Codex, resolve it
+through `.codex/agent-models.toml` and pass the model explicitly. On Hermes,
+subagent models come from the profile's `delegation` section — frontmatter is
+advisory.
+
+| Tier | Claude | Codex | Use |
+|---|---|---|---|
+| **Haiku** | `claude-haiku-5-5` | `gpt-6-luna` | Read-and-format work: status, changelogs, lookups — no judgment |
+| **Sonnet** | `claude-sonnet-5-5` | `gpt-6.1-terra` | Implementation, single-system analysis — the default |
+| **Opus** | `claude-opus-5-5` | `gpt-6.1-sol` | Multi-document synthesis, gate verdicts, cross-system review |
+
+Opus agents: `product-director`, `technical-director`, `producer`,
+`lead-engineer`. Haiku agents: `qa-tester`, `accessibility-specialist`,
+`community-manager`. Everything else is Sonnet — see `agent-roster.md`.
+
+Haiku skills: `help`, `sprint-status`, `kanban-status`, `changelog`,
+`patch-notes`, `create-test-store`, `propose-updates`, `update-research`.
+Opus skills: `architecture-review`. All others are Sonnet. New skills: Haiku
+only if they read and format; Opus only if they synthesise 5+ documents into a
+high-stakes verdict.
+
+## 10. Hermes and Codex invocation
+
+- **Codex**: read the agent's frontmatter `model`, resolve the tier through
+  `.codex/agent-models.toml`, and pass the GPT model on the child task. Do not
+  rely on the project-wide default for `haiku` or `opus` tiers.
+- **Hermes**: `delegation.backend` selects the routing mode; run `/start hermes`
+  to configure it. Agent `model:` fields are advisory here.
+- **Either way**: read any skill the agent references before spawning it. The
+  model mapping changes which model runs, not what the instructions say.
+
+## 11. Subagents vs agent teams
+
+**Subagents** (default): spawned within one session via Task, share the session
+context, run sequentially or in parallel, return results to the parent. Use for
+almost everything.
+
+**Agent teams** (opt-in, `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1`): independent
+sessions coordinated by a shared task list. Use only when workstreams touch
+disjoint files, each runs >30 minutes, and a director or `producer` is
+coordinating 3+ sessions. Do not use when one stream's output feeds another, or
+when cost matters.
+
+## 12. Parallel dispatch protocol
+
+1. Issue all independent Task calls before waiting for any result.
+2. Collect all results before starting a dependent phase.
+3. If any agent is BLOCKED, surface it immediately — do not skip it silently.
+4. Always produce a partial report when some agents complete and others block.
+5. Apply the strictest verdict when a gate panel returns mixed results: one
+   NOT READY overrides every READY.

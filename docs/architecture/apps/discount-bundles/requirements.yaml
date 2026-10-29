@@ -1,0 +1,170 @@
+# Requirements Registry — discount-bundles
+#
+# Stable IDs used by stories, epics and the ADR "App Requirements Addressed"
+# section. Append-only: never renumber, never delete — set status: deprecated.
+# Updated by /architecture-review (Phase 2 extract, Phase 8 write).
+#
+# Fields
+#   id                  REQ-<AREA>-NNN
+#   area                Data model | API surface | Scopes | Webhooks | Billing |
+#                       Admin UI | Theme extension | Checkout extension |
+#                       Auth/sessions | Jobs | Performance | Isolation/compliance
+#   requirement         one sentence, testable
+#   acceptance_criteria the criteria a story copies into its checklist
+#   edge_cases          situations the implementation must resolve explicitly
+#   priority            must | should | could
+#   adr                 governing ADR, or "" when still a gap
+#   status              active | deprecated
+
+version: 1
+app: discount-bundles
+pinned_admin_api_version: "2026-10"
+last_updated: "2026-10-29"
+
+requirements:
+  - id: REQ-BUNDLE-001
+    area: Admin UI
+    requirement: >
+      A merchant can create, edit, duplicate and delete a bundle group from the
+      embedded admin, choosing 2-50 product variants and a pricing mode.
+    acceptance_criteria:
+      - Bundle list shows name, variant count, pricing mode and status.
+      - Variant picker searches the shop catalogue and rejects duplicates.
+      - Saving an invalid bundle (1 variant, deleted variant) is blocked with an inline error, not a toast.
+    edge_cases:
+      - A variant that was deleted in Shopify between load and save.
+      - Two bundles sharing a variant — allowed, both may be active.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-002
+    area: Data model
+    requirement: >
+      Bundle definitions and their components persist per shop, keyed by the
+      shop's permanent domain, and are recoverable for 30 days after uninstall.
+    acceptance_criteria:
+      - Every bundle row carries shop_domain; no query crosses shops.
+      - Reinstall within 30 days restores bundles in the admin without re-entry.
+      - Uninstall soft-deletes; shop/redact hard-deletes.
+    edge_cases:
+      - Reinstall after redaction — must start empty, never resurrect partial data.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-003
+    area: API surface
+    requirement: >
+      A bundle appears at checkout as a single line item that expands into its
+      component lines, so inventory and fulfilment stay per-component.
+    acceptance_criteria:
+      - Adding the bundle product to a cart yields one parent line and N component lines after expansion.
+      - Component inventory is decremented on order creation.
+      - Removing the parent line removes every expanded component line.
+    edge_cases:
+      - One component out of stock at cart time.
+      - Quantity greater than one bundle.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-004
+    area: API surface
+    requirement: >
+      In fixed-price mode the bundle's unit price is the configured bundle price,
+      allocated across components proportionally to each component's list price.
+    acceptance_criteria:
+      - Sum of allocated component prices equals the configured bundle price exactly (no rounding drift).
+      - Percentage-off mode prices each component at its own discount and sums them.
+      - Currency follows the cart's presentment currency.
+    edge_cases:
+      - Component list price is 0 (free gift) — allocation must not divide by zero.
+      - Bundle price above the sum of components (upsell) is allowed.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-005
+    area: Theme extension
+    requirement: >
+      A theme app extension renders the bundle contents and price on the product
+      page, driven by merchant-editable block settings.
+    acceptance_criteria:
+      - App block lists component titles, images and the bundle price.
+      - Block states unavailable when the product is not a bundle.
+      - Renders without the Online Store 2.0 app-block editor breaking.
+    edge_cases:
+      - Legacy theme without app block support — degrade to a linked list, not a blank block.
+    priority: should
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-006
+    area: Webhooks
+    requirement: >
+      Catalogue changes reconcile bundle definitions: a deleted or unpublished
+      component disables the bundle instead of erroring at cart time.
+    acceptance_criteria:
+      - products/delete and products/update deliveries reconcile within 5 minutes.
+      - A bundle with any unavailable component is flagged in the admin and stops expanding.
+      - Handler is idempotent under duplicate delivery.
+    edge_cases:
+      - Duplicate webhook delivery of the same product version.
+      - Webhook arrives for a product the app never registered.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-007
+    area: Scopes
+    requirement: >
+      The app requests read_products and write_products only, and every scope is
+      justified in the App Store listing.
+    acceptance_criteria:
+      - shopify.app.toml declares exactly the scopes the app uses.
+      - No scope is requested for a surface the app does not render.
+    edge_cases:
+      - A future feature needing another scope requires a new ADR, not a silent toml edit.
+    priority: must
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-008
+    area: Isolation/compliance
+    requirement: >
+      The app stores no customer personal data; shop/redact erases all bundle
+      data within 30 days of the request.
+    acceptance_criteria:
+      - Schema contains no customer name, email, phone or address column.
+      - shop/redact enqueues a deletion job and the job is verified in the test store.
+      - customers/redact and customers/data_request handlers respond 200 and log the request.
+    edge_cases:
+      - Redact arrives while a reconciliation job is mid-flight.
+    priority: must
+    adr: ADR-0002
+    status: active
+    added: "2026-10-29"
+
+  - id: REQ-BUNDLE-009
+    area: Performance
+    requirement: >
+      The cart transform function stays inside the platform execution budget and
+      the admin bundle editor loads within the p75 route budget.
+    acceptance_criteria:
+      - Function execution measured under the 5 ms platform budget on a 10-component bundle.
+      - Bundle editor route p75 under 1.5 s with 100 bundles.
+      - Variant search debounced, one GraphQL query per keystroke pause (not per character).
+    edge_cases:
+      - Shop with 100k variants — search must paginate, never fetch all.
+    priority: should
+    adr: ADR-0001
+    status: active
+    added: "2026-10-29"

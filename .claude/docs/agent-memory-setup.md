@@ -1,9 +1,15 @@
 # Shared Root-Level Agent Memory
 
-Claude agents persist project memory under `.claude/agent-memory/<agent-role>/`.
-Git worktrees otherwise give each checkout a separate directory, so findings are
-lost when work moves between branches. This setup makes each worktree point at
-one root-level memory store with a relative symlink.
+Pipeline agents persist project memory under `.claude/agent-memory/<agent-role>/`.
+Git worktrees otherwise give each checkout a separate directory, so findings from
+`app-architect` or `api-lead` in one worktree are lost when work moves to another
+branch. This setup makes each worktree point at one root-level memory store with
+a relative symlink.
+
+Typical roles that accumulate memory: `producer` (board state, blockers),
+`technical-director` and `app-architect` (decisions, API-surface constraints),
+`api-lead` (pinned-version findings and deprecation notes), `lead-engineer`
+(review patterns that keep recurring), and `qa-lead` (flaky tests, store quirks).
 
 ## Architecture
 
@@ -12,8 +18,9 @@ root repository/.claude/agent-memory/       shared store
 worktree/.claude/agent-memory ->             relative symlink to the store
 ```
 
-The memory directory is local session state and is excluded from Git. Each
-worktree needs to be configured once.
+The memory directory is local session state and is excluded from Git
+(`.claude/agent-memory` in `.gitignore`). Each worktree needs to be configured
+once.
 
 ## Setup
 
@@ -26,7 +33,7 @@ From the repository root, run:
 For example:
 
 ```bash
-./.claude/scripts/setup-worktree-agent-memory.sh ./.claude/worktrees/my-feature
+./.claude/scripts/setup-worktree-agent-memory.sh ./.claude/worktrees/discount-bundles-billing
 ```
 
 The script validates both paths, preserves an existing symlink, warns before
@@ -51,6 +58,16 @@ rm <worktree-path>/.claude/agent-memory
 If the link is broken, remove it and rerun the setup script. On macOS and Linux
 symlinks work without extra configuration. Windows requires symlink support,
 administrator privileges, or Git configured with `core.symlinks=true`.
+
+## What belongs in memory
+
+- Findings that cost a dev-store experiment or an API-snapshot read to learn
+- Repeated review comments that should become a control-manifest rule
+- Store handles, scope surprises, and webhook delivery quirks for the dev store
+
+What does not: anything secret — no access tokens, no API keys, no customer
+data. The store is machine-local and never committed, but treat it as a shared
+notebook across every agent on the machine.
 
 ## Design rationale
 
