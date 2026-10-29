@@ -32,6 +32,11 @@ Non-goals: domain generalisation; CI; **any deletion from this repo**.
 
 ## 3. In-repo changes — corrective or additive only
 
+> **Rev. 3 note (owner decision):** the demo-slug → `my-app` placeholder rewrite
+> in 3.2 was reverted as unnecessary. Framework docs, skills and hook comments
+> keep the real example names; a generated repo will reference the worked
+> examples by name, which the owner accepts. Everything else is unchanged.
+
 No file listed in the "template-only payload" row above is modified or removed
 by this work.
 
