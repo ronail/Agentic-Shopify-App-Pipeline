@@ -152,6 +152,25 @@ Also state the bootstrap contract once, so the next session is not surprised:
 - Any change to `request.md` (for example the `## Apps in scope` table) needs a
   matching row in `request-history.md`; `.claude/hooks/track-request-changes.sh`
   enforces it.
+### Empty state — no `request.md` yet
+
+`request.md` missing (or its `## Goal` empty) is the real starting state — a
+fresh repo, or between projects. `/start` is read-only on app state and never
+writes `request.md` itself; it captures the idea and hands it to the skill that
+owns it. Use `AskUserQuestion`:
+
+> **What's the idea or request for this pipeline?**
+> A one-sentence summary is enough. If there is nothing yet, say so and I'll
+> route you to `/brainstorm open`.
+
+Then route on the answer (do not print a dashboard until a goal exists):
+- Idea supplied → `/update-request "<idea>"` (writes `request.md` v1 plus the
+  matching `request-history.md` row; the `track-request-changes.sh` hook
+  enforces the history row).
+- "Nothing yet / brainstorm" → `/brainstorm open`.
+
+This makes Phase 3's "ask what the pipeline should deliver" shorthand into a
+real, single question asked before any dashboard is printed.
 
 ## Phase 3 — Route
 
