@@ -1,0 +1,20 @@
+{
+  "apps": [
+    {
+      "slug": "discount-bundles",
+      "name": "Discount Bundles",
+      "purpose": "Create and manage product bundle discounts.",
+      "stage": "research",
+      "last_approved_gate": "gate-1-research",
+      "created": "2026-10-29"
+    },
+    {
+      "slug": "order-tags",
+      "name": "Order Tags",
+      "purpose": "Apply and manage tags on orders in bulk.",
+      "stage": "research",
+      "last_approved_gate": "gate-1-research",
+      "created": "2026-10-29"
+    }
+  ]
+}

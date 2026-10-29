@@ -63,6 +63,7 @@ __pycache__/
 *.pem
 *.key
 credentials.json
+credentials.*.json
 secrets.json
 
 # === Shopify CLI Local State ===

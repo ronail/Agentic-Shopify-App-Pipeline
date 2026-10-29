@@ -564,7 +564,7 @@ Expected: `R7-OK`. If `grep` prints filenames instead, the docs layer still teac
 
 **Acceptance criteria**
 
-- [ ] **AC-R8.1** `request.md` exists, and `ls request*.md` shows exactly one request file
+- [ ] **AC-R8.1** `request.md` exists, and exactly one non-history `request*.md` exists (`request.md`; `request-history.md` is the history and is excluded)
 - [ ] **AC-R8.2** `request-history.md` exists and its format records version, reason, timestamp
 - [ ] **AC-R8.3** `docs/registry/apps.json` parses as JSON and lists every directory under `apps/`
 - [ ] **AC-R8.4** Each `apps/<app>/` has `status.md` and `approvals.json`; the latter parses as JSON and its keys are a subset of the five gate ids
@@ -577,7 +577,7 @@ Expected: `R7-OK`. If `grep` prints filenames instead, the docs layer still teac
 
 ```bash
 test -f request.md && test -f request-history.md \
-  && [ "$(ls request*.md | wc -l)" -eq 1 ] \
+  && [ "$(ls request*.md | grep -v '^request-history\.md$' | wc -l)" -eq 1 ] \
   && python3 -m json.tool docs/registry/apps.json >/dev/null \
   && [ "$(ls -d apps/*/ | wc -l)" -ge 2 ] \
   && for a in apps/*/; do
