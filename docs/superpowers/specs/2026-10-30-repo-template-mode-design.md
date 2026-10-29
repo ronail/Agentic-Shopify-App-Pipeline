@@ -1,254 +1,242 @@
-# Repo Template Mode — Design Spec
+# Repo Template Mode — Design Spec (rev. 2)
 
 **Date:** 2026-10-30
-**Status:** Approved for planning (design approved in session)
+**Status:** Design approved; rev. 2 incorporates the owner's correction
 **Repo:** `ronail/Agentic-Shopify-App-Pipeline`
 
 ## 1. Intent
 
-Turn this repository into a **GitHub template repository** that a person can
-generate a new repo from and immediately run the pipeline in, without
-inheriting this repo's demo apps, retarget build log, or game-fork residue.
+Make this repository a **GitHub template repository** whose sanitisation happens
+**at generation time, in the generated repo** — never here.
 
-Success is: `git clone`/generate → `scripts/init-template.sh --name … --app …`
-→ `/start` → a working research/scaffold pipeline, with every internal
-consistency check green and zero references to content that no longer exists.
+This repo is a living reference implementation: two demo apps, worked session
+transcripts, the retarget log, the Skill Testing Framework. All of it stays.
+A person who clicks "Use this template" gets the same tree, then runs one
+script that strips it down to a clean starting point for *their* project.
 
-Non-goal: making the framework domain-agnostic. The template stays
-Shopify-specific.
+Success is: generate → `scripts/init-template.sh --name … --app …` → `/start` →
+a working pipeline with empty registries, no demo state, and every internal
+consistency check green — while `main` in this repo still carries all examples.
 
-## 2. Current state (baseline, measured)
+Non-goals: domain generalisation; CI; **any deletion from this repo**.
+
+## 2. Measured baseline
 
 | Fact | Value |
 |---|---|
-| Agents | 31 |
-| Skills | 66 (→ 67 with the new `/setup`) |
+| Agents / skills | 31 / 66 |
 | `check-references.py` | `OK: 31 agents, 66 skills, 0 broken references` |
-| `isolation-check.py` | prints `ISOLATION OK` |
-| Demo project state | `apps/discount-bundles`, `apps/order-tags`, `docs/architecture/apps/*`, `production/apps/*` |
-| Retarget artifacts | `TASKS.md` (43 KB), `docs/legacy/` (5 files), `request.md`, `request-history.md` |
-| Skill QA harness | `Skill Testing Framework/` (catalog, rubric, 66 specs, 31 agent specs) |
-| Game-fork residue | `design/CLAUDE.md` (GDD/Player Fantasy), `design/registry/entities.yaml` (Game World Entity Registry), `.claude/statusline.sh` (title + `design/gdd/game-concept.md`) |
+| `isolation-check.py` | `ISOLATION OK — 2 apps (discount-bundles, order-tags)` |
+| Template-only payload (stripped at generation, kept here) | `apps/{discount-bundles,order-tags}`, `docs/architecture/apps/`, `production/apps/`, `docs/examples/`, `docs/legacy/`, `TASKS.md`, `request.md`, `request-history.md`, `Skill Testing Framework/` |
+| Game-fork residue (defects, not content) | `design/CLAUDE.md`, `design/registry/entities.yaml`, `.claude/statusline.sh` |
 
-Baseline is green, so any red state after this work is attributable to this
-change set.
+## 3. In-repo changes — corrective or additive only
 
-## 3. Scope
+No file listed in the "template-only payload" row above is modified or removed
+by this work.
 
-### 3.1 Deletions
+### 3.1 Game-fork residue (defect fixes)
 
-| Path | Reason | Disposition |
+| File | Current state | Fix |
 |---|---|---|
-| `apps/discount-bundles/`, `apps/order-tags/` | demo project state | delete; add `apps/.gitkeep` |
-| `docs/architecture/apps/` | per-app requirements, control manifests, ADRs | delete; keep `docs/architecture/README.md` and `ADR-0001-admin-api-version-policy.md` |
-| `production/apps/` | per-app sprint/milestone/session state | delete; keep `production/.gitkeep`, `production/session-state/.gitkeep` |
-| `production/session-logs/*` | session artifacts (already gitignored) | delete local files |
-| `docs/examples/session-*.md` (5 files) | session transcripts of the deleted demo apps | delete; rewrite `docs/examples/README.md` to point at `docs/WORKFLOW-GUIDE.md` and state that examples are produced by running the pipeline |
-| `docs/legacy/` (5 files) | fork/retarget history | delete |
-| `TASKS.md` | retarget build log + AC trace | delete |
-| `request.md`, `request-history.md` | this repo's request state; `/start` already prompts when absent | delete |
-| `Skill Testing Framework/` | skill QA harness removed by owner | delete whole tree |
+| `design/CLAUDE.md` | GDD files, "Player Fantasy", `design/gdd/`, `/design-system` | Shopify design standards: `design/ux/` screen specs, `design/quick-specs/`, API contracts, interaction patterns; validated by `/ux-review`, `/design-review` |
+| `design/registry/entities.yaml` | "Game World Entity Registry", `goblin` examples | Design Entity Registry for cross-doc UX/API facts; empty, Shopify-flavoured header comments |
+| `.claude/statusline.sh` | Title "Agent Harness Game Studios"; reads `design/gdd/game-concept.md`, `systems-index.md` | Retitle; read real signals — app count/stage from `docs/registry/apps.json`, `request.md` presence, branch |
 
-`design/registry/entities.yaml` is **rewritten**, not deleted (see 3.3).
+### 3.2 Neutral placeholders in framework docs
 
-### 3.2 Repairs required by the deletions
-
-**Registries reset to their empty, valid shape:**
-
-- `docs/registry/apps.json` → `{"apps": []}`
-- `docs/registry/architecture.yaml` → keep `version`, `last_updated`,
-  `pinned_admin_api_version`, `api_version_policy`, and the stances section;
-  `apps:` becomes an empty map. Header rules/skill wiring stay.
-- `design/registry/entities.yaml` → rewritten as a **Design Entity Registry**
-  (cross-doc facts for UX/API contracts), empty, Shopify-flavoured examples in
-  the header comments only. No game vocabulary.
-
-**Skills that depend on the removed harness:**
-
-- `.claude/skills/skill-test/SKILL.md` — keep `static` and `spec` modes
-  (self-contained: they read `.claude/skills/*/SKILL.md` and
-  `.claude/docs/templates/skill-test-spec.md`). Remove `category` and `audit`
-  modes, all `Skill Testing Framework/…` paths, and update `argument-hint`.
-- `.claude/skills/skill-improve/SKILL.md` — replace the Phase 2b
-  category-baseline (which reads `Skill Testing Framework/catalog.yaml`) with
-  a static-only baseline; remove the STF reference.
-- `.claude/hooks/*.sh` — verified by grep to hold no `Skill Testing Framework`
-  references, so no hook patch is expected; re-grep after the skill edits.
-
-**Game-fork residue rewritten:**
-
-- `design/CLAUDE.md` → Shopify design-doc standards: `design/ux/` screen specs,
-  `design/quick-specs/`, API contracts, interaction patterns; validation via
-  `/ux-review` and `/design-review`. No GDD sections, no Player Fantasy, no
-  `design/gdd/` or `design/hud` paths.
-- `.claude/statusline.sh` → retitle "Agentic Shopify App Pipeline"; replace
-  `design/gdd/game-concept.md` / `systems-index.md` reads with the pipeline's
-  real signals (`docs/registry/apps.json` app count/stage, `request.md`
-  presence, current branch).
-
-**Demo-slug placeholders** — `discount-bundles` / `order-tags` replaced with
-`<app>` (docs/prose) or `my-app` (runnable examples) in:
+Framework docs naming `discount-bundles` / `order-tags` would dangle in a
+generated repo. Replace with `<app>` (prose) / `my-app` (runnable examples) in:
 
 - `docs/WORKFLOW-GUIDE.md`, `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md`,
-  `docs/architecture/README.md`,
-  `docs/architecture/ADR-0001-admin-api-version-policy.md`
+  `docs/architecture/README.md`, `docs/architecture/ADR-0001-admin-api-version-policy.md`
 - `.claude/skills/`: `start`, `scaffold`, `adopt`, `kanban-status`,
   `project-stage-detect`, `tech-debt`, `update-request`, `consistency-check`
 - `.claude/hooks/`: `approval-gate.sh`, `app-store-gate.sh`, `pre-compact.sh`,
-  `session-start.sh`, `detect-gaps.sh` (comments, usage examples, and any
-  hard-coded slug list — functional behaviour must stay glob/arg-driven)
-- `.claude/docs/`: `agent-memory-setup.md`, `hooks-reference/app-store-gate.md`,
-  `hooks-reference/approval-gate.md`
+  `session-start.sh`, `detect-gaps.sh` — comments and usage examples only;
+  behaviour stays glob/arg-driven
+- `.claude/docs/`: `agent-memory-setup.md`, `hooks-reference/approval-gate.md`,
+  `hooks-reference/app-store-gate.md`
 
-**`docs/legacy` links removed** from `README.md`, `CONTRIBUTING.md`,
-`.claude/docs/agent-roster.md`, `.claude/docs/coordination-rules.md`.
+Files stripped at generation (`docs/examples/session-*.md`, `TASKS.md`,
+`docs/legacy/`) keep their concrete app names — they are historical documents
+and they leave with the demo data.
 
-**Docs updated for the generated-repo flow:**
+### 3.3 STF-dependent skills degrade gracefully
 
-- `.claude/docs/directory-structure.md` — `apps/` starts empty; add `scripts/`,
-  `TEMPLATE.md` to the map.
-- `.claude/docs/setup-requirements.md` — add "generated from template" first-run
-  section (init script, then `/setup`, then `/start`).
-- `.claude/docs/quick-start.md` — same, and remove the "five steps from
-  nothing" duplication if the init script covers it.
-- `.claude/docs/skills-reference.md` — add `/setup`, correct `skill-test`
-  modes.
-- `.claude/docs/workflow-catalog.yaml` — add `setup` entry; remove modes that
-  no longer exist.
+`Skill Testing Framework/` stays here and is stripped at generation. Rather
+than patching skill text inside the script, the skills detect the absence:
 
-**Codex compat regenerated** — `python3 .codex/generate_compat.py` after all
-skill/agent edits; commit the regenerated `.codex/agents/*.toml` and skill
-sidecars.
+- `.claude/skills/skill-test/SKILL.md` — before `category` or `audit` mode:
+  if `Skill Testing Framework/catalog.yaml` is absent, print
+  "Skill Testing Framework not installed; `static` and `spec` available" and
+  stop. `static` and `spec` remain unchanged and self-contained.
+- `.claude/skills/skill-improve/SKILL.md` — Phase 2b category baseline: if the
+  catalog is absent, skip with the same notice and continue on static results.
 
-### 3.3 New artifacts
+No mode is deleted in either skill.
 
-#### `scripts/init-template.sh`
+### 3.4 Docs for the generated-repo flow
 
-POSIX bash + `git` (+ `python3` only for the checker invocation). Contract:
+- `.claude/docs/directory-structure.md` — add `scripts/`, `TEMPLATE.md`; note
+  `apps/` is empty in a generated repo
+- `.claude/docs/quick-start.md`, `.claude/docs/setup-requirements.md` — insert
+  the generation flow ahead of `/start`
+- `.claude/docs/skills-reference.md` — add `/setup`
+- `.claude/docs/workflow-catalog.yaml` — add `setup` entry
+- `README.md` — "Use this template" section between
+  `<!-- TEMPLATE-ONLY:START -->` / `<!-- TEMPLATE-ONLY:END -->`, plus a note
+  that `apps/discount-bundles` and `apps/order-tags` are worked examples the
+  init script removes
+- `TEMPLATE.md` — new (section 6)
+- `.codex/generate_compat.py` — run after edits; commit regenerated files
+
+## 4. `scripts/init-template.sh` — the sanitizer
+
+POSIX bash + `git`; `python3` only to invoke the existing checkers.
 
 ```
 Usage: scripts/init-template.sh [options]
 
-  --name <project-name>     Repo/project display name (required unless --dry-run)
-  --description <text>      One-line description for README/CLAUDE.md
-  --app <slug>              Optional first app slug (lowercase kebab)
-  --dry-run                 Print the planned actions; write nothing
-  --force                   Proceed with a dirty working tree
-  --skip-checks             Skip check-references.py / isolation-check.py
+  --name <project-name>   Display name for README/CLAUDE.md (required with --apply)
+  --description <text>    One-line description (optional)
+  --app <slug>            Optional first app slug (lowercase kebab)
+  --apply                 Actually mutate (without it: report only)
+  --yes                   Skip the interactive confirmation
+  --force                 Allow a dirty tree or a template-origin remote
+  --skip-checks           Skip check-references.py / isolation-check.py
 ```
 
-Steps, in order:
+### 4.1 Guards, in order
 
-1. Verify it is running inside the template repo (`.claude/agents` +
-   `TEMPLATE.md` exist). Refuse otherwise.
-2. Refuse when `git status --porcelain` is non-empty, unless `--force`.
-3. Validate `--name` and `--app` (kebab-case, no path separators).
-4. Rewrite the first `# …` heading of `README.md` and `CLAUDE.md` to
-   `# <name>`; replace the README tagline line pairs with `--description`
-   (only when provided). Idempotent.
-5. Reset registries: `docs/registry/apps.json` → empty, `apps:` map in
-   `docs/registry/architecture.yaml` → empty, `design/registry/entities.yaml`
-   → empty registry.
-6. When `--app` is given, create from the recorded shapes:
-   `apps/<slug>/{README.md,status.md,approvals.json,prototype/.gitkeep}` and
-   `production/apps/<slug>/{sprints,milestones,session-state}/.gitkeep`, and
-   add the registry entry with `stage: research`, no gate approved.
-7. Delete template-only content: `TEMPLATE.md`, `scripts/init-template.sh`,
-   and the region of `README.md` between `<!-- TEMPLATE-ONLY:START -->` and
-   `<!-- TEMPLATE-ONLY:END -->`.
-8. Run `python3 .claude/scripts/check-references.py` and
-   `python3 .claude/scripts/isolation-check.py`; print both results and exit
-   non-zero if either fails (unless `--skip-checks`).
-9. Print next steps: edit `request.md` or run `/start`.
+1. `.claude/agents/` and `TEMPLATE.md` must both exist, else exit 1 (not
+   template mode).
+2. If `git remote get-url origin` matches `Agentic-Shopify-App-Pipeline`,
+   refuse unless `--force`. **This is what stops the script from sanitising
+   this repo.**
+3. Refuse a dirty tree (`git status --porcelain`) unless `--force`.
+4. Validate `--name` (non-empty, no newlines) and `--app` (`^[a-z][a-z0-9-]*$`).
+5. Without `--apply`: print every planned action prefixed `would`, exit 0.
 
-Every mutating step prints the path it touches. `--dry-run` prints the same
-lines prefixed `would`.
+### 4.2 Mutation order
 
-#### `.claude/skills/setup/SKILL.md`
+| # | Action |
+|---|---|
+| 1 | Confirm (unless `--yes`): print the strip list, require `yes` |
+| 2 | Rewrite the first `# …` heading of `README.md` and `CLAUDE.md` to `# <name>`; replace the README tagline when `--description` given |
+| 3 | Delete demo state: every `apps/*/` directory, `docs/architecture/apps/`, `production/apps/` |
+| 4 | Delete this project's history: `docs/examples/`, `docs/legacy/`, `TASKS.md`, `request.md`, `request-history.md`, `production/session-logs/*` |
+| 5 | Delete `Skill Testing Framework/` (skills degrade per 3.3) |
+| 6 | Reset registries: `docs/registry/apps.json` → `{"apps": []}`; `docs/registry/architecture.yaml` → pins/stances kept, `apps:` empty; `design/registry/entities.yaml` → empty registry |
+| 7 | If `--app`: create `apps/<slug>/{README.md,status.md,approvals.json,prototype/.gitkeep}`, `production/apps/<slug>/{sprints,milestones,session-state}/.gitkeep`, and register it at `stage: research`, `last_approved_gate: null` |
+| 8 | Strip the `TEMPLATE-ONLY` region of `README.md`; delete `TEMPLATE.md` and `scripts/init-template.sh` |
+| 9 | Run both checkers; print results; exit non-zero on failure unless `--skip-checks` |
+| 10 | Print next steps: write `request.md` (or let `/start` prompt), then `/start` |
 
-`/setup` — the in-harness wrapper:
+Every mutation prints the path touched. Steps 3–6 are idempotent.
 
-1. Detect state: `TEMPLATE.md` present → template mode; absent →
-   initialized mode (verify only).
-2. Template mode: show the exact changes `scripts/init-template.sh` will make
-   (`--dry-run`), ask for approval (Collaboration Protocol), then run it with
-   the user's answers as flags.
-3. Initialized mode: run both checkers, report drift, propose repairs, do not
-   rewrite content without approval.
-4. Hand off to `/start`.
+## 5. `.claude/skills/setup/SKILL.md`
 
-Frontmatter matches repo convention: `name`, `description`, `argument-hint`,
+`/setup` — in-harness wrapper, state-aware:
+
+1. `TEMPLATE.md` present → template mode: run the script without `--apply`,
+   show the plan, collect `--name` / `--description` / `--app` conversationally,
+   ask approval, then run with `--apply --yes`.
+2. `TEMPLATE.md` absent → initialised mode: run both checkers, report drift,
+   propose repairs, never rewrite without approval.
+3. Hand off to `/start`.
+
+Frontmatter follows repo convention: `name`, `description`, `argument-hint`,
 `user-invocable: true`, `allowed-tools: Read, Glob, Grep, Write, Bash,
 AskUserQuestion, request_user_input, clarify`, `model: sonnet`.
 
-#### `TEMPLATE.md`
+## 6. `TEMPLATE.md`
 
-The template contract: what ships, what is intentionally empty, what the init
-script rewrites/deletes, how to pull framework updates later
-(`git remote add upstream`, cherry-pick), and what is out of scope.
+Ships in the template, deleted by step 8 of the script:
 
-#### `README.md`
+- what the template ships, and which parts are worked examples
+- the exact strip list
+- dry-run-first workflow and the template-origin guard
+- how to pull framework updates later (`git remote add upstream`, cherry-pick)
+- known limitation: strip-once; re-running is refused because `TEMPLATE.md` is
+  gone — re-sanitising a hand-initialised repo is out of scope
 
-Add a "Use this template" section (delimited by the `TEMPLATE-ONLY` markers so
-the init script strips it) with the generate URL
-`https://github.com/ronail/Agentic-Shopify-App-Pipeline/generate` and the
-manual clone equivalent. Correct the Project Structure block (`apps/` empty,
-`scripts/`, `TEMPLATE.md`).
-
-### 3.4 GitHub repository settings
+## 7. GitHub settings
 
 - `PATCH /repos/ronail/Agentic-Shopify-App-Pipeline` with `is_template: true`
 - Topics: `shopify`, `shopify-apps`, `agentic-ai`, `claude-code`, `codex`,
   `hermes`, `app-pipeline`, `template`
-- Description updated to mention it is a template.
+- Description mentions it is a template
+- Verified with `gh api … --jq '.is_template'` → `true`
+- Applied **after** the branch merges, since the flag changes what `main` offers
 
-Verified with `gh api repos/ronail/Agentic-Shopify-App-Pipeline --jq '.is_template'`
-→ `true`.
+## 8. Verification
 
-## 4. Verification
+### 8.1 This repo — proof nothing was removed
 
-All checks are executed, not asserted.
+| Check | Pass condition |
+|---|---|
+| `git diff --stat main` | no deletions of tracked files; only additions and the modified files in 3.1–3.4 |
+| Demo apps, `TASKS.md`, `docs/legacy/`, `docs/examples/session-*.md`, `request.md`, `Skill Testing Framework/` | all present |
+| `python3 .claude/scripts/check-references.py` | `0 broken references` |
+| `python3 .claude/scripts/isolation-check.py` | `ISOLATION OK — 2 apps` |
+| Hook smoke | `session-start`, `detect-gaps`, `pre-compact`, `post-compact`, `approval-gate`, `app-store-gate` all exit 0 |
 
-| Check | Command | Pass condition |
-|---|---|---|
-| Reference integrity | `python3 .claude/scripts/check-references.py` | `0 broken references` |
-| App isolation | `python3 .claude/scripts/isolation-check.py` | `ISOLATION OK — 0 apps` |
-| Hook smoke (zero apps, no `request.md`) | `bash .claude/hooks/session-start.sh`, `detect-gaps.sh`, `pre-compact.sh`, `post-compact.sh`, `approval-gate.sh`, `app-store-gate.sh` | exit 0, no traceback, no false gate block |
-| Residue grep | `git grep -nE 'discount-bundles\|order-tags\|Skill Testing Framework\|docs/legacy\|TASKS\.md'` | no hits |
-| Game residue | `git grep -niE '\bGDD\b\|player fantasy\|game studio\|game-concept\|godot\|unity'` | no hits outside `docs/shopify-api-reference` |
-| Codex compat | `python3 .codex/generate_compat.py` then `git status` | regenerated files consistent, no stale refs |
-| Generated-repo rehearsal | copy tree → scratch → `init-template.sh --name "Acme Bundles" --description "…" --app acme-bundles` | both checkers pass *in the generated repo*; `TEMPLATE.md` and the script are gone; README retitled; `apps/acme-bundles/` + registry entry exist |
-| Dead internal links | small python link checker over `README.md` + `docs/**/*.md` | 0 missing relative targets |
-| GitHub template flag | `gh api … --jq '.is_template'` | `true` |
+### 8.2 Generated repo — rehearsal in a scratch copy
 
-## 5. Risks and tradeoffs
+1. Copy the tree to the scratch dir.
+2. `scripts/init-template.sh --name "Acme Bundles" --app acme-bundles` → prints
+   the plan, mutates nothing (`--apply` absent).
+3. Same with `--apply --yes` → strip list gone; `apps/acme-bundles/` and its
+   registry entry exist; README retitled; `TEMPLATE.md`, the script, and the
+   `TEMPLATE-ONLY` region gone.
+4. Both checkers run **in the generated copy** → green, reporting one app
+   (`acme-bundles`).
+5. `git grep -nE 'discount-bundles|order-tags|Skill Testing Framework|docs/legacy|TASKS\.md'`
+   → no hits.
+6. `Skill Testing Framework` absent, so the skill-test guard path is exercised
+   (mode refuses with the notice rather than erroring).
 
-- **Worked-session narration is lost.** The 5 `docs/examples/session-*.md`
-  transcripts are deleted because they document the deleted apps. The pipeline
-  table in `README.md` and `docs/WORKFLOW-GUIDE.md` carry the explanation.
-- **`skill-test` loses `category` and `audit`.** Static + spec modes remain and
-  are self-contained.
-- **Consumers start with no app,** so `/start` is mandatory. Already supported
-  (no `request.md` → prompt for idea/request).
-- **GitHub template generation copies a snapshot with fresh history,** so the
-  repo's own git history is irrelevant to consumers; no history rewrite needed.
-- **`.agents/skills` is a symlink** to `.claude/skills`. Template generation
-  preserves symlinks; Windows clones may need the link recreated. Out of scope;
-  documented in `TEMPLATE.md`.
-- **Deleting `docs/legacy/`** removes the record of the fork divergence. The
-  upstream relationship is documented in `TEMPLATE.md` instead.
+### 8.3 Safety guards
 
-## 6. Out of scope
+- `--apply` inside this repo's clone without `--force` → refuses
+  (template-origin remote).
+- Dirty tree → refuses.
+- Directory without `TEMPLATE.md` → refuses.
 
-- Renaming the repository or changing its owner.
-- Adding CI workflows.
-- Domain-generalization (Shopify → other verticals).
-- Removing `docs/shopify-api-reference/` or the pinned 2026-10 API version.
-- Rewriting agent bodies beyond the residue fixes listed in 3.2.
+### 8.4 Repo-wide
 
-## 7. Delivery
+- Game residue: `git grep -niE '\bGDD\b|player fantasy|game studio|game-concept|godot|unity'`
+  → no hits, `TASKS.md` and `docs/legacy/` exempt (historical, and they leave
+  with the demo data)
+- Dead relative links in `README.md` + `docs/**/*.md` → 0
+- `python3 .codex/generate_compat.py` → clean regenerated tree
 
-- Branch `feat/template-mode` off `main`.
-- Conventional commits per task (`chore(template):`, `docs(template):`,
-  `refactor(skills):`, `feat(setup):`, `feat(scripts):`), not batched.
-- Draft PR opened early with `--body-file`, updated per task, no auto-merge.
+## 9. Risks
+
+- **Keeping the demo apps means every generated repo inherits them** until the
+  script runs. Mitigated by a prominent README step, `TEMPLATE.md`, and the
+  guard set.
+- **The script is the only barrier between a consumer and demo data.** Hence:
+  dry-run by default, template-origin refusal, confirmation prompt, and the
+  8.2/8.3 rehearsals.
+- **Skill degradation paths** must be exercised (8.2.6) or generated repos get
+  misleading `/skill-test` output.
+- **Strip-once:** the script deletes itself, so a repo initialised another way
+  cannot be re-sanitised by it.
+
+## 10. Out of scope
+
+- Deleting anything from this repo.
+- CI workflows, history rewrite, repo rename.
+- Domain generalisation; removing `docs/shopify-api-reference/`.
+- Re-running init on an already-initialised repo.
+
+## 11. Delivery
+
+- Branch `feat/template-mode` (exists; rev. 1 of this spec is committed there).
+- Conventional commits per task, not batched: `docs(template)`,
+  `fix(design)`, `fix(statusline)`, `refactor(skills)`, `feat(scripts)`,
+  `feat(setup)`, `docs(template)`.
+- Draft PR #1 updated per commit with `--body-file`; no auto-merge.
+- `is_template` applied after merge.
