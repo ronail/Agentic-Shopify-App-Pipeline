@@ -594,20 +594,20 @@ Expected: `R8-OK` with **at least two** app directories — the point of the pha
 
 ### R9 — Skill testing framework
 
-- [ ] `git mv "AHGS Skill Testing Framework" "Skill Testing Framework"`, then update the three live references: `.claude/skills/skill-test/SKILL.md`, `.claude/skills/skill-improve/SKILL.md`, `docs/architecture/ADR-godot-test-framework-vcs-policy.md` (rename the ADR too)
-- [ ] `catalog.yaml`, `README.md`, `CLAUDE.md`, `templates/` inside that tree — rebrand and re-domain (they still describe the game studio and list deleted roles)
-- [ ] Respec `agents/` test specs to the R2 roster: delete engine / art / audio / narrative specs, add a spec for each of the 13 new roles under the right group dir
-- [ ] Respec `skills/` test specs to the 66 surviving skills
-- [ ] `quality-rubric.md` — keep the rubric shape, drop the game-specific criteria
+- [x] `git mv "AHGS Skill Testing Framework" "Skill Testing Framework"`, then update the three live references: `.claude/skills/skill-test/SKILL.md`, `.claude/skills/skill-improve/SKILL.md`, `docs/architecture/ADR-godot-test-framework-vcs-policy.md` (rename the ADR too)
+- [x] `catalog.yaml`, `README.md`, `CLAUDE.md`, `templates/` inside that tree — rebrand and re-domain (they still describe the game studio and list deleted roles)
+- [x] Respec `agents/` test specs to the R2 roster: delete engine / art / audio / narrative specs, add a spec for each of the 13 new roles under the right group dir
+- [x] Respec `skills/` test specs to the 66 surviving skills
+- [x] `quality-rubric.md` — keep the rubric shape, drop the game-specific criteria
 
 **Acceptance criteria**
 
-- [ ] **AC-R9.1** `Skill Testing Framework/` exists; `AHGS Skill Testing Framework/` does not
-- [ ] **AC-R9.2** No live reference to the old name outside `docs/legacy/` and `TASKS.md`
-- [ ] **AC-R9.3** Every one of the 31 agents has a spec, and no spec describes a deleted role
-- [ ] **AC-R9.4** Every one of the 66 skills has a spec, or is listed in `catalog.yaml` as intentionally untested with a reason
-- [ ] **AC-R9.5** `catalog.yaml` parses as YAML and names only existing directories
-- [ ] **AC-R9.6** `quality-rubric.md` has no game-specific criterion (`grep -riE 'game|fun|player' quality-rubric.md` reviewed line by line, not by keyword count)
+- [x] **AC-R9.1** `Skill Testing Framework/` exists; `AHGS Skill Testing Framework/` does not
+- [x] **AC-R9.2** No live reference to the old name outside `docs/legacy/` and `TASKS.md`
+- [x] **AC-R9.3** Every one of the 31 agents has a spec, and no spec describes a deleted role
+- [x] **AC-R9.4** Every one of the 66 skills has a spec, or is listed in `catalog.yaml` as intentionally untested with a reason
+- [x] **AC-R9.5** `catalog.yaml` parses as YAML and names only existing directories
+- [x] **AC-R9.6** `quality-rubric.md` has no game-specific criterion (`grep -riE 'game|fun|player' quality-rubric.md` reviewed line by line, not by keyword count)
 
 **Smoke test**
 
