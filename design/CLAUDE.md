@@ -1,38 +1,53 @@
 # Design Directory
 
-When authoring or editing files in this directory, follow these standards.
+`design/` holds **shared design assets only** — material more than one app
+depends on. Anything that belongs to a single app lives under
+`apps/<app>/design/`, per `.claude/docs/directory-structure.md`.
 
-## GDD Files (`design/gdd/`)
+## UX specs — per app
 
-Every GDD must include all **8 required sections** in this order:
-1. Overview — one-paragraph summary
-2. Player Fantasy — intended feeling and experience
-3. Detailed Rules — unambiguous mechanics
-4. Formulas — all math defined with variables
-5. Edge Cases — unusual situations handled
-6. Dependencies — other systems listed
-7. Tuning Knobs — configurable values identified
-8. Acceptance Criteria — testable success conditions
+| Document | Path | Authored by |
+|---|---|---|
+| Screen spec | `apps/<app>/design/ux/<screen-slug>.md` | `/ux-design` |
+| Flows and navigation | `apps/<app>/design/ux/flows.md` | `/ux-design flows` |
+| Interaction patterns | `apps/<app>/design/ux/interaction-patterns.md` | `/ux-design patterns` |
+| Accessibility commitment | `apps/<app>/design/ux/accessibility.md` | `/ux-design accessibility` |
 
-**File naming:** `[system-slug].md` (e.g. `movement-system.md`, `combat-system.md`)
+Every screen spec names the Polaris components it uses, the App Bridge context
+it runs in, all states (loading, empty, error, partial, success), the merchant
+copy, and its WCAG 2.1 AA obligations. A spec without states is not reviewable.
 
-**Systems index:** `design/gdd/systems-index.md` — update when adding a new GDD.
+**Validation:** run `/ux-review <path>` before the screen enters a story. A spec
+that fails review blocks implementation — it is not a style suggestion.
 
-**Design order:** Foundation → Core → Feature → Presentation → Polish
+## Quick specs — per app
 
-**Validation:** Run `/design-review [path]` after authoring any GDD.
-Run `/review-all-gdds` after completing a set of related GDDs.
+`apps/<app>/design/quick-specs/<slug>.md` — short, focused specs for a copy
+change, a tuning value, or a bounded behaviour tweak that does not warrant a full
+screen spec. Author with `/quick-design`; reference the affected screen spec so
+the two do not drift.
 
-## Quick Specs (`design/quick-specs/`)
+## Shared design assets
 
-Lightweight specs for tuning changes, minor mechanics, or balance adjustments.
-Use `/quick-design` to author.
+| Path | Holds |
+|---|---|
+| `design/registry/entities.yaml` | Cross-doc facts: domain objects, API surfaces, formulas and limits that more than one document states |
+| other `design/*` files | Assets genuinely shared by multiple apps; each file states which apps read it |
 
-## UX Specs (`design/ux/`)
+Register a fact in `design/registry/entities.yaml` when a second document has to
+agree with it — a metafield namespace, a webhook topic set, a pricing formula, a
+platform limit. Never duplicate a fact into two app specs; register it once and
+reference it.
 
-- Per-screen specs: `design/ux/[screen-name].md`
-- HUD design: `design/ux/hud.md`
-- Interaction pattern library: `design/ux/interaction-patterns.md`
-- Accessibility requirements: `design/ux/accessibility-requirements.md`
+## Rules
 
-Use `/ux-design` to author. Validate with `/ux-review` before passing to `/team-ui`.
+- **One app, one owner.** An app's UX specs are written and edited by that app's
+  own agents. Cross-app design edits require an explicit request change.
+- **No app-specific content here.** If only one app reads it, it belongs in
+  `apps/<app>/design/`.
+- **API facts come from the pinned snapshot.** Any Shopify field, scope, mutation
+  or webhook topic named in a design doc must exist in
+  `docs/shopify-api-reference/<version>/` for the version the app pins in
+  `apps/<app>/shopify.app.toml`.
+- **Validation is a gate, not advice.** `/ux-review` for screens,
+  `/consistency-check` when a shared fact changes.
