@@ -1,69 +1,66 @@
-# AHGS Skill Testing Framework — Claude Instructions
+# Skill Testing Framework — Claude Instructions
 
-This folder is the quality assurance layer for the Agent Harness Game Studios skill/agent
-framework. It is self-contained and separate from any game project.
+This folder is the quality assurance layer for the Agentic Shopify App Pipeline
+skill/agent framework. It is self-contained and separate from any app under `apps/`.
 
 ## Key files
 
 | File | Purpose |
 |------|---------|
-| `catalog.yaml` | Master registry for all 73 skills and 49 agents. Contains category, spec path, and last-test tracking fields. Always read this first when running any test command. |
+| `catalog.yaml` | Master registry for all 66 skills and 31 agents. Contains category, group, spec path and last-test tracking fields. Always read this first when running any test command. |
 | `quality-rubric.md` | Category-specific pass/fail metrics. Read the matching `###` section for the skill's category when running `/skill-test category`. |
 | `skills/[category]/[name].md` | Behavioral spec for a skill — 5 test cases + protocol compliance assertions. |
-| `agents/[tier]/[name].md` | Behavioral spec for an agent — 5 test cases + protocol compliance assertions. |
+| `agents/[group]/[name].md` | Behavioral spec for an agent — 5 test cases + protocol compliance assertions. |
 | `templates/skill-test-spec.md` | Template for writing new skill spec files. |
 | `templates/agent-test-spec.md` | Template for writing new agent spec files. |
 | `results/` | Written by `/skill-test spec` when results are saved. Gitignored. |
 
 ## Path conventions
 
-- Skill specs: `AHGS Skill Testing Framework/skills/[category]/[name].md`
-- Agent specs: `AHGS Skill Testing Framework/agents/[tier]/[name].md`
-- Catalog: `AHGS Skill Testing Framework/catalog.yaml`
-- Rubric: `AHGS Skill Testing Framework/quality-rubric.md`
+- Skill specs: `Skill Testing Framework/skills/[category]/[name].md`
+- Agent specs: `Skill Testing Framework/agents/[group]/[name].md`
+- Catalog: `Skill Testing Framework/catalog.yaml`
+- Rubric: `Skill Testing Framework/quality-rubric.md`
 
 The `spec:` field in `catalog.yaml` is the authoritative path for each skill/agent spec.
 Always read it rather than guessing the path.
 
-## Skill categories
+## Skill categories (66 skills)
 
 ```
 gate        → gate-check
-review      → design-review, architecture-review, review-all-gdds
-authoring   → design-system, quick-design, architecture-decision, art-bible,
-              create-architecture, ux-design, ux-review
-readiness   → story-readiness, story-done
-pipeline    → create-epics, create-stories, dev-story, create-control-manifest,
-              propagate-design-change, map-systems
-analysis    → consistency-check, balance-check, content-audit, code-review,
-              tech-debt, scope-check, estimate, perf-profile, asset-audit,
-              security-audit, test-evidence-review, test-flakiness
-team        → team-combat, team-narrative, team-audio, team-level, team-ui,
-              team-qa, team-release, team-polish, team-live-ops
-sprint      → sprint-plan, sprint-status, milestone-review, retrospective,
-              changelog, patch-notes
-utility     → all remaining skills
+review      → architecture-review, design-review, prototype-review
+authoring   → architecture-decision, create-architecture, mmmvp-proposals,
+              propose-updates, quick-design, update-request, ux-design, ux-review
+readiness   → app-store-checklist, story-done, story-readiness
+pipeline    → build-prototype, create-control-manifest, create-epics,
+              create-stories, create-test-store, deploy-to-test-store, dev-story,
+              release, scaffold
+analysis    → code-review, consistency-check, estimate, perf-profile, research,
+              scope-check, security-audit, tech-debt, test-evidence-review,
+              test-flakiness, update-research
+sprint      → changelog, milestone-review, patch-notes, retrospective,
+              sprint-plan, sprint-status
+utility     → adopt, apply-updates, brainstorm, bug-report, bug-triage,
+              feature-request, help, hotfix, kanban-status, launch-checklist,
+              localize, onboard, project-stage-detect, prototype, qa-plan,
+              regression-suite, release-checklist, reverse-document, skill-improve,
+              skill-test, smoke-check, soak-test, start, test-helpers, test-setup
 ```
 
-## Agent tiers
+## Agent groups (31 agents)
 
 ```
-directors   → creative-director, technical-director, producer, art-director
-leads       → lead-programmer, narrative-director, audio-director, ux-designer,
-              qa-lead, release-manager, localization-lead
-specialists → gameplay-programmer, engine-programmer, ui-programmer,
-              tools-programmer, network-programmer, ai-programmer,
-              level-designer, sound-designer, technical-artist
-godot       → godot-specialist, godot-gdscript-specialist, godot-csharp-specialist,
-              godot-shader-specialist, godot-gdextension-specialist
-unity       → unity-specialist, unity-ui-specialist, unity-shader-specialist,
-              unity-dots-specialist, unity-addressables-specialist
-unreal      → unreal-specialist, ue-gas-specialist, ue-replication-specialist,
-              ue-umg-specialist, ue-blueprint-specialist
-operations  → devops-engineer, security-engineer, performance-analyst,
-              analytics-engineer, community-manager
-creative    → writer, world-builder, game-designer, economy-designer,
-              systems-designer, prototyper
+directors   → product-director, technical-director, producer
+leads       → app-architect, api-lead, growth-lead, lead-engineer, ux-lead
+specialists → app-bridge-specialist, auth-specialist, billing-specialist,
+              checkout-specialist, graphql-specialist, liquid-specialist,
+              performance-analyst, polaris-specialist, prototype-builder,
+              research-specialist, tools-engineer, webhooks-specialist
+operations  → analytics-engineer, app-store-reviewer, community-manager,
+              devops-engineer, localization-lead, release-manager,
+              test-store-manager
+qa          → accessibility-specialist, qa-lead, qa-tester, security-specialist
 ```
 
 ## Workflow for testing a skill
@@ -89,5 +86,5 @@ Treat spec failures as "this needs investigation," not "the skill is definitivel
 ## This folder is deletable
 
 Nothing in `.claude/` imports from here. Deleting this folder has no effect on the
-AHGS skills or agents themselves. `/skill-test` and `/skill-improve` will report that
+skills or agents themselves. `/skill-test` and `/skill-improve` will report that
 `catalog.yaml` is missing and guide the user to initialize it.

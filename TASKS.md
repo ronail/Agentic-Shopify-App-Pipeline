@@ -24,25 +24,25 @@ From that one request the system can generate and run **multiple Shopify apps** 
 ## Acceptance Criteria
 
 ### Master Request
-- [ ] Exactly one master request
-- [ ] Can be updated at any time
-- [ ] Every update is tracked with history
-- [ ] All research/update loops use the current version
+- [x] Exactly one master request
+- [x] Can be updated at any time
+- [x] Every update is tracked with history
+- [x] All research/update loops use the current version
 
 ### Multi-app from One Request
-- [ ] One master request can produce multiple apps
-- [ ] Apps run in parallel with isolated state
-- [ ] `/start` shows master request + all apps and their stages
+- [x] One master request can produce multiple apps
+- [x] Apps run in parallel with isolated state
+- [x] `/start` shows master request + all apps and their stages
 
 ### Pipeline
-- [ ] Research supports Original + Competitor Killer
-- [ ] Ranked MMMVP proposals
-- [ ] Prototype + user review
-- [ ] Epics + Stories + concurrent Kanban
-- [ ] Test store per app
-- [ ] Release only after explicit user approval
-- [ ] Ongoing update loop works
-- [ ] Human approval gates enforced per app
+- [x] Research supports Original + Competitor Killer
+- [x] Ranked MMMVP proposals
+- [x] Prototype + user review
+- [x] Epics + Stories + concurrent Kanban
+- [x] Test store per app
+- [x] Release only after explicit user approval
+- [x] Ongoing update loop works
+- [x] Human approval gates enforced per app
 
 ---
 
@@ -71,12 +71,12 @@ Ongoing: Update master request or re-research → Propose updates → Apply (wit
 
 ## Phase 0 – Master Request & Foundation
 
-- [ ] `request.md` (current master request)
-- [ ] `request-history.md` (full tracked changelog)
-- [ ] `apps/<app-name>/` structure
-- [ ] Per-app: `status.md`
-- [ ] App registry / dashboard data
-- [ ] `/update-request` skill (mandatory reason + auto-track)
+- [x] `request.md` (current master request)
+- [x] `request-history.md` (full tracked changelog)
+- [x] `apps/<app-name>/` structure
+- [x] Per-app: `status.md`
+- [x] App registry / dashboard data
+- [x] `/update-request` skill (mandatory reason + auto-track)
 
 ---
 
@@ -88,66 +88,66 @@ Ongoing: Update master request or re-research → Propose updates → Apply (wit
 > what "done" means.
 
 **Agents**
-- [ ] `product-director`
-- [ ] `research-specialist`
+- [x] `product-director`
+- [x] `research-specialist`
 
 **Skills**
-- [ ] `/start` (dashboard: master request + all apps)
-- [ ] `/research`
-- [ ] `/mmmvp-proposals`
-- [ ] `/update-request`
+- [x] `/start` (dashboard: master request + all apps)
+- [x] `/research`
+- [x] `/mmmvp-proposals`
+- [x] `/update-request`
 
 ---
 
 ## Phase 2 – Prototype
 
 **Agents**
-- [ ] `prototype-builder`
+- [x] `prototype-builder`
 
 **Skills**
-- [ ] `/scaffold --app <name>`
-- [ ] `/build-prototype --app <name>`
-- [ ] `/prototype-review --app <name>`
+- [x] `/scaffold --app <name>`
+- [x] `/build-prototype --app <name>`
+- [x] `/prototype-review --app <name>`
 
 ---
 
 ## Phase 3 – SDLC (Concurrent Kanban)
 
 **Agents**
-- [ ] `technical-director`
-- [ ] `app-architect`
+- [x] `technical-director`
+- [x] `app-architect`
 
 **Skills**
-- [ ] `/create-epics --app <name>`
-- [ ] `/create-stories --app <name>`
-- [ ] `/dev-story --app <name>`
-- [ ] `/kanban-status` (one app or `--all`)
+- [x] `/create-epics --app <name>`
+- [x] `/create-stories --app <name>`
+- [x] `/dev-story --app <name>`
+- [x] `/kanban-status` (one app or `--all`)
 
 ---
 
 ## Phase 4 – Quality & Release
 
 **Agents**
-- [ ] `security-specialist`
-- [ ] `app-store-reviewer`
-- [ ] `release-manager`
-- [ ] `test-store-manager`
+- [x] `security-specialist`
+- [x] `app-store-reviewer`
+- [x] `release-manager`
+- [x] `test-store-manager`
 
 **Skills**
-- [ ] `/security-audit --app <name>`
-- [ ] `/app-store-checklist --app <name>`
-- [ ] `/create-test-store --app <name>`
-- [ ] `/deploy-to-test-store --app <name>`
-- [ ] `/release --app <name>`
+- [x] `/security-audit --app <name>`
+- [x] `/app-store-checklist --app <name>`
+- [x] `/create-test-store --app <name>`
+- [x] `/deploy-to-test-store --app <name>`
+- [x] `/release --app <name>`
 
 ---
 
 ## Phase 5 – Ongoing Update Loop
 
 **Skills**
-- [ ] `/update-research` (against current master request)
-- [ ] `/propose-updates`
-- [ ] `/apply-updates --app <name>`
+- [x] `/update-research` (against current master request)
+- [x] `/propose-updates`
+- [x] `/apply-updates --app <name>`
 
 ---
 
@@ -227,22 +227,22 @@ Worked example: R6 is a phase with 15 hooks. `ls .claude/hooks/*.sh | wc -l` ret
 
 Every decision lands in one new file, `docs/legacy/REFACTOR-DECISIONS.md`. No existing file is edited in this phase.
 
-- [ ] Write that file with the baseline counts and the imported SHA (`fec6e35`)
-- [ ] **Ratify** the R2 agent roster (49 → 31) and the R4 skill buckets (75 → 66) as the target. Anything rejected moves under an `# Open` heading in the same file and must be closed before R1 starts — R2/R4 execute the ratified table, they do not re-litigate it
-- [ ] Decide the surviving top-level dirs: `src/`, `design/`, `production/`, `docs/` — and record that `assets/`, `prototypes/`, `tests/`, `tools/` stay absent (they were never imported)
-- [ ] Decide the data home for per-app state: `apps/<app>/…` vs `production/apps/<app>/…` (feeds R8's isolation contract)
-- [ ] Write `production/hermes-profile-mapping.json` (Hermes profile → agent-role resolution). Hermes parity is a hard gate in R10, so this is required, not optional
-- [ ] Record attribution: this repo derives from `ronail/Agent-Harness-Game-Studios` (MIT), itself a fork of `Donchitos/Claude-Code-Game-Studios`; keep `LICENSE`, credit both in `README.md`
+- [x] Write that file with the baseline counts and the imported SHA (`fec6e35`)
+- [x] **Ratify** the R2 agent roster (49 → 31) and the R4 skill buckets (75 → 66) as the target. Anything rejected moves under an `# Open` heading in the same file and must be closed before R1 starts — R2/R4 execute the ratified table, they do not re-litigate it
+- [x] Decide the surviving top-level dirs: `src/`, `design/`, `production/`, `docs/` — and record that `assets/`, `prototypes/`, `tests/`, `tools/` stay absent (they were never imported)
+- [x] Decide the data home for per-app state: `apps/<app>/…` vs `production/apps/<app>/…` (feeds R8's isolation contract)
+- [x] Write `production/hermes-profile-mapping.json` (Hermes profile → agent-role resolution). Hermes parity is a hard gate in R10, so this is required, not optional
+- [x] Record attribution: this repo derives from `ronail/Agent-Harness-Game-Studios` (MIT), itself a fork of `Donchitos/Claude-Code-Game-Studios`; keep `LICENSE`, credit both in `README.md`
 
 **Acceptance criteria**
 
-- [ ] **AC-R0.1** `docs/legacy/REFACTOR-DECISIONS.md` exists and has five `##` sections: baseline, roster, skills, directories, Hermes mapping (attribution may be a sixth)
-- [ ] **AC-R0.2** The roster section lists exactly 31 agents (18 rewritten + 13 new) and names the 31 deleted ones — the arithmetic 49 − 31 = 18 is stated and correct
-- [ ] **AC-R0.3** The skills section assigns **all 75** current skills to Delete / Rewrite / Keep and lists the 14 additions; 23 + 31 + 21 = 75
-- [ ] **AC-R0.4** The directories section states keep/drop for `src`, `design`, `production`, `docs` and marks `assets`/`prototypes`/`tests`/`tools` absent
-- [ ] **AC-R0.5** `production/hermes-profile-mapping.json` exists and parses as JSON
-- [ ] **AC-R0.6** `# Open` is empty — nothing is deferred into R1
-- [ ] **AC-R0.7** `git status --porcelain` lists only the two files above
+- [x] **AC-R0.1** `docs/legacy/REFACTOR-DECISIONS.md` exists and has five `##` sections: baseline, roster, skills, directories, Hermes mapping (attribution may be a sixth)
+- [x] **AC-R0.2** The roster section lists exactly 31 agents (18 rewritten + 13 new) and names the 31 deleted ones — the arithmetic 49 − 31 = 18 is stated and correct
+- [x] **AC-R0.3** The skills section assigns **all 75** current skills to Delete / Rewrite / Keep and lists the 14 additions; 23 + 31 + 21 = 75
+- [x] **AC-R0.4** The directories section states keep/drop for `src`, `design`, `production`, `docs` and marks `assets`/`prototypes`/`tests`/`tools` absent
+- [x] **AC-R0.5** `production/hermes-profile-mapping.json` exists and parses as JSON
+- [x] **AC-R0.6** `# Open` is empty — nothing is deferred into R1
+- [x] **AC-R0.7** `git status --porcelain` lists only the two files above
 
 **Smoke test**
 
@@ -259,31 +259,31 @@ Expected: `R0-OK`. Any other output — missing file, unparsable JSON, extra mod
 
 ### R1 — Foundation config
 
-- [ ] `CLAUDE.md` — drop the engine `[CHOOSE: ...]` lines, the engine-specialist note and `@docs/engine-reference/godot/VERSION.md`; keep the `@.claude/docs/*` import graph intact
-- [ ] `CLAUDE.md` — restate the stack: TypeScript / React / Polaris / App Bridge / Shopify GraphQL Admin API / Node
-- [ ] `AGENTS.md` — rebrand the studio name; keep the Codex tier-mapping table verbatim (it is role-agnostic)
-- [ ] `.codex/config.toml` — replace the header comment ("Claude Code Game Studios" → this pipeline)
-- [ ] `docs/CLAUDE.md` — replace **both** game blocks: the engine-reference section becomes a `docs/shopify-api-reference/` snapshot policy, and the GDD / `tr-registry.yaml` / `control-manifest.md` sections become their Shopify equivalents (ADR "App Requirements Addressed", per-app requirements registry, per-app control manifest)
-- [ ] `src/CLAUDE.md` — replace the game source rules (or delete with `src/` per R0)
-- [ ] `README.md` — rewrite (408 lines of game framing; keep the AHGS + Donchitos attribution and the MIT licence)
-- [ ] `IDEA.md`, `CONTRIBUTING.md`, `SECURITY.md` — strip game framing
-- [ ] `UPGRADING.md` — **delete**, do not edit. It is an 859-line upstream-merge guide whose recommended strategy is `git merge template/main` against AHGS, with per-release "delete these files" lists naming files R2/R4/R5 delete; following it resurrects the framework. Replace with `docs/legacy/DIVERGENCE.md`: this repo diverged permanently at `fec6e35`, no upstream merges, upstream fixes are cherry-picked by hand after being re-expressed for Shopify
-- [ ] `.github/CODEOWNERS` — drop the stale `settings.json` line (real path is `.claude/settings.json`, already covered by `.claude/`) and re-point the owner at this repo's account; `.github/FUNDING.yml` — delete (funds the upstream author); keep `PULL_REQUEST_TEMPLATE.md` and `ISSUE_TEMPLATE/*` (framework-shaped, no game text)
-- [ ] `.gitignore` — remove the Godot / Unity / Unreal and binary-asset blocks; keep the Claude, secret and build blocks
-- [ ] `.claude/settings.json` — audit the permission allow/deny list (no engine tooling); keep the `.env` denies
-- [ ] `.claude/docs/technical-preferences.md` — rewrite (engine → Shopify stack, hosting, DB, test runner)
-- [ ] `.claude/docs/coding-standards.md` — rewrite (GDScript / C# → TypeScript / React)
-- [ ] `.claude/docs/context-management.md` — keep the structure, swap the examples
+- [x] `CLAUDE.md` — drop the engine `[CHOOSE: ...]` lines, the engine-specialist note and `@docs/engine-reference/godot/VERSION.md`; keep the `@.claude/docs/*` import graph intact
+- [x] `CLAUDE.md` — restate the stack: TypeScript / React / Polaris / App Bridge / Shopify GraphQL Admin API / Node
+- [x] `AGENTS.md` — rebrand the studio name; keep the Codex tier-mapping table verbatim (it is role-agnostic)
+- [x] `.codex/config.toml` — replace the header comment ("Claude Code Game Studios" → this pipeline)
+- [x] `docs/CLAUDE.md` — replace **both** game blocks: the engine-reference section becomes a `docs/shopify-api-reference/` snapshot policy, and the GDD / `tr-registry.yaml` / `control-manifest.md` sections become their Shopify equivalents (ADR "App Requirements Addressed", per-app requirements registry, per-app control manifest)
+- [x] `src/CLAUDE.md` — replace the game source rules (or delete with `src/` per R0)
+- [x] `README.md` — rewrite (408 lines of game framing; keep the AHGS + Donchitos attribution and the MIT licence)
+- [x] `IDEA.md`, `CONTRIBUTING.md`, `SECURITY.md` — strip game framing
+- [x] `UPGRADING.md` — **delete**, do not edit. It is an 859-line upstream-merge guide whose recommended strategy is `git merge template/main` against AHGS, with per-release "delete these files" lists naming files R2/R4/R5 delete; following it resurrects the framework. Replace with `docs/legacy/DIVERGENCE.md`: this repo diverged permanently at `fec6e35`, no upstream merges, upstream fixes are cherry-picked by hand after being re-expressed for Shopify
+- [x] `.github/CODEOWNERS` — drop the stale `settings.json` line (real path is `.claude/settings.json`, already covered by `.claude/`) and re-point the owner at this repo's account; `.github/FUNDING.yml` — delete (funds the upstream author); keep `PULL_REQUEST_TEMPLATE.md` and `ISSUE_TEMPLATE/*` (framework-shaped, no game text)
+- [x] `.gitignore` — remove the Godot / Unity / Unreal and binary-asset blocks; keep the Claude, secret and build blocks
+- [x] `.claude/settings.json` — audit the permission allow/deny list (no engine tooling); keep the `.env` denies
+- [x] `.claude/docs/technical-preferences.md` — rewrite (engine → Shopify stack, hosting, DB, test runner)
+- [x] `.claude/docs/coding-standards.md` — rewrite (GDScript / C# → TypeScript / React)
+- [x] `.claude/docs/context-management.md` — keep the structure, swap the examples
 
 **Acceptance criteria**
 
-- [ ] **AC-R1.1** No engine technology choice remains in the five config files: `grep -riE 'godot|unity|unreal|gdscript'` over `CLAUDE.md AGENTS.md README.md docs/CLAUDE.md src/CLAUDE.md` returns nothing
-- [ ] **AC-R1.2** Every `@`-import in `CLAUDE.md` resolves to an existing path
-- [ ] **AC-R1.3** `UPGRADING.md` is gone and `docs/legacy/DIVERGENCE.md` states the no-upstream-merge rule and the divergence SHA
-- [ ] **AC-R1.4** `.gitignore` has no Godot/Unity/Unreal/binary-asset block; still ignores `.env*`, `.claude/settings.local.json`, `node_modules/`
-- [ ] **AC-R1.5** `.github/FUNDING.yml` is gone, CODEOWNERS has no `settings.json` entry, PR + issue templates are intact
-- [ ] **AC-R1.6** `docs/CLAUDE.md` no longer requires a "GDD Requirements Addressed" ADR section or `tr-registry.yaml`
-- [ ] **AC-R1.7** `coding-standards.md` and `technical-preferences.md` name the Shopify stack, and `grep -iE 'gdscript|c#'` on them returns nothing
+- [x] **AC-R1.1** No engine technology choice remains in the five config files: `grep -riE 'godot|unity|unreal|gdscript'` over `CLAUDE.md AGENTS.md README.md docs/CLAUDE.md src/CLAUDE.md` returns nothing
+- [x] **AC-R1.2** Every `@`-import in `CLAUDE.md` resolves to an existing path
+- [x] **AC-R1.3** `UPGRADING.md` is gone and `docs/legacy/DIVERGENCE.md` states the no-upstream-merge rule and the divergence SHA
+- [x] **AC-R1.4** `.gitignore` has no Godot/Unity/Unreal/binary-asset block; still ignores `.env*`, `.claude/settings.local.json`, `node_modules/`
+- [x] **AC-R1.5** `.github/FUNDING.yml` is gone, CODEOWNERS has no `settings.json` entry, PR + issue templates are intact
+- [x] **AC-R1.6** `docs/CLAUDE.md` no longer requires a "GDD Requirements Addressed" ADR section or `tr-registry.yaml`
+- [x] **AC-R1.7** `coding-standards.md` and `technical-preferences.md` name the Shopify stack, and `grep -iE 'gdscript|c#'` on them returns nothing
 
 **Smoke test**
 
@@ -331,22 +331,22 @@ Expected: `R1-OK` with no `MISSING` line. A `MISSING` path means `CLAUDE.md` sti
 
 **Per-agent work (every surviving and new agent)**
 
-- [ ] Frontmatter: `name`, `description`, and a `model` tier (`opus` / `sonnet` / `haiku`) that still reflects the role's weight
-- [ ] Prompt body: remove engine / art / audio / narrative content and every game file path
-- [ ] Keep the **Collaboration Protocol** section (question → options → decision → draft → approval)
-- [ ] Point output paths at `apps/<app-name>/`, `docs/`, `production/` — never `src/game/`, `assets/`
-- [ ] Record in `.claude/docs/agent-roster.md` (this phase owns that file) which rule and which skill invoke the agent. No agent ships without an owner — `ai-agent-engineer` was dropped for exactly this reason
-- [ ] Regenerate the Codex layer: `python3 .codex/generate_compat.py`; delete stale `.codex/agents/*.toml`
+- [x] Frontmatter: `name`, `description`, and a `model` tier (`opus` / `sonnet` / `haiku`) that still reflects the role's weight
+- [x] Prompt body: remove engine / art / audio / narrative content and every game file path
+- [x] Keep the **Collaboration Protocol** section (question → options → decision → draft → approval)
+- [x] Point output paths at `apps/<app-name>/`, `docs/`, `production/` — never `src/game/`, `assets/`
+- [x] Record in `.claude/docs/agent-roster.md` (this phase owns that file) which rule and which skill invoke the agent. No agent ships without an owner — `ai-agent-engineer` was dropped for exactly this reason
+- [x] Regenerate the Codex layer: `python3 .codex/generate_compat.py`; delete stale `.codex/agents/*.toml`
 
 **Acceptance criteria**
 
-- [ ] **AC-R2.1** `ls .claude/agents/*.md` = **31** files and the names match the rewrite table + Add list exactly — no leftover, no extra
-- [ ] **AC-R2.2** All 31 deleted agents are gone from `.claude/agents` and from `.codex/agents`
-- [ ] **AC-R2.3** `.codex/agents/*.toml` = 31 and `python3 .codex/generate_compat.py` produces no diff
-- [ ] **AC-R2.4** No engine/audio/art/narrative string in any agent body: `grep -rliwE 'godot|unity|unreal|gdscript|gdd|battle pass' .claude/agents` returns nothing
-- [ ] **AC-R2.5** Every agent has the Collaboration Protocol section (`grep -L 'Collaboration Protocol' .claude/agents/*.md` is empty)
-- [ ] **AC-R2.6** Every agent's frontmatter has a valid `model:` tier of `opus|sonnet|haiku`
-- [ ] **AC-R2.7** `.claude/docs/agent-roster.md` lists all 31 with an owning rule + skill column, and that file's rows match the directory 1:1
+- [x] **AC-R2.1** `ls .claude/agents/*.md` = **31** files and the names match the rewrite table + Add list exactly — no leftover, no extra
+- [x] **AC-R2.2** All 31 deleted agents are gone from `.claude/agents` and from `.codex/agents`
+- [x] **AC-R2.3** `.codex/agents/*.toml` = 31 and `python3 .codex/generate_compat.py` produces no diff
+- [x] **AC-R2.4** No engine/audio/art/narrative string in any agent body: `grep -rliwE 'godot|unity|unreal|gdscript|gdd|battle pass' .claude/agents` returns nothing
+- [x] **AC-R2.5** Every agent has the Collaboration Protocol section (`grep -L 'Collaboration Protocol' .claude/agents/*.md` is empty)
+- [x] **AC-R2.6** Every agent's frontmatter has a valid `model:` tier of `opus|sonnet|haiku`
+- [x] **AC-R2.7** `.claude/docs/agent-roster.md` lists all 31 with an owning rule + skill column, and that file's rows match the directory 1:1
 
 **Smoke test**
 
@@ -371,17 +371,17 @@ Expected: `R2-OK`. Any count mismatch, game string, or agent missing the protoco
 
 **Add (7):** `admin-embed-code.md`, `theme-extension-code.md`, `webhook-code.md`, `graphql-code.md`, `billing-code.md`, `auth-code.md`, `functions-code.md`
 
-- [ ] Each rule's `paths:` frontmatter glob matches at least one file that exists on disk when the rule is written — run `find` against every glob and paste the command into the commit message. `apps/**` globs land after R8, so either write those rules after R8 or note the deferral in the commit
-- [ ] `.claude/docs/rules-reference.md` lists every rule file, 1:1
-- [ ] No rule contradicts `.claude/docs/coding-standards.md` or `technical-preferences.md`
+- [x] Each rule's `paths:` frontmatter glob matches at least one file that exists on disk when the rule is written — run `find` against every glob and paste the command into the commit message. `apps/**` globs land after R8, so either write those rules after R8 or note the deferral in the commit
+- [x] `.claude/docs/rules-reference.md` lists every rule file, 1:1
+- [x] No rule contradicts `.claude/docs/coding-standards.md` or `technical-preferences.md`
 
 **Acceptance criteria**
 
-- [ ] **AC-R3.1** `ls .claude/rules/*.md` = **13** files, matching the delete/rewrite/add lists
-- [ ] **AC-R3.2** No rule references a game path: `grep -riE 'src/game|assets/|shader|\bgodot\b|\bunity\b|\bunreal\b' .claude/rules` returns nothing
-- [ ] **AC-R3.3** Every rule has `paths:` frontmatter whose glob resolves to ≥1 existing file (record the `find` per glob in the commit)
-- [ ] **AC-R3.4** `rules-reference.md` has exactly 13 entries and each names a file that exists
-- [ ] **AC-R3.5** Each of the 7 new rules has a stated owner among the R2 agents
+- [x] **AC-R3.1** `ls .claude/rules/*.md` = **13** files, matching the delete/rewrite/add lists
+- [x] **AC-R3.2** No rule references a game path: `grep -riE 'src/game|assets/|shader|\bgodot\b|\bunity\b|\bunreal\b' .claude/rules` returns nothing
+- [x] **AC-R3.3** Every rule has `paths:` frontmatter whose glob resolves to ≥1 existing file (record the `find` per glob in the commit)
+- [x] **AC-R3.4** `rules-reference.md` has exactly 13 entries and each names a file that exists
+- [x] **AC-R3.5** Each of the 7 new rules has a stated owner among the R2 agents
 
 **Smoke test**
 
@@ -406,21 +406,21 @@ Expected: `R3-OK`. Then run the per-glob `find` checks manually — that part ca
 
 **Add (14):** `research` (Original | Competitor Killer, consumes the current `request.md`), `scaffold --app <name>` (creates `apps/<app-name>/` — the only task that produces the layout R3's globs and R6's hooks need), `mmmvp-proposals`, `update-request`, `build-prototype`, `prototype-review`, `kanban-status`, `app-store-checklist`, `create-test-store`, `deploy-to-test-store`, `release`, `update-research`, `propose-updates`, `apply-updates`
 
-- [ ] Rewrite `/start` before anything else and re-run it: dashboard = master request + every app + its stage, read from `docs/registry/apps.json`
-- [ ] Each surviving skill: frontmatter `description` free of game terms; body paths updated
-- [ ] `.claude/docs/skills-reference.md` — **this phase owns the file**: regenerate it from `docs/legacy/REFACTOR-DECISIONS.md` (R0 only records the decision)
-- [ ] `.claude/docs/workflow-catalog.yaml` — `/help` resolves every `step` id to an existing skill directory (manual pass; record the command used)
-- [ ] `.agents/skills` symlink still resolves (Codex discovery)
+- [x] Rewrite `/start` before anything else and re-run it: dashboard = master request + every app + its stage, read from `docs/registry/apps.json`
+- [x] Each surviving skill: frontmatter `description` free of game terms; body paths updated
+- [x] `.claude/docs/skills-reference.md` — **this phase owns the file**: regenerate it from `docs/legacy/REFACTOR-DECISIONS.md` (R0 only records the decision)
+- [x] `.claude/docs/workflow-catalog.yaml` — `/help` resolves every `step` id to an existing skill directory (manual pass; record the command used)
+- [x] `.agents/skills` symlink still resolves (Codex discovery)
 
 **Acceptance criteria**
 
-- [ ] **AC-R4.1** `ls -d .claude/skills/*/` = **66** directories; the 23 deleted names are absent, the 14 new names are present
-- [ ] **AC-R4.2** `.agents/skills` is a symlink that resolves to `.claude/skills`
-- [ ] **AC-R4.3** No skill frontmatter/body carries game vocabulary: `grep -rliwE 'godot|unity|unreal|gdd|bartle|mda framework' .claude/skills/*/SKILL.md` returns nothing
-- [ ] **AC-R4.4** `skills-reference.md` has 66 entries, each naming a directory that exists
-- [ ] **AC-R4.5** Every skill named in an agent body exists, and every agent named in a skill body exists (R10's `check-references.py` is the arbiter; it must report zero here)
-- [ ] **AC-R4.6** `/research` and `/scaffold` exist as directories with `SKILL.md` and are listed in the catalog
-- [ ] **AC-R4.7** `/start` run once shows master request + apps + stages (empty-state output is acceptable before R8 seeds data, but the command must not error)
+- [x] **AC-R4.1** `ls -d .claude/skills/*/` = **66** directories; the 23 deleted names are absent, the 14 new names are present
+- [x] **AC-R4.2** `.agents/skills` is a symlink that resolves to `.claude/skills`
+- [x] **AC-R4.3** No skill frontmatter/body carries game vocabulary: `grep -rliwE 'godot|unity|unreal|gdd|bartle|mda framework' .claude/skills/*/SKILL.md` returns nothing
+- [x] **AC-R4.4** `skills-reference.md` has 66 entries, each naming a directory that exists
+- [x] **AC-R4.5** Every skill named in an agent body exists, and every agent named in a skill body exists (R10's `check-references.py` is the arbiter; it must report zero here)
+- [x] **AC-R4.6** `/research` and `/scaffold` exist as directories with `SKILL.md` and are listed in the catalog
+- [x] **AC-R4.7** `/start` run once shows master request + apps + stages (empty-state output is acceptable before R8 seeds data, but the command must not error)
 
 **Smoke test**
 
@@ -552,26 +552,26 @@ Expected: `R7-OK`. If `grep` prints filenames instead, the docs layer still teac
 
 `.claude/docs/directory-structure.md` is owned here — it is where the isolation contract lives.
 
-- [ ] `request.md` — exactly **one**; `track-request-changes.sh` rejects an untracked edit
-- [ ] `request-history.md` — every superseded version with reason, timestamp and the loop it fed
-- [ ] `apps/<app-name>/status.md` per app — stage, blockers, last approved gate
-- [ ] `docs/registry/apps.json` — single append-only registry, the one source both `/start` and `session-start.sh` read
-- [ ] `apps/<app>/approvals.json` — schema keyed by the five gate ids above, written by the skill at each gate (gate id, timestamp, approver)
-- [ ] Isolation contract in `.claude/docs/directory-structure.md`: per app — own directory, own `.env.local` (git-ignored), own dev-store credentials file, own kanban file, own `production/apps/<app>/{sprints,milestones,session-state}/`; **no shared mutable file outside `docs/registry/apps.json`**; one writer per app dir; registry is append-only
-- [ ] `production/` — split into per-app subdirs; the global `session-state/` holds repo-level state only
-- [ ] Apply the directory decisions recorded in R0 (do not re-decide them here)
-- [ ] Every loop (research, update, propose) reads the **current** `request.md`, never a cached copy
+- [x] `request.md` — exactly **one**; `track-request-changes.sh` rejects an untracked edit
+- [x] `request-history.md` — every superseded version with reason, timestamp and the loop it fed
+- [x] `apps/<app-name>/status.md` per app — stage, blockers, last approved gate
+- [x] `docs/registry/apps.json` — single append-only registry, the one source both `/start` and `session-start.sh` read
+- [x] `apps/<app>/approvals.json` — schema keyed by the five gate ids above, written by the skill at each gate (gate id, timestamp, approver)
+- [x] Isolation contract in `.claude/docs/directory-structure.md`: per app — own directory, own `.env.local` (git-ignored), own dev-store credentials file, own kanban file, own `production/apps/<app>/{sprints,milestones,session-state}/`; **no shared mutable file outside `docs/registry/apps.json`**; one writer per app dir; registry is append-only
+- [x] `production/` — split into per-app subdirs; the global `session-state/` holds repo-level state only
+- [x] Apply the directory decisions recorded in R0 (do not re-decide them here)
+- [x] Every loop (research, update, propose) reads the **current** `request.md`, never a cached copy
 
 **Acceptance criteria**
 
-- [ ] **AC-R8.1** `request.md` exists, and exactly one non-history `request*.md` exists (`request.md`; `request-history.md` is the history and is excluded)
-- [ ] **AC-R8.2** `request-history.md` exists and its format records version, reason, timestamp
-- [ ] **AC-R8.3** `docs/registry/apps.json` parses as JSON and lists every directory under `apps/`
-- [ ] **AC-R8.4** Each `apps/<app>/` has `status.md` and `approvals.json`; the latter parses as JSON and its keys are a subset of the five gate ids
-- [ ] **AC-R8.5** `directory-structure.md` contains the isolation contract, including the "no shared mutable file outside the registry" rule and the one-writer-per-app rule
-- [ ] **AC-R8.6** `production/apps/<app>/` exists for each app and holds `sprints/`, `milestones/`, `session-state/`
-- [ ] **AC-R8.7** Two seed apps exist (`/scaffold` twice) and neither writes a file inside the other's directory — demonstrate with `git status` after touching both
-- [ ] **AC-R8.8** An untracked edit to `request.md` is rejected by `track-request-changes.sh` (negative fixture, non-zero exit)
+- [x] **AC-R8.1** `request.md` exists, and exactly one non-history `request*.md` exists (`request.md`; `request-history.md` is the history and is excluded)
+- [x] **AC-R8.2** `request-history.md` exists and its format records version, reason, timestamp
+- [x] **AC-R8.3** `docs/registry/apps.json` parses as JSON and lists every directory under `apps/`
+- [x] **AC-R8.4** Each `apps/<app>/` has `status.md` and `approvals.json`; the latter parses as JSON and its keys are a subset of the five gate ids
+- [x] **AC-R8.5** `directory-structure.md` contains the isolation contract, including the "no shared mutable file outside the registry" rule and the one-writer-per-app rule
+- [x] **AC-R8.6** `production/apps/<app>/` exists for each app and holds `sprints/`, `milestones/`, `session-state/`
+- [x] **AC-R8.7** Two seed apps exist (`/scaffold` twice) and neither writes a file inside the other's directory — demonstrate with `git status` after touching both
+- [x] **AC-R8.8** An untracked edit to `request.md` is rejected by `track-request-changes.sh` (negative fixture, non-zero exit)
 
 **Smoke test**
 
@@ -624,25 +624,25 @@ Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill
 
 ### R10 — Verification gates (bind to Acceptance Criteria)
 
-- [ ] **Zero game strings, tree-wide:** `grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=legacy --exclude=TASKS.md .` → **0 results** (word-boundary variant of the baseline pattern, whole tree, `docs/legacy/` exempt)
-- [ ] **Counts:** agents **31** == `.codex/agents`; skills **66**; rules **13**; hooks **15**; templates **35** — each equal to its reference doc
-- [ ] `python3 .codex/generate_compat.py` → no diff
-- [ ] `bash -n` all hooks; `python3 -m json.tool` on `.claude/settings.json` and `.codex/hooks.json`
-- [ ] Add `.claude/scripts/check-references.py` (stdlib only) and run it: fail when (a) an agent named in a skill body is missing from `.claude/agents/`, (b) a skill named in an agent body is missing from `.claude/skills/`, (c) a `.claude/docs/templates/...` path in a skill does not resolve, (d) a name in `agent-roster.md` has no agent file; non-zero exit on any hit
-- [ ] **`docs/legacy/AC-TRACE.md`** maps all 16 project Acceptance Criteria **and** every `AC-Rn.x` in this section to the item that satisfies each; any criterion without a linked item becomes a new item here before this gate can pass
-- [ ] **Isolation check:** no two apps write the same file outside `docs/registry/apps.json`
-- [ ] **Approval check:** `/release` on an app whose `approvals.json` lacks gate 4 exits non-zero
-- [ ] **`/start` smoke run in Claude Code, Codex and Hermes** (Hermes through `production/hermes-profile-mapping.json`) — each shows master request, apps and stages
+- [x] **Zero game strings, tree-wide:** `grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=legacy --exclude=TASKS.md .` → **0 results** (word-boundary variant of the baseline pattern, whole tree, `docs/legacy/` exempt)
+- [x] **Counts:** agents **31** == `.codex/agents`; skills **66**; rules **13**; hooks **15**; templates **35** — each equal to its reference doc
+- [x] `python3 .codex/generate_compat.py` → no diff
+- [x] `bash -n` all hooks; `python3 -m json.tool` on `.claude/settings.json` and `.codex/hooks.json`
+- [x] Add `.claude/scripts/check-references.py` (stdlib only) and run it: fail when (a) an agent named in a skill body is missing from `.claude/agents/`, (b) a skill named in an agent body is missing from `.claude/skills/`, (c) a `.claude/docs/templates/...` path in a skill does not resolve, (d) a name in `agent-roster.md` has no agent file; non-zero exit on any hit
+- [x] **`docs/legacy/AC-TRACE.md`** maps all 16 project Acceptance Criteria **and** every `AC-Rn.x` in this section to the item that satisfies each; any criterion without a linked item becomes a new item here before this gate can pass
+- [x] **Isolation check:** no two apps write the same file outside `docs/registry/apps.json`
+- [x] **Approval check:** `/release` on an app whose `approvals.json` lacks gate 4 exits non-zero
+- [x] **`/start` smoke run in Claude Code, Codex and Hermes** (Hermes through `production/hermes-profile-mapping.json`) — each shows master request, apps and stages
 
 **Acceptance criteria**
 
-- [ ] **AC-R10.1** The tree-wide engine grep returns 0 files
-- [ ] **AC-R10.2** All five counts match their reference docs (31 / 66 / 13 / 15 / 35)
-- [ ] **AC-R10.3** `check-references.py` exists, exits 0, and was proven to fail by pointing it at a renamed agent (negative fixture restored afterwards)
-- [ ] **AC-R10.4** `docs/legacy/AC-TRACE.md` covers 16 project criteria + every `AC-Rn.x`, with no empty mapping cell
-- [ ] **AC-R10.5** Isolation and approval negative fixtures both exit non-zero by name
-- [ ] **AC-R10.6** `/start` runs in all three harnesses; output pasted in the commit
-- [ ] **AC-R10.7** `git status --porcelain` is clean and the final commit message contains the pasted gate output
+- [x] **AC-R10.1** The tree-wide engine grep returns 0 files
+- [x] **AC-R10.2** All five counts match their reference docs (31 / 66 / 13 / 15 / 35)
+- [x] **AC-R10.3** `check-references.py` exists, exits 0, and was proven to fail by pointing it at a renamed agent (negative fixture restored afterwards)
+- [x] **AC-R10.4** `docs/legacy/AC-TRACE.md` covers 16 project criteria + every `AC-Rn.x`, with no empty mapping cell
+- [x] **AC-R10.5** Isolation and approval negative fixtures both exit non-zero by name
+- [x] **AC-R10.6** `/start` runs in all three harnesses; output pasted in the commit
+- [x] **AC-R10.7** `git status --porcelain` is clean and the final commit message contains the pasted gate output
 
 **Smoke test**
 
