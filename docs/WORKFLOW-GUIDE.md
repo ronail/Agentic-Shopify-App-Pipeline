@@ -73,7 +73,7 @@ state:
 Branch: main
 Recent commits:
   ea78fa4 refactor(r6): hooks layer hardening ...
-Apps: my-app (research), another-app (research)
+Apps: discount-bundles (research), order-tags (research)
 =====================================================
 ```
 
@@ -213,7 +213,7 @@ them and because accessibility is cheaper to fix in a spec than in a component.
 ### Step 2.1: `/research`
 
 ```
-/research my-app
+/research discount-bundles
 ```
 
 Two modes, chosen explicitly:
@@ -230,7 +230,7 @@ A brief that lists ten features has not chosen a wedge.
 ### Step 2.2: `/ux-design`
 
 ```
-/ux-design my-app
+/ux-design discount-bundles
 ```
 
 One spec per admin screen under `apps/<app>/design/ux/`: states (loading, empty,
@@ -243,7 +243,7 @@ than padding.
 ### Step 2.3: `/ux-review`
 
 ```
-/ux-review my-app
+/ux-review discount-bundles
 ```
 
 Validates the specs against Polaris, App Bridge constraints, and the accessibility
@@ -334,7 +334,7 @@ fiction*.
 ### Step 3.2: `/create-architecture`
 
 ```
-/create-architecture my-app
+/create-architecture discount-bundles
 ```
 
 Writes `docs/architecture/apps/<app>/architecture.md`: app boundaries, stack and
@@ -375,7 +375,7 @@ registry.
 ### Step 3.4: `/architecture-review`
 
 ```
-/architecture-review my-app
+/architecture-review discount-bundles
 ```
 
 Modes: `full`, `coverage`, `consistency`, `api`, `rtm`.
@@ -394,7 +394,7 @@ never renumber.
 ### Step 3.5: `/create-control-manifest`
 
 ```
-/create-control-manifest my-app
+/create-control-manifest discount-bundles
 ```
 
 Extracts every Must / Never / Limit from Accepted ADRs, `.claude/rules/`,
@@ -441,7 +441,7 @@ store, not a mockup — to answer the questions the ADRs could not settle.
 ### Step 4.1: `/build-prototype`
 
 ```
-/build-prototype my-app
+/build-prototype discount-bundles
 ```
 
 The skill asks what the prototype must **prove**, then orders those questions by how
@@ -454,7 +454,7 @@ may be ugly; it may not be fake.
 ### Step 4.2: `/prototype-review`
 
 ```
-/prototype-review apps/my-app/prototype
+/prototype-review apps/discount-bundles/prototype
 ```
 
 Reviews against the research wedge and the UX specs — not against the eventual
@@ -511,7 +511,7 @@ to requirements, estimate, and plan the first sprint.
 ### Step 5.1: `/scope-check`
 
 ```
-/scope-check my-app
+/scope-check discount-bundles
 ```
 
 Classifies every work item as **in scope** (traced to a requirement), **not yet
@@ -521,8 +521,8 @@ named, not scheduled.
 ### Step 5.2: `/create-epics` and `/create-stories`
 
 ```
-/create-epics my-app
-/create-stories my-app epic-1-rule-engine
+/create-epics discount-bundles
+/create-stories order-tags epic-1-rule-engine
 ```
 
 Epics list governing ADRs and traced vs untraced requirements. Stories carry:
@@ -661,7 +661,7 @@ that can be trusted before release.
 ### Step 7.1: `/qa-plan`
 
 ```
-/qa-plan my-app
+/qa-plan discount-bundles
 ```
 
 Test strategy per surface: unit for pure logic, integration for the queue and
@@ -675,7 +675,7 @@ Runners, fixtures and factories. Helpers derive from requirement prefixes
 ### Step 7.3: `/smoke-check`
 
 ```
-/smoke-check my-app
+/smoke-check discount-bundles
 ```
 
 Exercises the app on a **dev store**: install, create the object the app manages,
@@ -698,7 +698,7 @@ webhook p95 < 500 ms).
 ### Step 7.5: `/security-audit`
 
 ```
-/security-audit my-app
+/security-audit discount-bundles
 ```
 
 OAuth and session tokens, scope minimality, webhook verification, token storage,
@@ -730,7 +730,7 @@ Submission as a checklist, with every claim proven on a dev store.
 ### Step 8.1: `/release-checklist`
 
 ```
-/release-checklist my-app
+/release-checklist discount-bundles
 ```
 
 Checks the repo, not your memory: tests pass, functions build, ADRs Accepted,
@@ -743,7 +743,7 @@ A handler that returns 200 is not evidence that redaction works.
 ### Step 8.2: `/app-store-checklist`
 
 ```
-/app-store-checklist my-app
+/app-store-checklist discount-bundles
 ```
 
 Listing title and description matching what the app actually does, scope
@@ -753,8 +753,8 @@ schema, billing configured through Shopify (no external payment links).
 ### Step 8.3: `/release` and `/launch-checklist`
 
 ```
-/release my-app 1.0.0
-/launch-checklist my-app
+/release discount-bundles 1.0.0
+/launch-checklist discount-bundles
 ```
 
 `/release` deploys the app version (bundling functions and extensions), tags the
@@ -975,7 +975,7 @@ An unrecorded gate is not an approved gate: `/project-stage-detect` and `/help` 
 ### Reverse documentation
 
 ```
-/reverse-document apps/my-app
+/reverse-document apps/order-tags
 ```
 
 For code that exists without docs: reads the implementation, infers intent, asks

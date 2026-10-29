@@ -35,9 +35,10 @@ authoring a new ADR so they cannot contradict an accepted decision.
 
 ## Apps
 
-Every app lives in `apps/<app>/` and owns its ADR set in
-`docs/architecture/apps/<app>/`. `docs/registry/architecture.yaml` is the app
-index — read it for the current list rather than duplicating it here.
+| App | Purpose | Architecture |
+|-----|---------|--------------|
+| `discount-bundles` | Create and manage product bundle discounts | [apps/discount-bundles/](apps/discount-bundles/) |
+| `order-tags` | Apply and manage tags on orders in bulk | [apps/order-tags/](apps/order-tags/) |
 
-Pinned Admin API version for all apps: **2026-10** —
+Pinned Admin API version for both apps: **2026-10** —
 [ADR-0001-admin-api-version-policy.md](ADR-0001-admin-api-version-policy.md).

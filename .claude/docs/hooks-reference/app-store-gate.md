@@ -29,12 +29,12 @@ History sections may quote old failures freely; only the result column
 ## Invocation
 
 ```bash
-bash .claude/hooks/app-store-gate.sh --app my-app
+bash .claude/hooks/app-store-gate.sh --app order-tags
 bash .claude/hooks/app-store-gate.sh --checklist /tmp/fixture.md
 APP_STORE_CHECKLIST=/path/to/checklist.md bash .claude/hooks/app-store-gate.sh
 
 # hook mode: fires only on release / submission commands
-echo '{"tool_input":{"command":"/release my-app"}}' | bash .claude/hooks/app-store-gate.sh
+echo '{"tool_input":{"command":"/release order-tags"}}' | bash .claude/hooks/app-store-gate.sh
 ```
 
 Exit `0` = allowed. Exit `2` = `BLOCKED [app-store-gate.sh]: ...` on stderr.

@@ -219,5 +219,5 @@ version.
 ## Related
 
 - `docs/registry/architecture.yaml` — stance `admin_api_version_policy`
-- Per-app ADRs: `docs/architecture/apps/<app>/ADR-*.md`
+- Per-app ADRs: `apps/discount-bundles/ADR-0001-*`, `apps/order-tags/ADR-0001-*`
 - `docs/shopify-api-reference/VERSION.md` — the repo-wide pin

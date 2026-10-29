@@ -40,11 +40,11 @@ fixtures run.
 
 ```bash
 # explicit
-bash .claude/hooks/approval-gate.sh --app my-app --gate gate-4-release
-bash .claude/hooks/approval-gate.sh --app my-app --action release
+bash .claude/hooks/approval-gate.sh --app order-tags --gate gate-4-release
+bash .claude/hooks/approval-gate.sh --app order-tags --action release
 
 # hook mode: reads the PreToolUse payload, silent unless the command is gated
-echo '{"tool_input":{"command":"/release my-app"}}' \
+echo '{"tool_input":{"command":"/release order-tags"}}' \
   | bash .claude/hooks/approval-gate.sh
 ```
 
