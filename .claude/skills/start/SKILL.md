@@ -109,7 +109,7 @@ Table rules:
 
 | Stage | Meaning | Next skill |
 |-------|---------|-----------|
-| `research` | demand and API feasibility not settled | `/research <app>`, then `/mmmvp-proposals <app>` → gate-1-research |
+| `research` | demand and API feasibility not settled | `/research <app>` → `/mmmvp-proposals <app>` → **user reviews slices** (advance only on pick/override; refine → `/update-request` + re-`/research` → re-run proposals) → `/gate-check gate-1-research <app>` |
 | `prototype` | concept approved, prototype not built or not reviewed | `/scaffold <app>` → `/build-prototype <app>` → `/prototype-review <app>` → gate-2-prototype |
 | `scope` | prototype approved, production scope not set | `/scope-check <app>`, `/create-epics <app>`, `/create-stories <app>` → gate-3-scope |
 | `build` | stories exist, implementation in flight | `/sprint-plan <app>` or `/kanban-status <app>`, then `/dev-story` |

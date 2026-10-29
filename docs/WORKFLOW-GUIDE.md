@@ -250,6 +250,25 @@ Validates the specs against Polaris, App Bridge constraints, and the accessibili
 tier (WCAG 2.1 AA by default). Findings are BLOCKING (stops handoff) or ADVISORY
 (fix during the visual pass).
 
+### Step 2.3b — Review the MMMVP slices and refine (loop before gate 1)
+
+`/research` produces a recommendation; `/mmmvp-proposals` turns it into three
+slices (S1 thinnest / S2 credible / S3 complete). Those are a **suggestion, not
+a decision** — review them here, before gate 1:
+
+- **Pick a slice or explicitly override the proposals** → take it to
+  `/gate-check gate-1-research <app>`. This is the **only** path that advances
+  to the next step.
+- **Refine the request or idea** → `/update-request` (the only skill that edits
+  `request.md`), then re-run `/research <app>` and `/mmmvp-proposals <app>`
+  against the updated request. Do not advance; repeat until you pick/override
+  or kill the idea.
+- **Not worth building** → record the kill reason and stop; do not gate.
+
+Each pass rewrites `production/apps/<app>/mmmvp-proposals.md`, so the trail
+records what was rejected and why. Gate 1 — and the next stage — are not opened
+until you have picked a slice or explicitly overridden the proposals.
+
 ### Step 2.4: Gate 1 — research
 
 ```

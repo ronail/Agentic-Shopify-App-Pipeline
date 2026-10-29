@@ -60,6 +60,31 @@ of a feature list. Three slices, not one — a single proposal is not a choice.
    worth shipping (no merchant asks for it in reviews, the API surface is
    deprecated, the incumbent bundles it free).
 8. **Ask before writing** to `production/apps/<app>/`.
+9. **Run the user-review loop — the pipeline advances ONLY on an explicit pick
+   or override.** The three slices are a suggestion, not a decision. Present
+   them and `AskUserQuestion`:
+
+   > **Which slice — or should the idea change?**
+   > S1 thinnest / S2 credible / S3 complete / override the proposals /
+   > refine the idea / not worth building.
+
+   - **Pick a slice, or explicitly override the proposals** (user says "go with
+     S2", or "just build it, ignore the slices") → record the chosen/overridden
+     scope as the recommendation and hand off to `/gate-check gate-1-research
+     <app>`. This is the ONLY path that advances to the next step. The user
+     still approves the gate; this skill never self-approves.
+   - **Refine the request or idea** → capture the change, route to
+     `/update-request` (the only skill allowed to edit `request.md`), then re-run
+     `/research <app>` against the updated request and return to **step 4** with
+     fresh slices. Do not advance. Repeat until the user picks/overrides or
+     kills the idea.
+   - **Not worth building** → stop; append the kill reason to
+     `production/research/<app>/recommendation.md` and do not gate.
+
+   Each iteration rewrites `production/apps/<app>/mmmvp-proposals.md`, so the
+   trail records which slices the user rejected and why. Do not open
+   `gate-1-research` — and do not move to the next stage — until the user has
+   picked a slice or explicitly overridden the proposals.
 
 ## Outputs
 
