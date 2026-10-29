@@ -82,15 +82,15 @@ Last request change: v1 — initial request (2026-10-29T00:00:00Z)
 APPS (2)
 | App | Stage | Last gate | Prototype | Pipeline | Next |
 |-----|-------|-----------|-----------|----------|------|
-| discount-bundles | research | gate-1-research | empty | 0 files | /research |
-| order-tags | research | gate-1-research | empty | 0 files | /research |
+| my-app | research | gate-1-research | empty | 0 files | /research |
+| other-app | research | gate-1-research | empty | 0 files | /research |
 
 BLOCKERS
 - none
 
 NEXT
-1. discount-bundles — research not settled: /research discount-bundles
-2. order-tags — research not settled: /research order-tags
+1. my-app — research not settled: /research my-app
+2. other-app — research not settled: /research other-app
 ```
 
 Table rules:

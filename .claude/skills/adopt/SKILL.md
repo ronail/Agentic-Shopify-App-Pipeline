@@ -270,7 +270,7 @@ Estimated remediation: [X blocking items × ~Y min each = roughly Z hours]
 Before asking to write, show a **Gap Preview**:
 - List every BLOCKING gap as a one-line bullet describing the actual problem
   (e.g. `ADR-0002.md: missing ## Status section`,
-  `discount-bundles/requirements.yaml: 3 entries missing acceptance_criteria`).
+  `my-app/requirements.yaml: 3 entries missing acceptance_criteria`).
   No counts — show the actual items.
 - Show HIGH / MEDIUM / LOW as counts only (e.g. `HIGH: 4, MEDIUM: 2, LOW: 1`).
 

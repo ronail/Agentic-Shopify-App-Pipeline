@@ -8,12 +8,12 @@
 # Gate ids: gate-1-research, gate-2-prototype, gate-3-scope, gate-4-release, gate-5-update
 #
 # Explicit use:
-#   bash .claude/hooks/approval-gate.sh --app order-tags --gate gate-4-release
-#   bash .claude/hooks/approval-gate.sh --app order-tags --action release
-#   bash .claude/hooks/approval-gate.sh --app order-tags --apps <dir> --gate gate-4-release
+#   bash .claude/hooks/approval-gate.sh --app my-app --gate gate-4-release
+#   bash .claude/hooks/approval-gate.sh --app my-app --action release
+#   bash .claude/hooks/approval-gate.sh --app my-app --apps <dir> --gate gate-4-release
 #
 # Hook use (stdin = PreToolUse payload; auto-detects a gated action, silent otherwise):
-#   echo '{"tool_input":{"command":"/release order-tags"}}' | bash .claude/hooks/approval-gate.sh
+#   echo '{"tool_input":{"command":"/release my-app"}}' | bash .claude/hooks/approval-gate.sh
 #
 # Exit codes: 0 = allowed / not a gated action, 2 = BLOCKED (PreToolUse block code).
 # Graceful without jq or python3.
@@ -75,7 +75,7 @@ if [ -z "$APP" ] && [ -n "$CMD" ]; then
   APP=$(printf '%s' "$CMD" | grep -oE '\-\-app[= ][A-Za-z0-9._-]+' | head -1 | sed -E 's/^--app[= ]//')
 fi
 if [ -z "$APP" ] && [ -n "$CMD" ]; then
-  # "/release order-tags" / "/apply-updates order-tags" — the first token after the action.
+  # "/release my-app" / "/apply-updates my-app" — the first token after the action.
   APP=$(printf '%s' "$CMD" | grep -oE '/(release|apply-updates|propose-updates)[[:space:]]+[A-Za-z0-9._-]+' | head -1 | awk '{print $2}')
 fi
 if [ -z "$APP" ]; then

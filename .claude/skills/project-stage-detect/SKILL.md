@@ -105,8 +105,8 @@ to `producer`. Claiming a stage that the record does not support is a
 
 | App | Claimed stage | Last gate (record) | State | Blockers | Next action |
 |-----|---------------|--------------------|-------|----------|-------------|
-| discount-bundles | research | gate-1-research | aligned | none | research the pricing surface, then write ADRs — `/gate-check gate-2-prototype discount-bundles` is not reachable until a prototype exists |
-| order-tags | research | gate-1-research | claim ahead of evidence | none | ... |
+| my-app | research | gate-1-research | aligned | none | research the pricing surface, then write ADRs — `/gate-check gate-2-prototype my-app` is not reachable until a prototype exists |
+| other-app | research | gate-1-research | claim ahead of evidence | none | ... |
 
 ## Per-app detail — <app>
 

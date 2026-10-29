@@ -35,6 +35,18 @@ Determine mode from the first argument:
 - `category all` → run category rubric for every skill that has a `category:` in catalog
 - `audit` (or no argument) → read catalog, list all skills and agents, show coverage
 
+**Harness guard.** Before dispatching on the mode: if
+`Skill Testing Framework/catalog.yaml` is absent — a repo generated from the
+template strips that directory — then `spec`, `category` and `audit` cannot
+run. Print exactly:
+
+```
+Skill Testing Framework not installed. Only `/skill-test static` is available in this repo.
+```
+
+and stop. `static` is self-contained and must still run with no harness
+present.
+
 If argument is missing or unrecognized, output usage and stop.
 
 ---

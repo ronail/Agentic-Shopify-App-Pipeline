@@ -38,7 +38,7 @@ any per-app skill runs, and it must finish before anything tries to read the app
 ## Steps
 
 1. **Validate the slug.** Lowercase, hyphen-separated, no spaces or underscores.
-   Reject `--app "Discount Bundles"` and ask for `discount-bundles`. If the slug
+   Reject `--app "My App"` and ask for `my-app`. If the slug
    is in neither `request.md` nor the registry, stop and say so — scaffolding an
    unrequested app is how phantom directories appear.
 2. **Check for an existing directory.** If `apps/<app>/` exists, do not
