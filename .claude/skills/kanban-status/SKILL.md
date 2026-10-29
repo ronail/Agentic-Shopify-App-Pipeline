@@ -91,3 +91,5 @@ Owned by **producer**. Read-only for everyone else; any agent may run it.
   fix belongs to whoever owns that file.
 - **No invented dates.** A gate with `date: null` shows as not started.
 - **One recommendation.** A list of six priorities is not a board.
+
+Template: `.claude/docs/templates/kanban-card.md` — the card schema every board entry is read from.

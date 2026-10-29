@@ -94,3 +94,5 @@ verdict at `gate-4-release`.
 - **Re-check after fixes.** Change the line's result, keep the old failure in the
   history section.
 - **No submission from this skill.** It gates the release; `/release` files it.
+
+Template: `.claude/docs/templates/app-store-listing.md` — the listing fields each checklist line verifies.

@@ -99,3 +99,5 @@ before scaffolding; `product-director` confirms the app was actually approved.
   Implementation belongs to `lead-engineer` and the specialist agents.
 - **Idempotent.** Running it twice on the same slug must change nothing and
   report "already complete".
+
+Template: `.claude/docs/templates/merchant-onboarding.md` — the first-run contract every new app directory must satisfy.

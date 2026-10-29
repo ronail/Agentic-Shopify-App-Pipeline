@@ -153,48 +153,66 @@ Ask yourself: "What department would handle this in a real studio?"
 
 ### 4. Use Templates for New Documents
 
-Templates are in `.claude/docs/templates/`:
+Templates are in `.claude/docs/templates/` — 35 documents, one per artifact type:
 
-- `game-design-document.md` -- for new mechanics and systems
-- `architecture-decision-record.md` -- for technical decisions
-- `architecture-traceability.md` -- maps GDD requirements to ADRs to story IDs
-- `risk-register-entry.md` -- for new risks
-- `narrative-character-sheet.md` -- for new characters
-- `test-plan.md` -- for feature test plans
-- `sprint-plan.md` -- for sprint planning
-- `milestone-definition.md` -- for new milestones
-- `level-design-document.md` -- for new levels
-- `game-pillars.md` -- for core design pillars
-- `art-bible.md` -- for visual style reference
-- `technical-design-document.md` -- for per-system technical designs
-- `post-mortem.md` -- for project/milestone retrospectives
-- `sound-bible.md` -- for audio style reference
-- `release-checklist-template.md` -- for platform release checklists
-- `changelog-template.md` -- for player-facing patch notes
-- `release-notes.md` -- for player-facing release notes
-- `incident-response.md` -- for live incident response playbooks
-- `game-concept.md` -- for initial game concepts (MDA, SDT, Flow, Bartle)
-- `pitch-document.md` -- for pitching the game to stakeholders
-- `economy-model.md` -- for virtual economy design (sink/faucet model)
-- `faction-design.md` -- for faction identity, lore, and gameplay role
-- `systems-index.md` -- for systems decomposition and dependency mapping
-- `project-stage-report.md` -- for project stage detection output
-- `design-doc-from-implementation.md` -- for reverse-documenting existing code into GDDs
-- `architecture-doc-from-code.md` -- for reverse-documenting code into architecture docs
-- `concept-doc-from-prototype.md` -- for reverse-documenting prototypes into concept docs
-- `ux-spec.md` -- for per-screen UX specifications (layout zones, states, events)
-- `hud-design.md` -- for whole-game HUD philosophy, zones, and element specs
-- `accessibility-requirements.md` -- for project-wide accessibility tier and feature matrix
-- `interaction-pattern-library.md` -- for standard UI controls and game-specific patterns
-- `player-journey.md` -- for 6-phase emotional arc and retention hooks by time scale
-- `difficulty-curve.md` -- for difficulty axes, onboarding ramp, and cross-system interactions
-- `test-evidence.md` -- template for recording manual test evidence (screenshots, walkthrough notes)
+**Request and product definition**
 
-Also in `.claude/docs/templates/collaborative-protocols/` (used by agents, not typically edited directly):
+- `master-request.md` — structure of the master `request.md`
+- `request-history.md` — append-only entry format for `request-history.md`
+- `app-concept.md` — per-app concept record produced by `/research`
+- `app-prd.md` — per-app product requirements document
+- `mmmvp-proposal.md` — minimum merchant-viable product proposal
+- `pitch-document.md` — app pitch to stakeholders
+- `prototype-report.md` — result record for a prototype run
+- `prototype-review.md` — review verdict for a prototype
+- `concept-doc-from-prototype.md` — reverse-document a prototype into a concept doc
+- `design-doc-from-implementation.md` — reverse-document existing code into a design doc
 
-- `design-agent-protocol.md` -- question-options-draft-approval cycle for design agents
-- `implementation-agent-protocol.md` -- story pickup through /story-done cycle for programming agents
-- `leadership-agent-protocol.md` -- cross-department delegation and escalation for director-tier agents
+**Architecture**
+
+- `shopify-app-architecture.md` — the app's architecture document
+- `architecture-decision-record.md` — one ADR per genuine technical decision
+- `architecture-traceability.md` — maps PRD requirements to ADRs to story IDs
+- `architecture-doc-from-code.md` — reverse-document code into an ADR
+
+**UX**
+
+- `ux-spec.md` — per-screen UX specification (layout zones, states, events)
+- `interaction-pattern-library.md` — standard Polaris/admin interaction patterns
+- `accessibility-requirements.md` — project-wide accessibility tier and feature matrix
+
+**Planning and reporting**
+
+- `sprint-plan.md` — sprint planning
+- `milestone-definition.md` — milestone definition
+- `risk-register-entry.md` — new risk entry
+- `project-stage-report.md` — output of stage detection
+- `post-mortem.md` — milestone retro
+- `kanban-card.md` — the card schema used on the app board
+
+**Quality and release**
+
+- `test-plan.md` — per-sprint QA plan
+- `test-evidence.md` — manual test evidence record
+- `test-store-plan.md` — dev/test store record
+- `release-checklist-template.md` — release gate checklist
+- `release-notes.md` — merchant-facing release notes
+- `changelog-template.md` — merchant-facing changelog
+- `incident-response.md` — live incident playbook
+- `skill-test-spec.md` — spec used by `/skill-test`
+
+**Commercial**
+
+- `app-store-listing.md` — App Store listing fields and copy
+- `pricing-plan.md` — plans, feature matrix, billing implementation
+- `merchant-onboarding.md` — first-run contract for a new app
+
+`.claude/docs/templates/collaborative-protocols/` is a **directory**, not a
+template — it holds the protocol docs agents embed, not an artifact to fill in:
+
+- `design-agent-protocol.md` — question-options-draft-approval cycle for design agents
+- `implementation-agent-protocol.md` — story pickup through /story-done cycle for implementation agents
+- `leadership-agent-protocol.md` — cross-department delegation and escalation for director-tier agents
 
 ### 5. Follow the Coordination Rules
 

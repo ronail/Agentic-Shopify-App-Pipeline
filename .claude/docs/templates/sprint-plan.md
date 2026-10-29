@@ -1,5 +1,9 @@
 # Sprint [N] — [Start Date] to [End Date]
 
+> **App**: `apps/<app>` · **Kanban**: `production/apps/<app>/kanban.md`
+> **Gate context**: required gate for the next phase is recorded in
+> `apps/<app>/approvals.json` before the sprint closes (see `approval-gate.sh`).
+
 ## Sprint Goal
 
 [One sentence: what does this sprint achieve toward the current milestone?]
@@ -13,7 +17,8 @@
 ## Capacity
 
 - **Total days**: [X]
-- **Buffer (20%)**: [Y days reserved for unplanned work]
+- **Buffer (20%)**: [Y days reserved for unplanned work — webhook debugging,
+  app review feedback, Partner dashboard outages]
 - **Available**: [Z days]
 
 ## Tasks
@@ -51,16 +56,19 @@
 
 | Dependency | Status | Impact if Delayed | Contingency |
 |-----------|--------|------------------|-------------|
+| Shopify API version deprecation | | | Pin to a supported version | |
+| App review queue | | | Ship behind a feature flag | |
+| Dev store provisioning | | | Use an existing dev store | |
 
 ## Definition of Done
 
 - [ ] All Must Have tasks completed
 - [ ] All tasks pass acceptance criteria
-- [ ] QA plan exists (`production/qa/qa-plan-sprint-[N].md`)
+- [ ] Every task reflected in the app kanban (`production/apps/<app>/kanban.md`)
 - [ ] All Logic/Integration stories have passing unit/integration tests
+- [ ] `shopify app dev` boots clean against the dev store; no GraphQL errors in logs
 - [ ] Smoke check passed (`/smoke-check sprint`)
-- [ ] QA sign-off report: APPROVED or APPROVED WITH CONDITIONS (`/team-qa sprint`)
+- [ ] QA sign-off report: APPROVED or APPROVED WITH CONDITIONS (`/qa-plan` evidence)
 - [ ] No S1 or S2 bugs in delivered features
-- [ ] Design documents updated for any deviations
+- [ ] Technical design / ADR updated for any deviation (`/architecture-decision`)
 - [ ] Code reviewed and merged
-

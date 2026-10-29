@@ -1,12 +1,15 @@
 # What's New in [Version]
 
 **Release Date**: [Date]
+**App**: [App name] · **Shopify API version**: [e.g. 2025-10]
+**Update type**: [App Store update | Unlisted/backend-only | Bug fix]
 
 ---
 
 ## New Features
 
-- **[Feature Name]**: [Player-friendly description of what they can now do. Focus on the experience, not the implementation. 1-2 sentences.]
+- **[Feature Name]**: [Merchant-facing description of what they can now do in the
+  Shopify admin. Focus on the outcome, not the implementation. 1-2 sentences.]
 
 - **[Feature Name]**: [Description]
 
@@ -14,15 +17,17 @@
 
 ## Improvements
 
-- **[Area Improved]**: [How this makes the game better for the player. Be specific.]
+- **[Area Improved]**: [How this makes the app better for the merchant. Be specific.]
 
 - **[Area Improved]**: [Description]
 
 ---
 
-## Balance Changes
+## Behaviour Changes
 
-- **[What Changed]**: [Old value] -> [New value]. [Brief design reasoning in player terms. Example: "Healing potions now restore 50 HP (up from 30) -- late-game encounters needed more recovery options."]
+- **[What Changed]**: [Old behaviour] -> [New behaviour]. [Brief reasoning in
+  merchant terms. Example: "Order sync now runs every 2 minutes (was 15) — merchants
+  on high-volume plans were seeing stale inventory in the admin."]
 
 - **[What Changed]**: [Description]
 
@@ -30,15 +35,15 @@
 
 ## Bug Fixes
 
-- Fixed an issue where [describe the player-visible symptom, not the code fix]
-- Fixed [another player-visible symptom]
+- Fixed an issue where [describe the merchant-visible symptom, not the code fix]
+- Fixed [another merchant-visible symptom]
 - Fixed [symptom]
 
 ---
 
 ## Known Issues
 
-- [Issue description in player terms]. [Workaround if one exists.] We're working on a fix.
+- [Issue description in merchant terms]. [Workaround if one exists.] We're working on a fix.
 
 ---
 
@@ -49,7 +54,7 @@
 - Total commits: [N]
 
 ### Internal Changes
-- [Refactoring, infrastructure, or tooling changes not visible to players]
+- [Refactoring, infrastructure, scope changes, API version pins not visible to merchants]
 
 ### Deferred Items
 - [Features or fixes originally planned for this release but moved to next]
@@ -58,5 +63,4 @@
 
 ---
 
-Thank you for playing! Your feedback helps us improve the game.
-Report issues at [support link].
+Thanks for using [App name]. Questions or problems: [support link].

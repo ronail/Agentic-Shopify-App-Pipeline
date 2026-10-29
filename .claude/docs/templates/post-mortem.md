@@ -2,6 +2,7 @@
 
 ## Document Status
 - **Date**: [Date]
+- **App**: `apps/<app>`
 - **Facilitator**: producer
 - **Participants**: [List of agents/people involved]
 - **Period Covered**: [Start date] to [End date]
@@ -19,7 +20,7 @@
 
 | Date | Event | Impact |
 | ---- | ----- | ------ |
-| [Date] | [What happened] | [How it affected the project] |
+| [Date] | [What happened — e.g. app review rejected for missing billing disclosure] | [How it affected the project] |
 
 ## What Went Well
 
@@ -28,8 +29,8 @@
 **Why it worked**: [Root cause of success]
 **How to repeat**: [What to keep doing]
 
-### [Category 2: e.g., Team Coordination]
-**What**: [Description]
+### [Category 2: e.g., Shopify Integration]
+**What**: [Description — e.g. webhook HMAC verification and retry queue held up under load]
 **Why it worked**: [Root cause]
 **How to repeat**: [Action]
 
@@ -51,6 +52,8 @@
 | Tasks completed | [N] | [N] | |
 | Bugs found | — | [N] | |
 | Bugs fixed | — | [N] | |
+| App review attempts | 1 | [N] | |
+| Webhook failure rate | <1% | [N%] | |
 | Estimation accuracy | 100% | [N%] | |
 | Scope changes | 0 | [N] | |
 

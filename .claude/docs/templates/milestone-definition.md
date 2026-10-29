@@ -2,8 +2,9 @@
 
 ## Overview
 
+- **App**: `apps/<app>`
 - **Target Date**: [Date]
-- **Type**: [Prototype | Vertical Slice | Alpha | Beta | Gold | Post-Launch]
+- **Type**: [Prototype | MVP | Beta | App Store Submission | Launch | Post-Launch]
 - **Duration**: [N weeks]
 - **Number of Sprints**: [N]
 
@@ -21,33 +22,34 @@ these are met.]
 - [ ] [Criterion 2]
 - [ ] [Criterion 3]
 - [ ] All S1 and S2 bugs resolved
-- [ ] Performance within budget on target hardware
-- [ ] Build stable for [X] consecutive days
+- [ ] Install → OAuth → first value path completes on a clean dev store in < [X] minutes
+- [ ] App review checklist passes (`/app-store-checklist`) with zero blocking items
 
 ## Feature List
 
 ### Must Ship (Milestone Fails Without These)
 
-| Feature | Design Doc | Owner | Sprint Target | Status |
+| Feature | PRD / Design Doc | Owner | Sprint Target | Status |
 |---------|-----------|-------|--------------|--------|
 
 ### Should Ship (Planned but Cuttable)
 
-| Feature | Design Doc | Owner | Sprint Target | Cut Impact | Status |
+| Feature | PRD / Design Doc | Owner | Sprint Target | Cut Impact | Status |
 |---------|-----------|-------|--------------|-----------|--------|
 
 ### Stretch Goals (Only if Ahead of Schedule)
 
-| Feature | Design Doc | Owner | Value Add |
+| Feature | PRD / Design Doc | Owner | Value Add |
 |---------|-----------|-------|----------|
 
 ## Quality Gates
 
 | Gate | Threshold | Measurement Method |
 |------|-----------|-------------------|
-| Crash rate | < [X] per hour | Automated crash reporting |
-| Frame rate | > [X] FPS on min spec | Performance profiling |
-| Load time | < [X] seconds | Automated timing |
+| Error rate (5xx) | < [X]% of requests | App logs / Partner dashboard |
+| Webhook failure rate | < [X]% | Delivery log + retry queue depth |
+| Admin API latency (p95) | < [X] ms | Instrumented request timing |
+| Install success rate | > [X]% | OAuth funnel logs |
 | Critical bugs | 0 open S1 | Bug tracker |
 | Major bugs | < [X] open S2 | Bug tracker |
 | Test coverage | > [X]% | Test framework report |
@@ -68,6 +70,9 @@ these are met.]
 
 | Dependency | Provider | Status | Risk if Delayed |
 |-----------|---------|--------|----------------|
+| Admin API version | Shopify | | Deprecation breaks queries |
+| App review slot | Shopify | | Launch slips a review cycle |
+| Billing approval | Shopify | | Cannot charge merchants |
 
 ## Review Schedule
 

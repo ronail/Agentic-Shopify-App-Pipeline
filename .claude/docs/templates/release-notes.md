@@ -1,103 +1,76 @@
-# Release Notes: [Game Title] v[Version]
+# Release Notes: [App Name] v[Version]
 
-*Released: [Date]*
-
----
+> **Release date**: [Date] · **Distribution**: [App Store update | Unlisted | Backend only]
+> **Shopify API version**: [YYYY-MM] · **Minimum plan**: [Free / Growth / Pro]
 
 ## Headline
 
-> [One compelling sentence summarizing the most exciting part of this release.
-> This is what appears in store update notifications and social media.]
-
----
+[One sentence a merchant reads and understands in the Partner dashboard update
+feed or the listing's changelog.]
 
 ## What's New
 
 ### [Major Feature 1 Name]
-[2-4 sentences describing the feature. Focus on what players can DO, not
-how it works internally. Include a screenshot or GIF reference if applicable.]
+
+[What the merchant can now do, where in the admin they find it, and what it
+replaces. 2-3 sentences.]
 
 ### [Major Feature 2 Name]
+
 [Description]
 
----
+## Workflow Changes
 
-## Gameplay Changes
+### Behaviour Adjustments
 
-### Balance Adjustments
+- **[What changed]**: [Old] -> [New]. [Merchant-facing reason.]
 
-| Target | Change | Before | After | Context |
-| ---- | ---- | ---- | ---- | ---- |
-| [Weapon/Ability/Item] | [What changed] | [Old value] | [New value] | [Why — 1 sentence] |
-| | | | | |
+### Integration Changes
 
-### Mechanic Changes
-- **[Change Name]**: [What changed and how it affects gameplay. Be specific
-  about what players will experience differently.]
-
----
+- **[API / webhook change]**: [What differs — e.g. "Order sync now subscribes to
+  `orders/updated` as well as `orders/create`, so edits reach your warehouse."]
 
 ## Quality of Life
 
-- [Improvement 1 — describe the player benefit, not the technical change]
-- [Improvement 2]
-- [Improvement 3]
-
----
+- [Small improvement in merchant terms]
+- [Another]
 
 ## Bug Fixes
 
 ### Critical Fixes
-- Fixed [describe what players experienced, e.g., "a crash when loading
-  saved games from version 1.0"]
 
-### Gameplay Fixes
-- Fixed [describe the incorrect behavior and the correct behavior now]
+- Fixed an issue where [merchant-visible symptom]
 
-### UI Fixes
-- Fixed [description]
+### Workflow Fixes
 
-### Audio Fixes
-- Fixed [description]
+- Fixed [symptom]
 
-### Platform-Specific Fixes
-- **[Platform]**: Fixed [description]
+### Admin UI Fixes
 
----
+- Fixed [symptom]
+
+### Sync / Webhook Fixes
+
+- Fixed [symptom — e.g. duplicate rows after a webhook retry]
+
+### Store-Specific Fixes
+
+- Fixed [symptom affecting a particular store setup — e.g. multi-currency,
+  markets, or a specific theme]
 
 ## Performance Improvements
 
-- [Improvement players will notice, e.g., "Reduced load times by approximately
-  30% on all platforms"]
-- [Improvement]
-
----
+- [Measurable improvement — e.g. "Bulk import of 5,000 orders now completes in
+  90 seconds (was 6 minutes)"]
 
 ## Known Issues
 
-We are aware of the following issues and are working on fixes for a future update:
-
-- **[Issue]**: [Brief description and workaround if available]
-- **[Issue]**: [Description]
-
----
+- [Issue in merchant terms]. [Workaround if any]. We're working on it.
 
 ## Coming Next
 
-[Optional — tease upcoming content to build anticipation. Keep it vague enough
-to not create binding commitments.]
-
-> [1-2 sentences about what the team is working on next]
-
----
+- [Next planned capability, without dates you can't keep]
 
 ## Thank You
 
-[Brief message thanking the community. Reference specific community feedback
-that influenced changes in this release if applicable.]
-
----
-
-*For the full changelog with technical details, see the [developer changelog](link).*
-*Report bugs: [link to bug report channel/form]*
-*Join the community: [link to Discord/forum]*
+[Thanks to merchants who reported issues, left reviews, or joined beta.]

@@ -1,101 +1,69 @@
 # Architecture Traceability Index
 
-<!-- Living document — updated by /architecture-review after each review run.
-     Do not edit manually unless correcting an error. -->
-
 ## Document Status
 
 - **Last Updated**: [YYYY-MM-DD]
-- **Engine**: [e.g. Godot 4.6]
-- **GDDs Indexed**: [N]
-- **ADRs Indexed**: [M]
-- **Last Review**: [link to docs/architecture/architecture-review-[date].md]
+- **App**: [`apps/<app>` | `all`]
+- **PRD sources scanned**: [list `docs/prd/*.md` files]
+- **ADR sources scanned**: [list `docs/adr/*.md` files]
+- **Maintained by**: app-architect / architecture-review
 
 ## Coverage Summary
 
-| Status | Count | Percentage |
-|--------|-------|-----------|
-| ✅ Covered | [X] | [%] |
-| ⚠️ Partial | [Y] | [%] |
-| ❌ Gap | [Z] | [%] |
-| **Total** | **[N]** | |
-
----
+| Layer | Requirements | Covered by ADR | Coverage |
+|-------|--------------|----------------|----------|
+| Foundation | [N] | [N] | [N%] |
+| Core | [N] | [N] | [N%] |
+| Feature | [N] | [N] | [N%] |
+| Presentation | [N] | [N] | [N%] |
+| **Total** | [N] | [N] | [N%] |
 
 ## Traceability Matrix
 
-<!-- One row per technical requirement extracted from a GDD.
-     A "technical requirement" is any GDD statement that implies a specific
-     architectural decision: data structures, performance constraints, engine
-     capabilities needed, cross-system communication, state persistence. -->
-
-| Req ID | GDD | System | Requirement Summary | ADR(s) | Status | Notes |
-|--------|-----|--------|---------------------|--------|--------|-------|
-| TR-[gdd]-001 | [filename] | [system name] | [one-line summary] | [ADR-NNNN] | ✅ | |
-| TR-[gdd]-002 | [filename] | [system name] | [one-line summary] | — | ❌ GAP | Needs `/architecture-decision [title]` |
-
----
+| Requirement ID | PRD Section | Summary | ADR | Status |
+|----------------|-------------|---------|-----|--------|
+| [PRD-001] | [`docs/prd/sync.md` § Requirements] | [One-line requirement] | [ADR-0003] | [Covered / Partial / Gap] |
 
 ## Known Gaps
 
-Requirements with no ADR coverage, prioritised by layer (Foundation first):
-
 ### Foundation Layer Gaps (BLOCKING — must resolve before coding)
-- [ ] TR-[id]: [requirement] — GDD: [file] — Suggested ADR: "[title]"
+
+- [Requirement with no ADR — why it blocks, who owns it, target date]
 
 ### Core Layer Gaps (must resolve before relevant system is built)
-- [ ] TR-[id]: [requirement] — GDD: [file] — Suggested ADR: "[title]"
+
+- [Requirement with no ADR]
 
 ### Feature Layer Gaps (should resolve before feature sprint)
-- [ ] TR-[id]: [requirement] — GDD: [file] — Suggested ADR: "[title]"
+
+- [Requirement with no ADR]
 
 ### Presentation Layer Gaps (can defer to implementation)
-- [ ] TR-[id]: [requirement] — GDD: [file] — Suggested ADR: "[title]"
 
----
+- [Requirement with no ADR]
 
 ## Cross-ADR Conflicts
 
-<!-- Pairs of ADRs that make contradictory claims. Must be resolved. -->
+| ADR A | ADR B | Conflict | Resolution |
+|-------|-------|----------|------------|
+| [ADR-0003] | [ADR-0007] | [What contradicts — e.g. two different webhook retry policies] | [Supersede one / narrow scope] |
 
-| Conflict ID | ADR A | ADR B | Type | Status |
-|-------------|-------|-------|------|--------|
-| CONFLICT-001 | ADR-NNNN | ADR-MMMM | Data ownership | 🔴 Unresolved |
+## ADR → PRD Coverage (Reverse Index)
 
----
-
-## ADR → GDD Coverage (Reverse Index)
-
-<!-- For each ADR, which GDD requirements does it address? -->
-
-| ADR | Title | GDD Requirements Addressed | Engine Risk |
-|-----|-------|---------------------------|-------------|
-| ADR-0001 | [title] | TR-combat-001, TR-combat-002 | HIGH |
-
----
+| ADR | Title | PRD Requirements Satisfied |
+|-----|-------|---------------------------|
+| [ADR-0003] | [Title] | [PRD-001, PRD-004] |
 
 ## Superseded Requirements
 
-<!-- Requirements that existed in a GDD when an ADR was written, but the GDD
-     has since changed. The ADR may need updating. -->
-
-| Req ID | GDD | Change | Affected ADR | Status |
-|--------|-----|--------|-------------|--------|
-| TR-[id] | [file] | [what changed] | ADR-NNNN | 🔴 ADR needs update |
-
----
+| Requirement | Superseded By | Date | Reason |
+|-------------|---------------|------|--------|
+| [PRD-002] | [PRD-011] | [Date] | [Scope change approved at gate-3] |
 
 ## How to Use This Document
 
-**When writing a new ADR**: Add it to the "ADR → GDD Coverage" table and mark
-the requirements it satisfies as ✅ in the matrix.
-
-**When approving a GDD change**: Scan the matrix for requirements from that GDD
-and check whether the change invalidates any existing ADR. Add to "Superseded
-Requirements" if so.
-
-**When running `/architecture-review`**: The skill will update this document
-automatically with the current state.
-
-**Gate check**: The Pre-Production gate requires this document to exist and to
-have zero Foundation Layer Gaps.
+1. Run `/architecture-review` after any PRD or ADR change — it regenerates this index.
+2. Any requirement marked **Gap** at the Foundation layer blocks `/create-stories`.
+3. Any conflict row blocks `/create-architecture` sign-off until resolved.
+4. Gaps at the Presentation layer may be resolved inside the implementing story,
+   provided the story records the decision it made.

@@ -92,3 +92,6 @@ and runs `gate-1-research` — do not self-approve the gate.
   note what the listing shows instead.
 - **A kill recommendation is a success.** Ending an app before it costs a build
   is the cheapest outcome this skill can produce.
+
+Template: `.claude/docs/templates/app-concept.md` — the concept record produced when research points to a new app.
+Template: `.claude/docs/templates/app-prd.md` — the PRD skeleton that consumes research output.

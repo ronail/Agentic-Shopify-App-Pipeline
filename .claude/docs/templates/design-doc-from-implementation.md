@@ -1,204 +1,109 @@
 # [System Name] — Design Document
 
----
-**Status**: Reverse-Documented
-**Source**: `[path to implementation code]`
-**Date**: [YYYY-MM-DD]
-**Verified By**: [User name or "pending review"]
-**Implementation Status**: [Fully implemented | Partially implemented | Needs extension]
----
-
-> **⚠️ Reverse-Documentation Notice**
->
-> This design document was created **after** the implementation already existed.
-> It captures current behavior and clarified design intent based on code analysis
-> and user consultation. Some sections may be incomplete where implementation is
-> partial or design intent was unclear during reverse-engineering.
+> **App**: `apps/<app>` · **Source**: reverse-documented from the implementation
+> **Code**: [primary file paths]
+> **Date**: [YYYY-MM-DD]
 
 ---
 
 ## 1. Overview
 
-**Purpose**: [What problem does this system solve?]
-
-**Scope**: [What is included/excluded from this system?]
-
-**Current Implementation**: [Brief description of what exists in code]
-
-**Design Intent** (clarified):
-- [Intent 1 — why this feature exists]
-- [Intent 2 — what player experience it creates]
-- [Intent 3 — how it fits into overall game pillars]
+- **Purpose**: [What this system does for the merchant, one paragraph]
+- **Owner**: [agent/role]
+- **Trigger points**: [Where it runs — admin request, webhook, cron]
+- **Externally visible behaviour**: [What the merchant or Shopify sees]
 
 ---
 
 ## 2. Detailed Design
 
-### 2.1 Core Mechanics
+### 2.1 Core Behaviour
 
-[Describe the mechanics as implemented, organized clearly]
-
-**[Mechanic 1 Name]**:
-- **Description**: [What it does]
-- **Implementation**: [How it works in code]
-- **Design Rationale**: [Why it exists — from user clarification]
-- **Player-Facing**: [How players experience this]
-
-**[Mechanic 2 Name]**:
-- **Description**: [What it does]
-- **Implementation**: [How it works]
-- **Design Rationale**: [Why it exists]
-- **Player-Facing**: [Player experience]
+[The mechanism, described so a new engineer could change it safely. Cover the
+happy path and the boundaries between modules.]
 
 ### 2.2 Rules and Formulas
 
-**Formulas Discovered in Code**:
-
-| Formula | Expression | Purpose | Verified? |
-|---------|-----------|---------|-----------|
-| [Formula 1] | `[mathematical expression]` | [What it calculates] | ✅ / ⚠️ needs tuning |
-| [Formula 2] | `[expression]` | [Purpose] | ✅ / ⚠️ needs tuning |
-
-**Clarifications**:
-- [Formula X]: Originally [value/approach], user clarified intent is [corrected intent]
-- [Formula Y]: Implemented as [X], but should be [Y] — flagged for update
+| Rule | Where implemented | Notes |
+|------|-------------------|-------|
+| [e.g. retry backoff = min(2^attempt × 30s, 6h)] | [file:function] | [Why this shape] |
+| [e.g. GraphQL cost budget per shop = 1000 points] | [file] | [Matches API limits] |
 
 ### 2.3 State and Data
 
-**Data Structures** (from code):
-- [Data structure 1]: `[fields/properties]`
-- [Data structure 2]: `[fields/properties]`
-
-**State Machines** (if applicable):
-```
-[State diagram or list of states and transitions]
-```
-
-**Persistence**:
-- Saved: [What is saved to player save file]
-- Not saved: [What is session-only or recalculated]
+| Entity | Stored where | Key fields | Retention |
+|--------|--------------|------------|-----------|
+| [e.g. SyncRecord] | [DB table] | [shop, order_id, status, attempts] | [90 days] |
 
 ### 2.4 Integration Points
 
-**Dependencies** (systems this depends on):
-- [System 1]: [What it provides]
-- [System 2]: [What it provides]
-
-**Dependents** (systems that depend on this):
-- [System 3]: [How it uses this system]
-- [System 4]: [How it uses this system]
-
-**API Surface** (public interface):
-- [Method/Function 1]: [Purpose]
-- [Method/Function 2]: [Purpose]
+| Integration | Direction | Contract | Failure behaviour |
+|-------------|-----------|----------|-------------------|
+| Admin GraphQL API | outbound | [queries used] | Retry with backoff, surface banner |
+| Webhook ingress | inbound | [topics] | Verify HMAC, enqueue, 200 fast |
+| Billing API | outbound | [mutations] | Fail closed, log, alert |
 
 ---
 
 ## 3. Edge Cases
 
-**Handled in Code**:
-- ✅ [Edge case 1]: [How it's handled]
-- ✅ [Edge case 2]: [How it's handled]
-
-**Not Yet Handled** (discovered during analysis):
-- ⚠️ [Edge case 3]: [What happens? Needs implementation]
-- ⚠️ [Edge case 4]: [What happens? Needs implementation]
-
-**Unclear** (need user clarification):
-- ❓ [Edge case 5]: [What should happen? Pending decision]
+| Case | Current handling | Correct? | Ticket |
+|------|------------------|----------|--------|
+| [Order with no line items] | [Behaviour] | [Y/N] | [#] |
+| [Webhook delivered twice] | [Idempotency key] | Y | |
+| [Shop uninstalls mid-job] | [Job aborts on 401] | Y | |
+| [Scope revoked after install] | [Banner + re-auth] | [?] | |
 
 ---
 
 ## 4. Dependencies
 
-**Technical Dependencies**:
-- [Dependency 1]: [Why needed]
-- [Dependency 2]: [Why needed]
-
-**Design Dependencies** (other design docs):
-- [System X Design]: [How they interact]
-- [System Y Design]: [How they interact]
-
-**Content Dependencies**:
-- [Asset type]: [What's needed]
-- [Data files]: [Required config/balance data]
+| Dependency | Type | Version / pin | Risk |
+|------------|------|---------------|------|
+| Admin API | external | [YYYY-MM] | Version deprecation |
+| App Bridge | external | [version] | Breaking upgrade |
+| Polaris | external | [version] | Component deprecation |
+| [internal module] | internal | — | Shared with other apps via `src/` |
 
 ---
 
-## 5. Balance and Tuning
+## 5. Limits and Tuning
 
-**Current Values** (as implemented):
+| Parameter | Current value | Range considered | Effect of changing |
+|-----------|---------------|------------------|--------------------|
+| [Batch size] | [N] | [a-c] | Larger = fewer requests, more cost per request |
+| [Retry attempts] | [N] | [a-c] | More attempts = later delivery, higher queue depth |
+| [Cache TTL] | [Ns] | | Longer = staler admin reads |
 
-| Parameter | Current Value | Rationale | Needs Tuning? |
-|-----------|--------------|-----------|---------------|
-| [Param 1] | [value] | [Why this value] | ✅ / ⚠️ / ❌ |
-| [Param 2] | [value] | [Why this value] | ✅ / ⚠️ / ❌ |
-
-**Balance Concerns Identified**:
-- ⚠️ [Concern 1]: [What's wrong, suggested fix]
-- ⚠️ [Concern 2]: [What's wrong, suggested fix]
-
-**Recommended Balance Pass**:
-- Run `/balance-check` on [specific aspect]
-- Playtest with focus on [specific scenario]
+[Note any value that is load-bearing: changing it alters merchant-visible behaviour.]
 
 ---
 
 ## 6. Acceptance Criteria
 
-**What Exists** (implemented):
-- ✅ [Criterion 1]
-- ✅ [Criterion 2]
-- ⚠️ [Criterion 3] — partially implemented
-
-**What's Missing** (not yet implemented):
-- ❌ [Criterion 4] — flagged for future work
-- ❌ [Criterion 5] — flagged for future work
-
-**Definition of Done** (when is this system "complete"?):
-- [ ] [Requirement 1]
-- [ ] [Requirement 2]
-- [ ] [Requirement 3]
+- [ ] Behaviour matches §2 for the happy path, verified by test [name]
+- [ ] All §3 edge cases have a test or a documented manual check
+- [ ] Failure of each §2.4 integration degrades gracefully (no 500 to the merchant)
+- [ ] Limits in §5 documented in the technical design or ADR that set them
 
 ---
 
 ## 7. Open Questions and Follow-Up Work
 
 ### Questions Needing User Decision
-1. **[Question 1]**: [What needs to be decided?]
-   - Option A: [Approach A]
-   - Option B: [Approach B]
 
-2. **[Question 2]**: [What needs to be decided?]
+| # | Question | Owner | Impact if unanswered |
+|---|----------|-------|----------------------|
+| 1 | [Question] | [Who] | [What stalls] |
 
 ### Flagged Follow-Up Work
-- [ ] **Update [Formula X]**: Change from exponential to linear (per user clarification)
-- [ ] **Implement [Edge Case Y]**: Handle scenario not in current code
-- [ ] **Create ADR**: Document why [architectural decision] was chosen
-- [ ] **Balance pass**: Run `/balance-check` on progression curve
-- [ ] **Extend design doc**: When [related feature] is implemented, update this doc
+
+- [ ] [Task] — [reason it was deferred] — [ticket]
 
 ---
 
 ## 8. Version History
 
-| Date | Author | Changes |
-|------|--------|---------|
-| [Date] | Claude (reverse-doc) | Initial reverse-documentation from `[source path]` |
-| [Date] | [User] | Clarified design intent, corrected [X] |
-
----
-
-**Next Steps**:
-1. [Priority 1 task based on gaps identified]
-2. [Priority 2 task]
-3. [Priority 3 task]
-
-**Related Skills**:
-- `/balance-check` — Validate formulas and progression
-- `/architecture-decision` — Document technical decisions
-- `/code-review` — Ensure code matches clarified design
-
----
-
-*This document was generated by `/reverse-document design [path]`*
+| Version | Date | Change | Author |
+|---------|------|--------|--------|
+| 1.0 | [Date] | Initial reverse-documented design | [agent] |

@@ -88,3 +88,6 @@ in-flight sprints; `app-architect` when it affects an app's surfaces.
   settings. Re-approval is a gate run, not a file edit.
 - **Non-goals are load-bearing.** If the change adds something previously listed
   as a non-goal, remove the non-goal in the same edit and say so in the history.
+
+Template: `.claude/docs/templates/master-request.md` — the structure `request.md` must hold before a change is proposed.
+Template: `.claude/docs/templates/request-history.md` — the append-only entry format every history edit follows.

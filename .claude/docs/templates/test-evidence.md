@@ -1,10 +1,11 @@
 # Test Evidence: [Story Title]
 
 > **Story**: `[path to story file]`
-> **Story Type**: [Visual/Feel | UI]
+> **Story Type**: [UI | Integration | Visual/Feel]
 > **Date**: [date]
 > **Tester**: [who performed the test]
 > **Build / Commit**: [version or git hash]
+> **Dev store**: [store handle] · **API version**: [e.g. 2025-10]
 
 ---
 
@@ -30,11 +31,11 @@ the acceptance criteria numbers from the story that this evidence covers.]
 ## Screenshots / Video
 
 List all captured evidence below. Store files in the same directory as this
-document or in `production/qa/evidence/[story-slug]/`.
+document or in `production/apps/<app>/qa/evidence/[story-slug]/`.
 
 | # | Filename | What It Shows | Acceptance Criterion |
 |---|----------|--------------|----------------------|
-| 1 | `[filename.png]` | [brief description of what is visible] | AC-1 |
+| 1 | `[filename.png]` | [brief description of what is visible — admin embedded app surface] | AC-1 |
 | 2 | `[filename.png]` | | AC-2 |
 
 *If video: note the timestamp and what it demonstrates.*
@@ -43,18 +44,20 @@ document or in `production/qa/evidence/[story-slug]/`.
 
 ## Test Conditions
 
-- **Game state at start**: [e.g., "fresh save, player at level 1, no items"]
-- **Platform / hardware**: [e.g., "Windows 11, GTX 1080, 1080p"]
-- **Framerate during test**: [e.g., "stable 60fps" or "~45fps — within budget"]
-- **Any special setup required**: [e.g., "dev menu used to trigger specific state"]
+- **Store state at start**: [e.g. "fresh dev store, no orders, one test product"]
+- **Install path**: [e.g. "clean install → OAuth grant → embedded admin load"]
+- **Scopes granted**: [list the access scopes exercised]
+- **Webhook delivery**: [e.g. "orders/create fired via CLI trigger, received in 1.2s"]
+- **Any special setup required**: [e.g. "seeded 50 orders; checkouts in Bogus Gateway"]
 
 ---
 
 ## Observations
 
 [Anything noteworthy that didn't cause a FAIL but should be recorded. Examples:
-minor visual jitter, frame dip under load, behaviour that technically passes
-but felt slightly off. These become candidates for polish work.]
+slow GraphQL query under bulk load, Polaris layout jitter on narrow admin widths,
+behaviour that technically passes but felt slightly off. These become tech-debt
+candidates.]
 
 - [Observation 1]
 - [Observation 2]
@@ -66,8 +69,8 @@ If nothing notable: *No significant observations.*
 ## Sign-Off
 
 All roles must sign off before the story can be marked COMPLETE via `/story-done`.
-Visual/Feel stories require the designer or art-lead sign-off. UI stories require
-the UX lead or designer sign-off.
+UI stories require the ux-lead or polaris-specialist sign-off. Integration
+stories require the api-lead or webhooks-specialist sign-off.
 
 **Solo developers**: all sign-offs may be by the same person in each role. The
 intent is that someone deliberately reviews the evidence before marking complete —
@@ -76,7 +79,7 @@ not that three separate people must participate.
 | Role | Name | Date | Signature |
 |------|------|------|-----------|
 | Developer (implemented) | | | [ ] Approved |
-| Designer / Art Lead / UX Lead | | | [ ] Approved |
+| UX Lead / Polaris Specialist | | | [ ] Approved |
 | QA Lead | | | [ ] Approved |
 
 **Any sign-off can be marked "Deferred — [reason]"** if the person is
@@ -86,5 +89,5 @@ past the sprint review.
 ---
 
 *Template: `.claude/docs/templates/test-evidence.md`*
-*Used for: Visual/Feel and UI story type evidence records*
-*Location: `production/qa/evidence/[story-slug]-evidence.md`*
+*Used for: UI and Integration story type evidence records*
+*Location: `production/apps/<app>/qa/evidence/[story-slug]-evidence.md`*

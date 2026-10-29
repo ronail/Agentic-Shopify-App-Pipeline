@@ -1,21 +1,25 @@
-# Concept Prototype Report: [Concept Name]
+# Prototype Report: [Prototype Name]
 
 > **Date**: [YYYY-MM-DD]
-> **Prototype Path**: [HTML / Engine / Paper]
-> **Concept File**: design/gdd/game-concept.md (if exists)
+> **App**: `apps/<app>`
+> **Prototype Path**: [Clickable HTML / Running app on dev store / Paper]
+> **Concept File**: `apps/<app>/concept.md` (if it exists)
+> **Gate**: gate-2-prototype evidence
 
 ---
 
 ## Hypothesis
 
 [The falsifiable hypothesis this prototype set out to test:
-"If the player [does X], they will feel [Y] — evidenced by [measurable signal Z]."]
+"If the merchant [does X in the admin], they will [achieve Y] — evidenced by
+[measurable signal Z, e.g. task completed without support, time on task]."]
 
 ---
 
 ## Riskiest Assumption Tested
 
-[What was identified as the biggest risk in the concept, and whether it proved out.]
+[What was identified as the biggest risk in the concept — an Admin API limit, a
+scope rejection, an onboarding drop-off — and whether it proved out.]
 
 ---
 
@@ -23,18 +27,20 @@
 
 [What was built, how long it took, what shortcuts were taken deliberately.]
 
-**Path chosen:** [HTML / Engine / Paper]
+**Path chosen:** [Clickable HTML / Running app on dev store / Paper]
 **Reason for path:** [Why this path was appropriate for this hypothesis]
 
 **Shortcuts taken (intentional):**
-- [e.g., hardcoded values, placeholder art, no menus, etc.]
+- [e.g. seeded fixtures instead of live orders, stub billing, no multi-currency,
+  hardcoded shop domain]
 
 ---
 
 ## Result
 
-[What actually happened — specific observations, not opinions. Quote playtesters
-directly where possible.]
+[What actually happened — specific observations, not opinions. Quote merchant
+or internal testers directly where possible. Note the exact dev store and API
+version used.]
 
 ---
 
@@ -42,11 +48,13 @@ directly where possible.]
 
 | Metric | Value |
 |--------|-------|
-| Path used | [HTML / Engine / Paper] |
-| Iterations to playable | [N — Engine path only; N/A otherwise] |
-| Prototype duration | [e.g., 4 hours] |
-| Playtesters | [N internal / N external] |
-| Feel assessment | [Specific — "response felt sluggish at 200ms" not "felt bad"] |
+| Path used | [Clickable HTML / Running app / Paper] |
+| Dev store | [store handle] — API version [YYYY-MM] |
+| Iterations to usable | [N] |
+| Prototype duration | [e.g. 6 hours] |
+| Testers | [N internal / N merchants] |
+| Task completion | [e.g. "4/5 testers completed install → first sync unprompted"] |
+| Time to first value | [e.g. "median 3m 20s"] |
 | Hypothesis verdict | [CONFIRMED / PARTIALLY CONFIRMED / REFUTED] |
 
 ---
@@ -59,21 +67,22 @@ directly where possible.]
 
 ## If Proceeding
 
-[What the prototype revealed that should directly inform GDD writing:]
+[What the prototype revealed that should directly inform the PRD:]
 
-- **Core tuning values discovered:** [e.g., "jump height of 3.5 units felt best"]
+- **Values discovered:** [e.g. "sync interval of 5 minutes satisfied every tester;
+  1 minute added cost with no perceived benefit"]
 - **Assumptions confirmed:** [What the concept doc assumed that proved true]
 - **Assumptions disproved:** [What the concept doc assumed that proved wrong]
-- **Emergent mechanics:** [Behaviors that appeared during testing worth formalizing]
+- **Emergent behaviour:** [Workflows testers invented that we should formalize]
 
-> Note: If HTML path was used and feel is uncertain, consider an engine prototype
-> targeting feel specifically before committing to GDDs.
+> Note: if the prototype was clickable HTML and the flow depends on real Shopify
+> data, run an app prototype against a dev store before committing to the PRD.
 
 **Next steps:**
-1. `/design-review design/gdd/game-concept.md`
-2. `/gate-check`
-3. `/map-systems`
-4. `/design-system [mechanic]` (use learnings in Tuning Knobs and Formulas sections)
+1. `/prototype-review apps/<app>/prototype`
+2. `/gate-check` (gate-2-prototype)
+3. `/research` to close any market gaps
+4. `/create-architecture` for the validated scope
 
 ---
 
@@ -82,15 +91,15 @@ directly where possible.]
 [What alternative direction the results suggest — what felt almost right and what
 to adjust. Be specific about what to change, not just that something needs changing.]
 
-**Pivot direction:** [What to try differently]
-**What to keep:** [What worked and should be preserved]
-**Next step:** `/prototype [revised-concept]`
+**Pivot direction**: [What to try differently]
+**What to keep**: [What worked and should be preserved]
+**Next step**: `/build-prototype [revised concept]`
 
 ---
 
 ## If Killing
 
-[Why this concept does not work — what specific signal led to this verdict.
+[Why this concept does not work — what specific signal led to the verdict.
 This report is the deliverable; no further action needed on this concept.]
 
 **Next step:** `/brainstorm [new-direction]`
@@ -110,5 +119,5 @@ This report is the deliverable; no further action needed on this concept.]
 
 ---
 
-> *Prototype code location: `prototypes/[concept-name]-concept/`*
+> *Prototype location: `apps/<app>/prototype/`*
 > *This code is throwaway. Never refactor into production.*

@@ -93,3 +93,5 @@ and rollback mechanics, `product-director` owns the gate approval.
 - **Rollback before ship.** Written, with a named decision owner.
 - **Notes in merchant language.** "Fixed an issue where bundles were not applied
   on checkout" beats "refactored the discount resolver".
+
+Template: `.claude/docs/templates/pricing-plan.md` — the billing plan record the release packages.

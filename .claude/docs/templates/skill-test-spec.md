@@ -25,8 +25,9 @@ Verified automatically by `/skill-test static` — no fixture needed.
 ### Case 1: Happy Path — [short description]
 
 **Fixture:** [Describe the assumed project state. Which files exist? What do they
-contain? E.g., "game-concept.md exists with all 8 required sections complete.
-systems-index.md exists. All MVP GDDs are present and individually reviewed."]
+contain? E.g., "request.md exists and is non-empty. apps/demo/status.md records
+stage 'prototype' with gate-1-research and gate-2-prototype approved in
+approvals.json. A dev store handle is recorded in apps/demo/credentials.dev.json."]
 
 **Input:** `/[skill-name] [args]`
 
@@ -45,8 +46,8 @@ systems-index.md exists. All MVP GDDs are present and individually reviewed."]
 
 ### Case 2: Failure Path — [short description, e.g., "Missing required artifact"]
 
-**Fixture:** [Describe the failure state. E.g., "game-concept.md is missing.
-No files exist in design/gdd/."]
+**Fixture:** [Describe the failure state. E.g., "request.md is missing. No app
+directory exists under apps/. docs/registry/apps.json has no entry."]
 
 **Input:** `/[skill-name] [args]`
 
@@ -58,7 +59,7 @@ No files exist in design/gdd/."]
 **Assertions:**
 - [ ] Skill does NOT output PASS when the fixture is incomplete
 - [ ] Skill names the specific missing artifact
-- [ ] Skill suggests a remediation action (e.g., "Run /[other-skill]")
+- [ ] Skill suggests a remediation action (e.g., "Run /scaffold --app <name>")
 - [ ] Skill does not create files to fill in the gap without asking
 
 ---
@@ -92,5 +93,6 @@ No files exist in design/gdd/."]
 [Document what is intentionally NOT tested in this spec and why. Examples:
 - "Case 3 (all-mode) is not covered because it runs too many checks to evaluate
   in a single spec — test each sub-mode individually."
-- "The database integration path is not covered as it requires a live environment."
+- "The live Admin API integration path is not covered as it requires a real dev
+  store and Partner credentials."
 - "Edge cases involving corrupted YAML files are deferred to a future spec."]

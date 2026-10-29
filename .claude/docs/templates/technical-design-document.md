@@ -1,26 +1,30 @@
-# Technical Design: [System Name]
+# Technical Design: [System / Service Name]
 
 ## Document Status
 - **Version**: 1.0
 - **Last Updated**: [Date]
+- **App**: `apps/<app>`
 - **Author**: [Agent/Person]
-- **Reviewer**: lead-programmer
+- **Reviewer**: lead-engineer
 - **Related ADR**: [ADR-XXXX if applicable]
-- **Related Design Doc**: [Link to game design doc this implements]
+- **Related PRD**: [Link to `docs/prd/<app>.md` section this implements]
 
-## Engine API Surface
+## Platform API Surface
 
 | Field | Value |
 |-------|-------|
-| **Engine** | [e.g. Godot 4.6 / Unity 6 / Unreal Engine 5.4] |
-| **APIs Depended On** | [Specific classes/methods/nodes used, version-pinned — e.g. `CharacterBody3D.move_and_slide() (Godot 4.x)`] |
-| **References Consulted** | [engine-reference docs read before writing this — e.g. `docs/engine-reference/godot/modules/physics.md`] |
-| **Post-Cutoff Features Used** | [Features from engine versions beyond LLM training cutoff, or "None"] |
-| **Unverified Assumptions** | [API behaviours assumed but not yet tested against the target version, or "None"] |
-| **Engine Upgrade Risk** | [LOW / MEDIUM / HIGH — how fragile is this design if the engine version changes?] |
+| **Admin API version** | [e.g. `2025-10` — pinned; upgrade reviewed quarterly] |
+| **API design** | [Admin GraphQL (default) / REST only where GraphQL has no equivalent] |
+| **APIs depended on** | [Specific queries/mutations, version-pinned — e.g. `orderUpdate` mutation (2025-10)] |
+| **References consulted** | [Shopify docs pages read before writing — e.g. `shopify.dev/docs/api/admin-graphql/2025-10`] |
+| **App Bridge / Polaris versions** | [e.g. App Bridge 4.x, Polaris 13.x] |
+| **Post-deprecation features used** | [Fields/flags newer than the team's baseline knowledge, or "None"] |
+| **Unverified assumptions** | [API behaviour assumed but not yet exercised on a dev store, or "None"] |
+| **Deprecation risk** | [LOW / MEDIUM / HIGH — how fragile is this design if the API version moves?] |
 
-> **Rule**: If any **Unverified Assumptions** are listed, this document cannot be marked
-> as Accepted until those assumptions are validated in the actual engine environment.
+> **Rule**: If any **Unverified assumptions** are listed, this document cannot be
+> marked Accepted until those assumptions are exercised against a dev store on
+> the pinned API version.
 
 ## Overview
 [2-3 sentence summary of what this system does and why it exists]
@@ -31,16 +35,19 @@
 - [FR-2]: [Description]
 
 ### Non-Functional Requirements
-- **Performance**: [Budget — e.g., "< 1ms per frame"]
-- **Memory**: [Budget — e.g., "< 50MB at peak"]
-- **Scalability**: [Limits — e.g., "Support up to 1000 entities"]
-- **Thread Safety**: [Requirements]
+- **Latency**: [Budget — e.g. "p95 admin request < 400ms"]
+- **Throughput**: [e.g. "5,000 webhook events/min without backlog"]
+- **Memory / storage**: [Budget — e.g. "row store < 5GB for a 100k-order shop"]
+- **Rate limits**: [GraphQL cost budget per shop — leaky bucket points restored/s]
+- **Idempotency**: [Requirements for retried mutations and webhooks]
+- **Data retention**: [How long merchant data is kept after uninstall]
 
 ## Architecture
 
 ### System Diagram
 ```
-[ASCII diagram showing components and data flow]
+[ASCII diagram showing components and data flow: admin frontend (App Bridge),
+app server, queues, database, Shopify Admin API, webhook ingress]
 ```
 
 ### Component Breakdown
@@ -50,16 +57,18 @@
 
 ### Public API
 ```
-[Interface/API definition in pseudocode or target language]
+[Internal API / tRPC / REST contract in pseudocode or target language]
 ```
 
 ### Data Structures
 ```
-[Key data structures with field descriptions]
+[Key models with field descriptions and indexes]
 ```
 
 ### Data Flow
-[Step by step: how data moves through the system during a typical frame]
+[Step by step for the primary path: admin request → auth (session token) →
+GraphQL query → cache → response. Then the webhook path: verify HMAC → enqueue →
+worker → Admin API write.]
 
 ## Implementation Plan
 
@@ -71,8 +80,8 @@
 - [ ] [Task 3]
 - [ ] [Task 4]
 
-### Phase 3: [Optimization/Polish]
-- [ ] [Task 5]
+### Phase 3: [Hardening]
+- [ ] [Task 5 — rate-limit backoff, webhook replay, observability]
 
 ## Dependencies
 | Depends On | For What |
@@ -84,13 +93,14 @@
 | [System] | [Reason] |
 
 ## Testing Strategy
-- **Unit Tests**: [What to test at unit level]
-- **Integration Tests**: [Cross-system tests needed]
-- **Performance Tests**: [Benchmarks to create]
-- **Edge Cases**: [Specific scenarios to test]
+- **Unit tests**: [Pure logic — mappers, validators, cost calculators]
+- **Integration tests**: [Against a dev store or a recorded GraphQL contract]
+- **Webhook tests**: [HMAC verification, replay, ordering]
+- **Performance tests**: [Rate-limit behaviour under a 10k-order backfill]
 
 ## Known Limitations
-[What this design intentionally does NOT support and why]
+[What this design intentionally does NOT support and why — e.g. multi-currency
+only on Plus, no bulk operations above 10k records]
 
 ## Future Considerations
 [What might need to change if requirements evolve — but do NOT build for this now]

@@ -85,3 +85,5 @@ fixtures the test plan needs; `auth-specialist` confirms the install flow.
   cost money and confuse the deploy target.
 - **Do not install production builds on test stores** without labelling the
   version in the record.
+
+Template: `.claude/docs/templates/test-store-plan.md` — the store record written by this skill.

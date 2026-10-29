@@ -243,3 +243,5 @@ REVISION NEEDED** → return to sections 3–6 with the objection quoted.
 
 Verdict: **COMPLETE** — `docs/architecture/apps/<app>/architecture.md` written,
 requirement coverage stated, unverified API operations listed.
+
+Template: `.claude/docs/templates/shopify-app-architecture.md` — the architecture document this skill writes.

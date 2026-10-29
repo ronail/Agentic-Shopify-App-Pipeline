@@ -1,125 +1,95 @@
-# Release Checklist: [Version] -- [Platform]
+# Release Checklist: [Version] -- [Distribution: App Store | Unlisted | Backend]
 
-**Release Date**: [Target Date]
-**Release Manager**: [Name]
-**Status**: [ ] GO / [ ] NO-GO
-
----
+> **App**: `apps/<app>` · **API version**: [YYYY-MM] · **Gate**: gate-4-release
+> **Approver recorded in** `apps/<app>/approvals.json` before this checklist runs.
 
 ## Build Verification
 
-- [ ] Clean build succeeds on all target platforms
-- [ ] No compiler warnings (zero-warning policy)
-- [ ] Build version number set correctly: `[version]`
-- [ ] Build is reproducible from tagged commit: `[commit hash]`
-- [ ] Build size within budget: [actual] / [budget]
-- [ ] All assets included and loading correctly
-- [ ] No debug/development features enabled in release build
-
----
+- [ ] `npm run build` (or repo equivalent) passes clean
+- [ ] `shopify app deploy` succeeds; extension versions published
+- [ ] Production secrets set in the hosting environment (not committed)
+- [ ] `SHOPIFY_API_KEY` / `SHOPIFY_API_SECRET` match the production Partner app
+- [ ] App URL and allowed redirect URLs match production exactly
+- [ ] Database migrations applied and reversible
+- [ ] Version tag created; changelog entry written
 
 ## Quality Gates
 
 ### Critical Bugs
-- [ ] Zero S1 (Critical) bugs open
-- [ ] Zero S2 (Major) bugs -- or documented exceptions below:
 
-| Bug ID | Description | Exception Rationale | Approved By |
-| ---- | ---- | ---- | ---- |
-| | | | |
+- [ ] Zero open S1 defects
+- [ ] Zero open S2 defects in shipped features
+- [ ] Known issues documented in release notes
 
 ### Test Coverage
-- [ ] All critical path features tested and signed off
-- [ ] Full regression suite passed: [pass rate]%
-- [ ] Soak test passed (4+ hours continuous play)
-- [ ] Edge case testing complete
+
+- [ ] Unit tests green in CI
+- [ ] Integration tests green against a dev store on the pinned API version
+- [ ] Manual QA plan executed with evidence attached
+- [ ] Regression suite green (`/regression-suite`)
 
 ### Performance
-- [ ] Target FPS met on minimum spec: [actual] / [target] FPS
-- [ ] Memory usage within budget: [actual] / [budget] MB
-- [ ] Load times within budget: [actual] / [target] seconds
-- [ ] No memory leaks over extended play (soak test)
-- [ ] No frame drops below [threshold] in normal gameplay
 
----
+- [ ] Admin page p95 under budget on a 50k-order store
+- [ ] Webhook processing lag under budget at peak
+- [ ] GraphQL cost per request within limits; no retry storms observed
+- [ ] Bulk/backfill paths throttled and resumable
 
 ## Content Complete
 
-- [ ] All placeholder assets replaced with final versions
-- [ ] All player-facing text proofread
-- [ ] All text localization-ready (no hardcoded strings)
-- [ ] Localization complete for: [list locales]
-- [ ] Audio mix finalized and approved
-- [ ] Credits complete and accurate
-- [ ] Legal notices and third-party attributions complete
+- [ ] All merchant-facing strings translated (or fallback verified)
+- [ ] In-app help / docs links resolve
+- [ ] Onboarding copy reviewed by a non-author
+- [ ] Support email and help-centre URL set in the Partner dashboard
+- [ ] Pricing page copy matches the plans configured in billing
 
----
+## Platform: Embedded Admin App
 
-## Platform: PC
+- [ ] Session token auth works from a cold load and after long idle
+- [ ] App Bridge nav menu, title bar and back button behave
+- [ ] Polaris components at supported versions; no deprecated props
+- [ ] Works in the Shopify mobile admin
+- [ ] Scope set is minimal and every scope is justified in the listing
 
-- [ ] Minimum and recommended specs documented
-- [ ] Keyboard+mouse controls fully functional
-- [ ] Controller support tested (Xbox, PlayStation, generic)
-- [ ] Resolution scaling tested: 1080p, 1440p, 4K, ultrawide
-- [ ] Windowed, borderless, fullscreen modes working
-- [ ] Graphics settings save and load correctly
-- [ ] Store SDK integrated and tested: [Steam/Epic/GOG]
-- [ ] Achievements functional
-- [ ] Cloud saves functional
+## Platform: Extensions (Storefront / Checkout / POS, if applicable)
 
-## Platform: Console (if applicable)
-
-- [ ] TRC/TCR/Lotcheck requirements met
-- [ ] Platform controller prompts correct
-- [ ] Suspend/resume works
-- [ ] User switching handled
-- [ ] Network loss handled gracefully
-- [ ] Storage full scenario handled
-- [ ] Parental controls respected
-- [ ] Certification submission prepared
-
----
+- [ ] Extension renders on a clean theme / POS device
+- [ ] No console errors in the extension surface
+- [ ] Checkout extension respects checkout UI extension limits
+- [ ] Theme app extension blocks survive theme duplicate and publish
 
 ## Store and Distribution
 
-- [ ] Store page metadata complete and proofread
-- [ ] Screenshots current and meet platform requirements
-- [ ] Trailer current
-- [ ] Key art and capsule images final
-- [ ] Age ratings obtained: [ ] ESRB [ ] PEGI [ ] Other
-- [ ] Legal: EULA, Privacy Policy, Terms of Service
-- [ ] Pricing configured for all regions
-
----
+- [ ] App Store listing complete (`app-store-listing.md`): name, tagline,
+  screenshots, demo store, pricing, privacy policy, support links
+- [ ] Required webhooks registered: `app/uninstalled`, `app_subscriptions/update`
+- [ ] GDPR mandatory webhooks implemented and verified
+- [ ] Protected customer data access justified and declared
+- [ ] Billing plans created and testable in the dev store
+- [ ] Uninstall path cleans up merchant data per the retention policy
 
 ## Launch Readiness
 
-- [ ] Analytics/telemetry verified and receiving data
-- [ ] Crash reporting configured: [service name]
-- [ ] Day-one patch prepared (if needed)
-- [ ] On-call team schedule set for first 72 hours
-- [ ] Community announcements drafted
-- [ ] Press/influencer keys prepared
-- [ ] Support team briefed on known issues
-- [ ] Rollback plan documented and tested
-
----
+- [ ] Rollback plan written and rehearsed (previous version deployable)
+- [ ] Monitoring/alerts live: error rate, webhook failures, install failures
+- [ ] On-call owner named for the first 72 hours
+- [ ] App review submitted (if listing changed) and merchant comms drafted
+- [ ] Support macros prepared for anticipated questions
 
 ## Sign-offs
 
-| Role | Name | Status | Date |
-| ---- | ---- | ---- | ---- |
-| QA Lead | | [ ] Approved | |
-| Technical Director | | [ ] Approved | |
-| Producer | | [ ] Approved | |
-| Creative Director | | [ ] Approved | |
-
----
+| Role | Name | Date | Approved |
+|------|------|------|----------|
+| QA lead | | | [ ] |
+| App architect / lead engineer | | | [ ] |
+| App Store reviewer | | | [ ] |
+| Producer | | | [ ] |
 
 ## Final Decision
 
-**GO / NO-GO**: ____________
+- [ ] **SHIP** — all gates green
+- [ ] **SHIP WITH CONDITIONS** — conditions listed below and accepted by producer
+- [ ] **HOLD** — blockers listed below
 
-**Rationale**: [Summary of readiness. If NO-GO, list specific blocking items and estimated time to resolve.]
-
-**Notes**: [Any additional context, known risks accepted, or conditions on the release.]
+**Conditions / blockers**:
+- [Blocker with owner and date]

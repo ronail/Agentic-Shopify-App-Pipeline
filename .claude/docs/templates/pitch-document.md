@@ -1,72 +1,79 @@
-# Game Pitch: [Title]
+# App Pitch: [App Name]
 
 *Version: [Draft Number]*
 *Date: [Date]*
+*App directory: `apps/<app>` (created by `/scaffold --app <app>`)*
 
 ---
 
 ## The Hook
 
-> [One powerful sentence. If someone reads nothing else, this should make them
-> curious.]
+> [One sentence a merchant would repeat to their ops manager. If someone reads
+> nothing else, this should make them ask "does it handle my store?"]
 
 ---
 
 ## What Is It?
 
-[2-3 sentences expanding the hook into a clear picture. Genre, setting, core
-mechanic, and what makes it special.]
+[2-3 sentences expanding the hook: the merchant problem, the workflow it
+replaces, and the Shopify surface it lives on (embedded admin page, admin
+action, checkout extension, POS extension).]
 
 ---
 
 ## Why Now?
 
-[Why is this the right game at the right time? Market trends, audience gaps,
-technology enablers, cultural relevance.]
+[Why this app at this API version? Shopify platform changes that enable it,
+merchant behaviour shifts, gaps left by existing apps, deprecations that open a
+window.]
 
 ---
 
-## Target Audience
+## Target Merchant
 
-**Primary**: [Who is the core audience? Be specific — not "gamers" but
-"roguelike fans who enjoy build-crafting and short sessions"]
+**Primary**: [Who is the core merchant? Be specific — not "e-commerce stores"
+but "Shopify stores doing 200-2,000 orders/month with an in-house 3PL"]
 
-**Secondary**: [Adjacent audience who would also enjoy this]
+**Secondary**: [Adjacent merchant who would also buy]
 
-**Market Size**: [Estimated TAM based on comparable titles]
+**Market Size**: [Number of Shopify stores in the segment; how you estimated it]
 
 ---
 
-## Comparable Titles
+## Comparable Apps
 
-| Title | Similarity | Our Differentiation | Commercial Performance |
+| App | Similarity | Our Differentiation | Commercial Signal |
 | ---- | ---- | ---- | ---- |
-| [Game 1] | [What's similar] | [What's different/better] | [Revenue/units if known] |
-| [Game 2] | [What's similar] | [What's different/better] | [Performance] |
-| [Game 3] | [What's similar] | [What's different/better] | [Performance] |
+| [App 1] | [What's similar] | [What's different/better] | [Pricing, rating, review count] |
+| [App 2] | [What's similar] | [What's different/better] | [Signal] |
+| [App 3] | [What's similar] | [What's different/better] | [Signal] |
+
+> Evidence for this table comes from `/research`; link the research note.
 
 ---
 
-## Core Experience
+## Core Merchant Experience
 
-### The Player Fantasy
-[What does the player get to BE or DO? The emotional promise.]
+### The Promise
+[What does the merchant get to BE or DO? The operational outcome and the
+emotion attached to it — confidence, not features.]
 
 ### Core Loop (30 seconds)
-[Describe the primary activity]
+[The primary action: what they click, what Shopify data it touches, what they
+see change in the admin.]
 
-### Session Flow (30 minutes)
-[What does a typical session look like start to finish?]
+### Daily Flow (30 minutes)
+[What a typical working session looks like start to finish.]
 
-### Progression Hook
-[Why do players come back tomorrow?]
+### Retention Hook
+[Why the merchant opens it again tomorrow — a daily number they need, an alert
+they can't miss, a report they forward.]
 
 ---
 
 ## Key Features
 
-1. **[Feature Name]**: [1-2 sentence description of what it is and why it
-   matters to the player]
+1. **[Feature Name]**: [1-2 sentences — what it does and why the merchant cares]
 2. **[Feature Name]**: [Description]
 3. **[Feature Name]**: [Description]
 4. **[Feature Name]**: [Description]
@@ -74,25 +81,27 @@ technology enablers, cultural relevance.]
 
 ---
 
-## Visual Identity
+## Shopify Surface & Integration
 
-[Brief description of the art style, mood, and visual tone. Include reference
-images or mood board link if available.]
-
-**Art Style**: [e.g., "Hand-painted 2D with dynamic lighting, inspired by
-Hollow Knight's atmosphere but with warmer colors"]
+| Field | Value |
+|-------|-------|
+| **App type** | [Embedded admin app / Admin action / Checkout UI extension / POS UI extension / Theme app extension] |
+| **Admin API** | [Admin GraphQL API, target version e.g. 2025-10] |
+| **Required scopes** | [read_orders, write_products, ...] |
+| **Webhooks** | [orders/create, products/update, app/uninstalled, ...] |
+| **App Bridge** | [Session tokens, NavMenu, Toast, Modal — versions] |
+| **Polaris** | [Polaris version / web components vs React] |
+| **Data residency** | [Where merchant data is stored; retention policy] |
+| **Protected customer data** | [Yes/No — if yes, which level and why] |
 
 ---
 
-## Audio Identity
+## Visual Identity
 
-[Brief description of the sonic palette and musical direction.]
+[Polaris-native by default: the app should feel like part of the admin, not a
+microsite. Note any deliberate deviation and why.]
 
-**Music**: [e.g., "Adaptive orchestral with folk instruments, shifting based
-on biome and combat intensity"]
-
-**SFX**: [e.g., "Crunchy, satisfying impact sounds. Tactile feedback on every
-player action."]
+**Design system**: [Polaris components used; custom components to build]
 
 ---
 
@@ -100,11 +109,11 @@ player action."]
 
 | Aspect | Plan |
 | ---- | ---- |
-| **Model** | [Premium $X / F2P / etc.] |
-| **Platforms** | [Steam, Console, Mobile] |
-| **Price Point** | [$X.XX] |
-| **DLC/Expansion Plans** | [Post-launch content strategy] |
-| **Monetization Ethics** | [What we will and won't do] |
+| **Model** | [Recurring app subscription / usage-based / free with paid tier] |
+| **Plans** | [Free / Growth $X / Pro $Y] |
+| **Billing API** | [appSubscriptionCreate, trial days, usage records] |
+| **Distribution** | [App Store listing / unlisted / custom app for one merchant] |
+| **Monetization ethics** | [What we will and won't do — no dark patterns, no scope overreach] |
 
 ---
 
@@ -112,14 +121,14 @@ player action."]
 
 | Milestone | Duration | Deliverable |
 | ---- | ---- | ---- |
-| Concept & Pre-production | [X weeks] | Game concept, pillars, vertical slice plan |
-| Vertical Slice | [X weeks] | Playable slice demonstrating core loop |
-| Alpha | [X weeks] | All features in, content placeholder |
-| Beta | [X weeks] | Content complete, polish pass |
-| Launch | [Date] | Release build |
+| Concept & Research | [X weeks] | App concept, PRD, competitive research |
+| Prototype | [X weeks] | Clickable prototype on a dev store |
+| MVP | [X weeks] | Install → OAuth → core loop on a dev store |
+| Beta | [X weeks] | Billing, onboarding, support docs |
+| App Store submission | [Date] | Listing, review-ready build |
 
 **Team Size**: [X people, roles]
-**Engine**: [Godot / Unity / Unreal]
+**Stack**: [Remix / Node / Polaris / Prisma — whatever the repo standard is]
 **Estimated Budget**: [Range if applicable]
 
 ---
@@ -128,13 +137,13 @@ player action."]
 
 | Risk | Likelihood | Impact | Mitigation |
 | ---- | ---- | ---- | ---- |
-| [Risk 1] | [H/M/L] | [H/M/L] | [How we handle it] |
-| [Risk 2] | [H/M/L] | [H/M/L] | [Mitigation] |
-| [Risk 3] | [H/M/L] | [H/M/L] | [Mitigation] |
+| [App review rejection] | [H/M/L] | [H/M/L] | [Checklist run before submission] |
+| [API deprecation] | [H/M/L] | [H/M/L] | [Pin version, watch changelog] |
+| [Scope creep] | [H/M/L] | [H/M/L] | [Feature list frozen at gate-3] |
 
 ---
 
 ## The Ask
 
-[What do you need? Funding, publishing deal, team members, feedback? Be
-specific about what you're looking for and what you're offering in return.]
+[What do you need? Approval to prototype, budget, a dev store, a merchant
+interview? Be specific about what you're asking for and what happens next.]

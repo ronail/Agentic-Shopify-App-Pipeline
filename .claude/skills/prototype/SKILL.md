@@ -182,3 +182,5 @@ Then:
 
 Ask before writing; for prototype code, a single approval for the planned files
 under `apps/<app>/prototype/` is enough — do not interrupt for each file.
+
+Template: `.claude/docs/templates/prototype-review.md` — the review record produced after a prototype run.

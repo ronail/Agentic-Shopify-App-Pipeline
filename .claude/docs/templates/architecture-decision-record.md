@@ -11,8 +11,8 @@
 ## Last Verified
 
 [YYYY-MM-DD — when this ADR was last confirmed accurate against the current
-engine version and design. Update this date when you re-read and confirm it
-is still correct, even if nothing changed.]
+pinned Admin API version and PRD. Update this date when you re-read and confirm
+it is still correct, even if nothing changed.]
 
 ## Decision Makers
 
@@ -21,23 +21,23 @@ is still correct, even if nothing changed.]
 ## Summary
 
 [2 sentences: what problem this ADR solves, and what was decided. Written for
-tiered context loading — a skill scanning 20 ADRs uses this to decide whether
-to read the full decision. Be specific: name the system, the problem, and the
+tiered context loading — a skill scanning 20 ADRs uses this to decide whether to
+read the full decision. Be specific: name the system, the problem, and the
 chosen approach.]
 
-## Engine Compatibility
+## Platform Compatibility
 
 | Field | Value |
 |-------|-------|
-| **Engine** | [e.g. Godot 4.6 / Unity 6 / Unreal Engine 5.4] |
-| **Domain** | [Physics / Rendering / UI / Audio / Navigation / Animation / Networking / Core / Input / Scripting] |
-| **Knowledge Risk** | [LOW — in training data / MEDIUM — near cutoff, verify / HIGH — post-cutoff, must verify] |
-| **References Consulted** | [e.g. `docs/engine-reference/godot/modules/physics.md`, `breaking-changes.md`] |
-| **Post-Cutoff APIs Used** | [Specific APIs from post-cutoff engine versions this decision depends on, or "None"] |
-| **Verification Required** | [Concrete behaviours to test against the target engine version before shipping, or "None"] |
+| **Admin API version** | [e.g. `2025-10`] |
+| **Surface** | [Admin GraphQL / REST / Webhooks / App Bridge / Polaris / Checkout extension / Billing / POS] |
+| **Knowledge risk** | [LOW — well documented / MEDIUM — recently changed, verify / HIGH — new surface, must verify] |
+| **References consulted** | [e.g. `shopify.dev/docs/api/admin-graphql/2025-10`, changelog entry] |
+| **Recently introduced APIs used** | [Fields or mutations this decision depends on, or "None"] |
+| **Verification required** | [Concrete behaviours to exercise on a dev store before shipping, or "None"] |
 
-> **Note**: If Knowledge Risk is MEDIUM or HIGH, this ADR must be re-validated if the
-> project upgrades engine versions. Flag it as "Superseded" and write a new ADR.
+> **Note**: If knowledge risk is MEDIUM or HIGH, this ADR must be re-validated at
+> each API version bump. Flag it as "Superseded" and write a new ADR.
 
 ## ADR Dependencies
 
@@ -46,7 +46,7 @@ chosen approach.]
 | **Depends On** | [ADR-NNNN (must be Accepted before this can be implemented), or "None"] |
 | **Enables** | [ADR-NNNN (this ADR unlocks that decision), or "None"] |
 | **Blocks** | [Epic/Story name — cannot start until this ADR is Accepted, or "None"] |
-| **Ordering Note** | [Any sequencing constraint that isn't captured above] |
+| **Ordering note** | [Any sequencing constraint that isn't captured above] |
 
 ## Context
 
@@ -61,17 +61,17 @@ cost of not deciding?]
 
 ### Constraints
 
-- [Technical constraints -- engine limitations, platform requirements]
-- [Timeline constraints -- deadline pressures, dependencies]
-- [Resource constraints -- team size, expertise available]
-- [Compatibility requirements -- must work with existing systems]
+- [Technical constraints — Admin API limits, rate limits, App Bridge capabilities]
+- [Platform constraints — access scopes, protected customer data rules, app review]
+- [Timeline constraints — deadline pressures, dependencies]
+- [Compatibility requirements — must work with existing apps and shared `src/`]
 
 ### Requirements
 
 - [Functional requirement 1]
 - [Functional requirement 2]
-- [Performance requirement -- specific, measurable]
-- [Scalability requirement]
+- [Performance requirement — specific, measurable]
+- [Scale requirement — shops, orders/day, webhook volume]
 
 ## Decision
 
@@ -94,7 +94,8 @@ creates. These become the contracts that implementers must respect.]
 
 ### Implementation Guidelines
 
-[Specific guidance for the programmer implementing this decision.]
+[Specific guidance for the engineer implementing this decision — error handling,
+retry policy, idempotency keys, logging fields.]
 
 ## Alternatives Considered
 
@@ -133,16 +134,17 @@ creates. These become the contracts that implementers must respect.]
 
 | Metric | Before | Expected After | Budget |
 |--------|--------|---------------|--------|
-| CPU (frame time) | [X]ms | [Y]ms | [Z]ms |
-| Memory | [X]MB | [Y]MB | [Z]MB |
-| Load Time | [X]s | [Y]s | [Z]s |
-| Network (if applicable) | [X]KB/s | [Y]KB/s | [Z]KB/s |
+| Admin API latency (p95) | [X]ms | [Y]ms | [Z]ms |
+| GraphQL cost per request | [X] points | [Y] points | [Z] points |
+| Webhook processing lag | [X]s | [Y]s | [Z]s |
+| DB query time (p95) | [X]ms | [Y]ms | [Z]ms |
 
 ## Migration Plan
 
-[If this changes existing systems, the step-by-step plan to migrate.]
+[If this changes existing systems, the step-by-step plan to migrate — including
+the data backfill and its rate-limit budget.]
 
-1. [Step 1 -- what changes, what breaks, how to verify]
+1. [Step 1 — what changes, what breaks, how to verify]
 2. [Step 2]
 3. [Step 3]
 
@@ -156,18 +158,18 @@ creates. These become the contracts that implementers must respect.]
 - [ ] [Measurable criterion 2]
 - [ ] [Performance criterion]
 
-## GDD Requirements Addressed
+## PRD Requirements Addressed
 
-<!-- This section is MANDATORY. Every ADR must trace back to at least one GDD
-     requirement, or explicitly state it is a foundational decision with no GDD
+<!-- This section is MANDATORY. Every ADR must trace back to at least one PRD
+     requirement, or explicitly state it is a foundational decision with no PRD
      dependency. Traceability is audited by /architecture-review. -->
 
-| GDD Document | System | Requirement | How This ADR Satisfies It |
+| PRD Document | System | Requirement | How This ADR Satisfies It |
 |-------------|--------|-------------|--------------------------|
-| [e.g. `design/gdd/combat.md`] | [e.g. Combat] | [e.g. "Hitbox detection must resolve within 1 frame"] | [e.g. "Jolt physics collision queries run synchronously in _physics_process"] |
+| [e.g. `docs/prd/sync.md`] | [e.g. Order Sync] | [e.g. "Failed orders must be retryable from the admin"] | [e.g. "Retry queue keyed by (shop, order id) with exponential backoff"] |
 
-> If this is a foundational decision with no direct GDD dependency, write:
-> "Foundational — no GDD requirement. Enables: [list what GDD systems this
+> If this is a foundational decision with no direct PRD dependency, write:
+> "Foundational — no PRD requirement. Enables: [list what PRD systems this
 > decision unlocks or constrains]"
 
 ## Related

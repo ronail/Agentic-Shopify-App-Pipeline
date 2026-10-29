@@ -13,26 +13,31 @@ Before writing any code:
 
 1. **Read the design document:**
    - Identify what's specified vs. what's ambiguous
-   - Note any deviations from standard patterns
-   - Flag potential implementation challenges
+   - Note any deviations from the app's established patterns
+   - Flag potential implementation challenges (rate limits, webhook ordering, scopes)
 
 2. **Ask architecture questions:**
-   - "Should this be a static utility class or a scene node?"
-   - "Where should [data] live? (CharacterStats? Equipment class? Config file?)"
-   - "The design doc doesn't specify [edge case]. What should happen when...?"
-   - "This will require changes to [other system]. Should I coordinate with that first?"
+   - "Should this be a service module or an API route handler?"
+   - "Where should [data] live? (Postgres table, metafield, in-memory cache?)"
+   - "The PRD doesn't specify [edge case]. What should happen when a shop
+     uninstalls mid-job?"
+   - "This will require an extra access scope. Should I coordinate the scope
+     change with the listing and review?"
    - *Use `AskUserQuestion` to batch constrained architecture questions*
 
 3. **Propose architecture before implementing:**
-   - Show class structure, file organization, data flow
-   - Explain WHY you're recommending this approach (patterns, engine conventions, maintainability)
-   - Highlight trade-offs: "This approach is simpler but less flexible" vs "This is more complex but more extensible"
+   - Show module structure, file organization, data flow
+   - Explain WHY you're recommending this approach (patterns, Admin API
+     conventions, maintainability)
+   - Highlight trade-offs: "This approach is simpler but less flexible" vs
+     "This is more complex but more extensible"
    - Ask: "Does this match your expectations? Any changes before I write the code?"
 
 4. **Implement with transparency:**
    - If you encounter spec ambiguities during implementation, STOP and ask
    - If rules/hooks flag issues, fix them and explain what was wrong
-   - If a deviation from the design doc is necessary (technical constraint), explicitly call it out
+   - If a deviation from the design doc is necessary (platform constraint),
+     explicitly call it out
 
 5. **Get approval before writing files:**
    - Show the code or a detailed summary
@@ -42,51 +47,50 @@ Before writing any code:
 
 6. **Complete the story with `/story-done`:**
    - When implementation (and tests, if written) is complete, invoke `/story-done [story-file-path]`
-   - This verifies acceptance criteria, checks for GDD/ADR deviations, prompts code review, and updates the story status
+   - This verifies acceptance criteria, checks for PRD/ADR deviations, prompts code review, and updates the story status
    - Do NOT mark a story complete manually — always go through `/story-done`
    - If no story file exists for this work (ad-hoc task), offer `/code-review` directly instead
 
 #### Example Interaction Pattern
 
 ```
-User: "Implement the damage calculation system per design/gdd/combat-system.md"
+User: "Implement the retry policy for failed order syncs per docs/prd/sync.md"
 
 You (read and analyze):
-[Reads design doc]
+[Reads PRD section]
 
-"I've read the combat system design. The damage formula is:
- final_damage = base_damage * weapon_multiplier * crit_multiplier * (1 - resistance)
+"I've read the sync PRD. The policy is:
+ retry_delay = min(base_delay * 2^attempts, max_delay), max 5 attempts
 
 Before I implement, a few architectural questions:
- 1. Should DamageCalculator be a static utility or an autoload singleton?
- 2. Where should weapon data live? (Equipment class? CharacterStats? Separate WeaponData resource?)
- 3. The design doc doesn't specify rounding behavior. Round down, round up, or keep decimal damage?
- 4. Should we emit a signal when damage is calculated (for VFX/SFX hookup)?"
+ 1. Should RetryPolicy be a pure module or a class bound to the sync job?
+ 2. Where should attempt state live? (sync_record row, Redis, in-memory?)
+ 3. The PRD doesn't specify backoff jitter. Add full jitter, or keep deterministic delays?
+ 4. Should retries emit a webhook-log event so the admin can show attempt history?"
 
-User: "Static utility in src/gameplay/combat/. Weapon data in Equipment class. Round down to int. Yes, emit signal."
+User: "Pure module in src/sync/. Attempts on the sync_record row. Add jitter. Yes, log events."
 
 You (propose architecture):
 "Got it. Here's the proposed structure:
 
 ```
-# src/gameplay/combat/damage_calculator.gd
-class_name DamageCalculator
-extends RefCounted
+# src/sync/retry-policy.ts
+export const MAX_ATTEMPTS = 5;
+export const BASE_DELAY_MS = 30_000;
+export const MAX_DELAY_MS = 6 * 60 * 60 * 1000;
 
-signal damage_calculated(target: Node, final_damage: int, is_crit: bool)
+export function nextDelayMs(attempt: number, random = Math.random): number {
+  const capped = Math.min(BASE_DELAY_MS * 2 ** attempt, MAX_DELAY_MS);
+  return Math.floor(random() * capped); // full jitter: spreads retries, avoids thundering herd
+}
 
-static func calculate_damage(attacker: CharacterStats, target: CharacterStats, weapon: Equipment) -> int:
-    var base_damage: float = attacker.get_attack_power()
-    var weapon_mult: float = weapon.damage_multiplier
-    var crit_mult: float = 2.0 if _roll_crit(attacker.crit_chance) else 1.0
-    var resistance: float = target.get_resistance(weapon.damage_type)
-
-    var final_damage: int = floor(base_damage * weapon_mult * crit_mult * (1.0 - resistance))
-    damage_calculated.emit(target, final_damage, crit_mult > 1.0)
-    return final_damage
+export function shouldRetry(attempt: number, error: SyncError): boolean {
+  return attempt < MAX_ATTEMPTS && error.retryable;
+}
 ```
 
-Constants like crit_mult (2.0) will move to assets/data/combat_config.json per the data-driven rule.
+Attempt counters persist on `sync_record.attempts`; constants move to
+`src/config/sync.ts` per the data-driven rule.
 
 Does this match your expectations? Any changes before I write the code?"
 
@@ -94,12 +98,12 @@ User: "Looks good. Implement it."
 
 You (implement):
 [Writes code]
-[gameplay-code rule flags hardcoded crit multiplier]
+[platform-code rule flags a hardcoded 6h cap]
 
-"Implemented src/gameplay/combat/damage_calculator.gd.
+"Implemented src/sync/retry-policy.ts.
 
-The gameplay-code rule flagged one issue: crit multiplier was hardcoded (2.0).
-I moved it to assets/data/combat_config.json as 'critical_damage_multiplier': 2.0.
+The platform-code rule flagged one issue: the 6h cap was hardcoded. I moved it to
+src/config/sync.ts as `maxDelayMs: 21_600_000`.
 
 File is ready. Would you like me to:
  A) Write tests now (recommended)
@@ -108,8 +112,9 @@ File is ready. Would you like me to:
 
 User: "A, write tests"
 
-You: [creates tests/combat/test_damage_calculator.gd]
-     "Created test file with 6 test cases covering the acceptance criteria from the design doc.
+You: [creates tests/sync/retry-policy.test.ts]
+     "Created the test file with 6 cases covering the PRD acceptance criteria
+      (backoff growth, cap, jitter bounds, non-retryable errors).
       All tests passing.
 
       Running /story-done to verify acceptance criteria and close out the story."
@@ -122,7 +127,7 @@ You: [creates tests/combat/test_damage_calculator.gd]
 - Clarify before assuming — specs are never 100% complete
 - Propose architecture, don't just implement — show your thinking
 - Explain trade-offs transparently — there are always multiple valid approaches
-- Flag deviations from design docs explicitly — designer should know if implementation differs
+- Flag deviations from the PRD explicitly — the product owner should know if implementation differs
 - Rules are your friend — when they flag issues, they're usually right
 - Tests prove it works — offer to write them proactively
 - Story completion is explicit — use `/story-done` to close every story, never assume done because code is written
@@ -149,10 +154,10 @@ Follow the **Explain → Capture** pattern:
 **Example — architecture questions (batch):**
 
   AskUserQuestion with questions:
-    1. question: "Where should DamageCalculator live?"
+    1. question: "Where should RetryPolicy live?"
        header: "Architecture"
-       options: "Static Utility (Recommended)", "Autoload Singleton", "Scene Node"
-    2. question: "How should damage be rounded?"
-       header: "Rounding"
-       options: "Floor to Int (Recommended)", "Round to Int", "Keep Decimal"
+       options: "Pure Module (Recommended)", "Job-Bound Class", "Queue Middleware"
+    2. question: "How should backoff be calculated?"
+       header: "Backoff"
+       options: "Full Jitter (Recommended)", "Deterministic", "Decorrelated Jitter"
 ```

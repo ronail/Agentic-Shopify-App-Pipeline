@@ -87,3 +87,5 @@ options and recommend, do not pick unilaterally.
   goes in `later`, and the reason is written down.
 - **Never edit `request.md`.** Scope changes to the request are
   `/update-request`; this skill only proposes.
+
+Template: `.claude/docs/templates/mmmvp-proposal.md` — the proposal shape each slice is written against.
