@@ -33,6 +33,12 @@ phases:
     description: "Decide whether the merchant problem is worth an app, and which Shopify surface it needs"
     next_phase: 1
     steps:
+      - id: setup
+        name: "Template Init"
+        command: /setup
+        required: false
+        description: "Initialise a repo generated from the template: preview and run scripts/init-template.sh, then verify. Not part of per-app progression."
+
       - id: start
         name: "Pipeline Dashboard"
         command: /start

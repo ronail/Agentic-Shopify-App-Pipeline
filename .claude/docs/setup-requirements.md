@@ -3,6 +3,23 @@
 Prerequisites for the Agentic Shopify App Pipeline. All hooks fail gracefully if
 their tools are missing — nothing breaks, but you lose validation.
 
+## First Run in a Generated Repo
+
+If you generated this repo from the template, run the initialiser **before**
+anything else:
+
+```bash
+scripts/init-template.sh --name "<your project>" --app <slug>     # preview
+scripts/init-template.sh --name "<your project>" --app <slug> --apply
+```
+
+It strips the worked-example apps, their ADRs/requirements/sprint state, the
+session transcripts, the retarget history and `Skill Testing Framework/`; resets
+the three registries; optionally seeds `apps/<slug>/`; runs
+`.claude/scripts/check-references.py` and `.claude/scripts/isolation-check.py`;
+then deletes itself and `TEMPLATE.md`. Commit the result before starting work.
+`/setup` wraps the same flow with an approval step.
+
 ## Required
 
 | Requirement | Purpose | How to get it |

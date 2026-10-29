@@ -15,6 +15,23 @@ API is **pinned to 2026-10**; every agent checks the pinned snapshot in
 `docs/shopify-api-reference/` before writing a query, mutation, or webhook
 payload.
 
+## Generate Your Repo (once)
+
+This repository is a GitHub template that ships two worked-example apps. Generate
+your own repo from it, then strip the examples:
+
+```bash
+# preview — writes nothing
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles
+# apply
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply
+```
+
+The script removes the worked examples and the retarget history, resets the
+registries, retitles the project, runs the repository checks, then deletes
+itself. `/setup` runs the same flow with a preview and an approval step. The full
+contract is in `TEMPLATE.md` (which the script deletes).
+
 ## Boot a Fresh Machine
 
 Five steps from nothing to a running app.

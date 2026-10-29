@@ -1,0 +1,6 @@
+interface:
+  display_name: "Setup"
+  short_description: "Initialise a repo generated from the Agentic Shopify App Pipeline template: preview what scripts/init-template.sh will strip, collect the project name and fi..."
+  default_prompt: "Use the $setup skill for the requested task."
+policy:
+  allow_implicit_invocation: true

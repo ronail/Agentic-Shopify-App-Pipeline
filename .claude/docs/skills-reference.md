@@ -1,11 +1,12 @@
 # Available Skills (Slash Commands)
 
-66 slash commands organized by pipeline phase. Type `/` to access any skill. The full step→skill map is resolved by /help from `.claude/docs/workflow-catalog.yaml`.
+67 slash commands organized by pipeline phase. Type `/` to access any skill. The full step→skill map is resolved by /help from `.claude/docs/workflow-catalog.yaml`.
 
 ## Onboarding & Navigation
 
 | Command | Purpose |
 |---------|---------|
+| `/setup` | Initialise a repo generated from the template — previews `scripts/init-template.sh`, collects the project name and first app, applies, verifies. In an initialised repo it runs the repository checks instead. |
 | `/start` | Pipeline dashboard — reads docs/registry/apps.json + request.md + per-app status, prints where each app stands, routes to the next skill. Supports /start claude\|codex\|hermes for model routing. |
 | `/help` | Context-aware guidance — reads the current stage and surfaces the next required step. |
 | `/onboard` | Onboard a developer or merchant to the project. |

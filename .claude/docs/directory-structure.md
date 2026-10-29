@@ -42,10 +42,12 @@ never inside an app directory.
 ```text
 /
 ├── CLAUDE.md                          # Master configuration
+├── TEMPLATE.md                        # Template contract (deleted once initialised)
 ├── request.md                         # Master request document
 ├── request-history.md                 # Append-only change log for request.md
 ├── .claude/                           # Agents, skills, hooks, rules, docs
 │   └── hooks/track-request-changes.sh # Enforces request-history updates
+├── scripts/                           # init-template.sh (deletes itself once applied)
 ├── apps/                              # One directory per app (working state + code)
 │   └── <app>/
 │       ├── README.md
