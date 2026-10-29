@@ -1,0 +1,6 @@
+interface:
+  display_name: "Update Request"
+  short_description: "Amends request.md without losing prior intent: bumps the version, writes the change, and appends a dated entry to request-history.md so superseded asks stay..."
+  default_prompt: "Use the $update-request skill for the requested task."
+policy:
+  allow_implicit_invocation: true

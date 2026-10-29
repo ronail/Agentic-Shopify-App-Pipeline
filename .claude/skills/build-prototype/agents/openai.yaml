@@ -1,0 +1,6 @@
+interface:
+  display_name: "Build Prototype"
+  short_description: "Builds a throwaway merchant-facing prototype for a Shopify app under apps/<app>/prototype/, with real Polaris-styled admin screens and the intended workflow,..."
+  default_prompt: "Use the $build-prototype skill for the requested task."
+policy:
+  allow_implicit_invocation: true

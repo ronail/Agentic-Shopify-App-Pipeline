@@ -1,6 +1,6 @@
 interface:
   display_name: "Security Audit"
-  short_description: "Audit the game for security vulnerabilities: save tampering, cheat vectors, network exploits, data exposure, and input validation gaps. Produces a prioritise..."
+  short_description: "Audit one Shopify app's security posture: OAuth install flow, session-token verification, access-token storage, webhook HMAC, scope minimisation, protected c..."
   default_prompt: "Use the $security-audit skill for the requested task."
 policy:
   allow_implicit_invocation: true

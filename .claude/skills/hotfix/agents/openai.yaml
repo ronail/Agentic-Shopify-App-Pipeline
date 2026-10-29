@@ -1,6 +1,6 @@
 interface:
   display_name: "Hotfix"
-  short_description: "Emergency fix workflow that bypasses normal sprint processes with a full audit trail. Creates hotfix branch, tracks approvals, and ensures the fix is backpor..."
+  short_description: "Use when a shipped app is broken in production. Runs the emergency path: assess severity, mitigate, branch from the released tag, make the minimum fix with a..."
   default_prompt: "Use the $hotfix skill for the requested task."
 policy:
   allow_implicit_invocation: true

@@ -1,6 +1,6 @@
 interface:
   display_name: "QA Plan"
-  short_description: "Generate a QA test plan for a sprint or feature. Reads GDDs and story files, classifies stories by test type (Logic/Integration/Visual/UI), and produces a st..."
+  short_description: "Use before a sprint or feature starts. Builds that app's QA plan: classifies each story by test type, specifies the automated tests, GraphQL and webhook fixt..."
   default_prompt: "Use the $qa-plan skill for the requested task."
 policy:
   allow_implicit_invocation: true

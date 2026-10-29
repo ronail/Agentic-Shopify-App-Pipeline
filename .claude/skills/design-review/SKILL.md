@@ -1,268 +1,239 @@
 ---
 name: design-review
-description: "Reviews a game design document for completeness, internal consistency, implementability, and adherence to project design standards. Run this before handing a design document to programmers."
-argument-hint: "[path-to-design-doc] [--depth full|lean|solo]"
+description: "Reviews a Shopify app spec — requirements, feature spec, UX spec, or architecture doc — for completeness, internal consistency, implementability, Polaris and accessibility compliance. Run before handing specs to implementation."
+argument-hint: "[path to spec | app slug] [--depth full|lean|solo]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Task, AskUserQuestion, request_user_input, clarify
 model: sonnet
+agent: technical-director
 ---
 
-## Phase 0: Parse Arguments
+# Design Review
+
+The quality gate between specification and implementation. It reads one spec in
+the context of the app it belongs to, then returns a verdict plus a fix list.
+It does not rewrite the spec unless the user asks.
+
+## Phase 0 — Parse arguments
 
-Extract `--depth [full|lean|solo]` if present. Default is `full` when no flag is given.
-
-**Note**: `--depth` controls the *analysis depth* of this skill (how many specialist agents are spawned). It is independent of the global review mode in `production/review-mode.txt`, which controls director gate spawning. These are two different concepts — `--depth` is about how thoroughly *this* skill analyses the document.
-
-- **`full`**: Complete review — all phases + specialist agent delegation (Phase 3b)
-- **`lean`**: All phases, no specialist agents — faster, single-session analysis
-- **`solo`**: Phases 1-4 only, no delegation, no Phase 5 next-step prompt — use when called from within another skill
-
----
-
-## Phase 1: Load Documents
-
-Read the target design document in full. Read CLAUDE.md to understand project context and standards. Read related design documents referenced or implied by the target doc (check `design/gdd/` for related systems).
-
-**Dependency graph validation:** For every system listed in the Dependencies section, use Glob to check whether its GDD file exists in `design/gdd/`. Flag any that don't exist yet — these are broken references that downstream authors will hit.
-
-**Lore/narrative alignment:** If `design/gdd/game-concept.md` or any file in `design/narrative/` exists, read it. Note any mechanical choices in this GDD that contradict established world rules, tone, or design pillars. Pass this context to `game-designer` in Phase 3b.
-
-**Prior review check:** Check whether `design/gdd/reviews/[doc-name]-review-log.md` exists. If it does, read the most recent entry — note what verdict was given and what blocking items were listed. This session is a re-review; track whether prior items were addressed.
-
----
-
-## Phase 2: Completeness Check
-
-Evaluate against the Design Document Standard checklist:
-
-- [ ] Has Overview section (one-paragraph summary)
-- [ ] Has Player Fantasy section (intended feeling)
-- [ ] Has Detailed Rules section (unambiguous mechanics)
-- [ ] Has Formulas section (all math defined with variables)
-- [ ] Has Edge Cases section (unusual situations handled)
-- [ ] Has Dependencies section (other systems listed)
-- [ ] Has Tuning Knobs section (configurable values identified)
-- [ ] Has Acceptance Criteria section (testable success conditions)
-
----
-
-## Phase 3: Consistency and Implementability
-
-**Internal consistency:**
-- Do the formulas produce values that match the described behavior?
-- Do edge cases contradict the main rules?
-- Are dependencies bidirectional (does the other system know about this one)?
-
-**Implementability:**
-- Are the rules precise enough for a programmer to implement without guessing?
-- Are there any "hand-wave" sections where details are missing?
-- Are performance implications considered?
-
-**Cross-system consistency:**
-- Does this conflict with any existing mechanic?
-- Does this create unintended interactions with other systems?
-- Is this consistent with the game's established tone and pillars?
-
----
-
-## Phase 3b: Adversarial Specialist Review (full mode only)
-
-**Skip this phase in `lean` or `solo` mode.**
-
-**This phase is MANDATORY in full mode.** Do not skip it.
-
-**Before spawning any agents**, print this notice:
-> "Full review: spawning specialist agents in parallel. This typically takes 8–15 minutes. Use `--review lean` for faster single-session analysis."
-
-### Step 1 — Identify all domains the GDD touches
-
-Read the GDD and identify every domain present. A GDD can touch multiple domains simultaneously — be thorough. Common signals:
-
-| If the GDD contains... | Spawn these agents |
-|------------------------|-------------------|
-| Costs, prices, drops, rewards, economy | `economy-designer` |
-| Combat stats, damage, health, DPS | `game-designer`, `systems-designer` |
-| AI behaviour, pathfinding, targeting | `ai-programmer` |
-| Level layout, spawning, wave structure | `level-designer` |
-| Player progression, XP, unlocks | `economy-designer`, `game-designer` |
-| UI, HUD, menus, player-facing displays | `ux-designer`, `ui-programmer` |
-| Dialogue, quests, story, lore | `narrative-director` |
-| Animation, feel, timing, juice | `gameplay-programmer` |
-| Multiplayer, sync, replication | `network-programmer` |
-| Audio cues, music triggers | `audio-director` |
-| Performance, draw calls, memory | `performance-analyst` |
-| Engine-specific patterns or APIs | Primary engine specialist (from `.claude/docs/technical-preferences.md`) |
-| Acceptance criteria, test coverage | `qa-lead` |
-| Data schema, resource structure | `systems-designer` |
-| Any gameplay system | `game-designer` (always) |
-
-Spawn `game-designer` for all GDDs that describe gameplay mechanics or player-facing rules.
-Spawn `systems-designer` for all GDDs that contain formulas or system interaction rules.
-These are the most common baselines — but not required for pure UI specs, audio specs, or lore documents. Use the domain table above to determine which specialists are truly relevant.
-
-### Step 2 — Spawn all relevant specialists in parallel
-
-**CRITICAL: Task in this skill spawns a SUBAGENT — a separate independent Claude session
-with its own context window. It is NOT task tracking. Do NOT simulate specialist
-perspectives internally. Do NOT reason through domain views yourself. You MUST issue
-actual Task calls. A simulated review is not a specialist review.**
-
-Issue all Task calls simultaneously. Do NOT spawn one at a time.
-
-**Prompt each specialist adversarially:**
-> "Here is the GDD for [system] and the main review's structural findings so far.
-> Your job is NOT to validate this design — your job is to find problems.
-> Challenge the design choices from your domain expertise. What is wrong,
-> underspecified, likely to cause problems, or missing entirely?
-> Be specific and critical. Disagreement with the main review is welcome."
-
-**Additional instructions per agent type:**
-
-- **`game-designer`**: Anchor your review to the Player Fantasy stated in Section B of this GDD. Does this design actually deliver that fantasy? Would a player feel the intended experience? Flag any rules that serve implementability but undermine the stated feeling.
-
-- **`systems-designer`**: For every formula in the GDD, plug in boundary values (minimum and maximum plausible inputs). Report whether any outputs go degenerate — negative values, division by zero, infinity, or nonsensical results at the extremes.
-
-- **`qa-lead`**: Review every acceptance criterion. Flag any that are not independently testable — phrases like "feels balanced", "works correctly", "performs well" are not ACs. Suggest concrete rewrites for any that fail this test.
-
-### Step 3 — Senior lead review
-
-After all specialists respond, spawn `creative-director` as the **senior reviewer**:
-- Provide: the GDD, all specialist findings, any disagreements between them
-- Ask: "Synthesise these findings. What are the most important issues? Do you agree with the specialists? What is your overall verdict on this design?"
-- The creative-director's synthesis becomes the **final verdict** in Phase 4.
-
-### Step 4 — Surface disagreements
-
-If specialists disagree with each other or with the creative-director, do NOT silently pick one view. Present the disagreement explicitly in Phase 4 so the user can adjudicate.
-
-Mark every finding with its source: `[game-designer]`, `[economy-designer]`, `[creative-director]` etc.
-
----
-
-## Phase 4: Output Review
-
-```
-## Design Review: [Document Title]
-Specialists consulted: [list agents spawned]
-Re-review: [Yes — prior verdict was X on YYYY-MM-DD / No — first review]
-
-### Completeness: [X/8 sections present]
-[List missing sections]
-
-### Dependency Graph
-[List each declared dependency and whether its GDD file exists on disk]
-- ✓ enemy-definition-data.md — exists
-- ✗ loot-system.md — NOT FOUND (file does not exist yet)
-
-### Required Before Implementation
-[Numbered list — blocking issues only. Each item tagged with source agent.]
-
-### Recommended Revisions
-[Numbered list — important but not blocking. Source-tagged.]
-
-### Specialist Disagreements
-[Any cases where agents disagreed with each other or with the main review.
-Present both sides — do not silently resolve.]
-
-### Nice-to-Have
-[Minor improvements, low priority.]
-
-### Senior Verdict [creative-director]
-[Creative director's synthesis and overall assessment.]
-
-### Scope Signal
-Estimate implementation scope based on: dependency count, formula count,
-systems touched, and whether new ADRs are required.
-- **S** — single system, no formulas, no new ADRs, <3 dependencies
-- **M** — moderate complexity, 1-2 formulas, 3-6 dependencies
-- **L** — multi-system integration, 3+ formulas, may require new ADR
-- **XL** — cross-cutting concern, 5+ dependencies, multiple new ADRs likely
-Label clearly: "Rough scope signal: M (producer should verify before sprint planning)"
-
-### Verdict: [APPROVED / NEEDS REVISION / MAJOR REVISION NEEDED]
-```
-
-This skill is read-only — no files are written during Phase 4.
-
----
-
-## Phase 5: Next Steps
-
-Use `AskUserQuestion`, `request_user_input` or `clarify` for ALL closing interactions. Never plain text.
-
-**First widget — what to do next:**
-
-If APPROVED (first-pass, no revision needed), proceed directly to the systems-index widget, review-log widget, then the final closing widget. Do not show a separate "what to do" widget — the final closing widget covers next steps.
-
-If NEEDS REVISION or MAJOR REVISION NEEDED, options:
-- `[A] Revise the GDD now — address blocking items together`
-- `[B] Stop here — revise in a separate session`
-- `[C] Accept as-is and move on (only if all items are advisory)`
-
-**If user selects [A] — Revise now:**
-
-Work through all blocking items, asking for design decisions only where you cannot resolve the issue from the GDD and existing docs alone. Group all design-decision questions into a single multi-tab `AskUserQuestion`, `request_user_input` or `clarify` before making any edits — do not interrupt mid-revision for each blocker individually.
-
-After all revisions are complete, show a summary table (blocker → fix applied) and use `AskUserQuestion`, `request_user_input` or `clarify` for a **post-revision closing widget**:
-
-- Prompt: "Revisions complete — [N] blockers resolved. What next?"
-- Note current context usage: if context is above ~50%, add: "(Recommended: /clear before re-review — this session has used X% context. A full re-review runs 5 agents and needs clean context.)"
-- Options:
-  - `[A] Re-review in a new session — run /design-review [doc-path] after /clear`
-  - `[B] Accept revisions and mark Approved — update systems index, skip re-review`
-  - `[C] Move to next system — /design-system [next-system] (#N in design order)`
-  - `[D] Stop here`
-
-Never end the revision flow with plain text. Always close with this widget.
-
-**Second widget — tracking records (combined, for APPROVED path):**
-
-When the verdict is APPROVED, use a single `AskUserQuestion`, `request_user_input` or `clarify` with `multiSelect: true` to batch the two tracking updates:
-- Prompt: "Verdict: APPROVED. I can update the tracking records now. Select any you'd like me to complete:"
-- Options:
-  - `Update systems-index.md status to 'Approved' for [system]`
-  - `Append approval entry to design/gdd/reviews/[doc-name]-review-log.md`
-
-If the review-log option is selected, append the same format as below. Execute both selected actions before showing the final closing widget.
-
-When the verdict is NEEDS REVISION or MAJOR REVISION NEEDED, use separate widgets as before:
-
-Use a second `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "May I update `design/gdd/systems-index.md` to mark [system] as [In Review / Approved]?"
-- Options: `[A] Yes — update it` / `[B] No — leave it as-is`
-
-Use a third `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "May I append this review summary to `design/gdd/reviews/[doc-name]-review-log.md`? This creates a revision history so future re-reviews can track what changed."
-- Options: `[A] Yes — append to review log` / `[B] No — skip`
-
-If yes, append an entry in this format:
-```
-## Review — [YYYY-MM-DD] — Verdict: [APPROVED / NEEDS REVISION / MAJOR REVISION NEEDED]
-Scope signal: [S/M/L/XL]
-Specialists: [list]
-Blocking items: [count] | Recommended: [count]
-Summary: [2-3 sentence summary of key findings from creative-director verdict]
-Prior verdict resolved: [Yes / No / First review]
+- **Target**: a file path, an app slug, or nothing.
+  - Path → review that file.
+  - Slug → review the app's spec set: `requirements.yaml`,
+    `control-manifest.md`, `architecture.md`, ADRs, and every file under
+    `apps/<app>/design/ux/`.
+  - Nothing → ask which, offering the apps in `docs/registry/apps.json`.
+- **`--depth full|lean|solo`** — how many specialist agents this run spawns.
+  Default `full`. This is independent of `production/review-mode.txt`, which
+  governs director gates elsewhere. State both when reporting.
+
+Confirm the resolved target in one line before reading.
+
+## Phase 1 — Build the context set
+
+Never review a spec in isolation. Read:
+
+| File | Why |
+|------|-----|
+| `docs/architecture/apps/<app>/requirements.yaml` | Requirement IDs and their 8 sections |
+| `docs/architecture/apps/<app>/control-manifest.md` | Conventions the implementation must follow |
+| `docs/architecture/apps/<app>/architecture.md` | Stack, API surface, data model |
+| `docs/architecture/apps/<app>/ADR-*.md` | Decisions the spec must not contradict |
+| `apps/<app>/design/concept.md` | Merchant job and MVP scope |
+| `apps/<app>/design/ux/*.md` | Screens, states, copy |
+| `docs/shopify-api-reference/<version>/` | Whether the API calls in the spec exist |
+| `apps/<app>/status.md` | Stage and approved gate — a spec reviewed too early wastes a pass |
+
+If the target spec cites a requirement ID that does not exist, that is finding
+number one; stop and report rather than guess the intent.
+
+## Phase 2 — Structural completeness
+
+Check the document type against its required shape.
+
+### Requirements (`requirements.yaml`)
+
+Every requirement carries all 8 sections, in order:
+
+1. Overview
+2. Merchant Job
+3. Detailed Rules
+4. Calculations
+5. Edge Cases
+6. Dependencies
+7. Configuration
+8. Acceptance Criteria
+
+Per `.claude/rules/design-docs.md`, also verify:
+
+- IDs follow `REQ-<AREA>-<NNN>` and are unique.
+- Calculations are formulas with variable definitions and at least one worked
+  example (bundle discount stacking, prorated usage, currency rounding).
+- Edge cases cover empty stores, huge catalogs, multi-currency, and partial
+  failures.
+- Every value with a default states its rationale or its source.
+
+### UX spec
+
+Required sections: screen purpose and entry point, merchant job, layout with
+named Polaris components, data and Admin API calls, every state, interactions,
+copy, accessibility, responsive behaviour, analytics, acceptance criteria.
+
+### Architecture doc
+
+Required sections: boundaries, stack and runtime, Shopify API surface matrix,
+auth and session model, data model and retention, request and data flow, billing
+and plan gating, webhook processing and idempotency, performance budgets,
+security and compliance, observability, testing strategy, ADR index, open
+questions.
+
+### Quick spec
+
+Required: change, merchant job, rules, API surface delta, UI delta, edge cases,
+acceptance criteria, rollback. A quick spec that needs a migration or a new
+scope belongs in the full path — flag it.
+
+Any missing section is a **BLOCKER**, not a suggestion.
+
+## Phase 3 — Internal consistency
+
+Cross-check, not just read:
+
+1. Every `REQ-<AREA>-<NNN>` in the spec appears in `requirements.yaml` and is
+   referenced by at least one acceptance criterion.
+2. Every screen named in a requirement exists as a UX spec, and every UX spec
+   maps back to a requirement. Orphans in either direction are **MAJOR**.
+3. Numbers agree across documents: batch sizes, limits, currency handling,
+   retention windows, plan gates. Two different values for one limit is a
+   **BLOCKER**.
+4. The API surface in the spec matches the architecture matrix; a new scope,
+   mutation, or webhook topic that the architecture does not list is **MAJOR**.
+5. ADRs win over prose. If the spec contradicts an Accepted ADR, the spec is
+   wrong unless a superseding ADR exists.
+6. Merchant-facing copy matches the monetisation section — a feature described
+   as included but gated behind a paid plan is a **BLOCKER**.
+
+## Phase 4 — Implementability
+
+A spec a programmer cannot implement without asking questions is not done.
+
+- **API version** — pinned and stated (`docs/shopify-api-reference/<version>/`).
+  Unpinned is **MAJOR**.
+- **Scopes** — every access scope listed, with a reason. A write the spec needs
+  but does not scope is **BLOCKER**.
+- **Queries and mutations** — named, with the fields and arguments they use.
+  "Fetch the order" is not implementable.
+- **Webhooks** — topic list, verification method, idempotency key, retry and
+  failure behaviour. Missing idempotency is **MAJOR** (duplicate order handling
+  is a real merchant-visible bug).
+- **Data model** — shop-scoped keys, migrations, retention, and the GDPR
+  webhook obligations for the data held.
+- **Billing** — charge type, plan gates, what happens on downgrade or uninstall.
+- **Errors** — one error shape, user-visible messages, and what the merchant can
+  do next.
+- **Rate limits** — how the spec behaves near the Admin API cost budget, and
+  whether work is queued.
+- **Every state** — loading, empty, error, partial, permission-denied,
+  plan-gated. A data surface without all six is **MAJOR**.
+
+## Phase 5 — Polaris and accessibility
+
+- **Polaris**: every component named exists in Polaris (no invented primitives).
+  Custom markup needs a stated reason and design tokens, never raw hex.
+- **App Bridge**: shop, host, and locale come from the App Bridge context, never
+  from parsing the query string. Navigation uses the App Bridge nav menu; toasts
+  and modals use App Bridge, not browser dialogs.
+- **WCAG 2.1 AA**, checked item by item:
+  - text contrast 4.5:1, large text and UI boundaries 3:1
+  - visible focus, logical focus order, no keyboard traps
+  - every control has an accessible name; icon-only buttons have labels
+  - errors are identified in text and tied to the field
+  - state is never conveyed by colour alone
+  - tables and index views expose headers to assistive tech
+  - motion respects reduced-motion preference
+  - interactive targets are large enough for touch and pointer
+- **Embedded constraints**: no top-level browser navigation inside the iframe,
+  no reliance on `window.top`, session tokens for every Admin API call, and a
+  re-auth path when the session expires.
+
+## Phase 6 — Specialist panel
+
+Spawn with `Task`, passing the target path and the relevant context files.
+Honour `--depth`:
+
+| `--depth` | Who runs |
+|-----------|----------|
+| `full` | Every specialist the doc type needs, plus `qa-lead` for testability |
+| `lean` | Two: the primary owner of the doc type plus `accessibility-specialist` |
+| `solo` | No agents; this skill's own checklist is the review |
+
+Pick specialists by document content:
+
+| Spec touches | Specialist |
+|--------------|-----------|
+| Layout, components, copy | `polaris-specialist` |
+| Contrast, keyboard, screen readers | `accessibility-specialist` |
+| Queries, mutations, pagination, cost | `graphql-specialist`, `api-lead` |
+| Auth, scopes, session tokens | `auth-specialist` |
+| Charges, plan gates, trials | `billing-specialist` |
+| Webhooks, idempotency, retries | `webhooks-specialist` |
+| Extensions, theme blocks, checkout | `app-bridge-specialist`, `checkout-specialist`, `liquid-specialist` |
+| Customer data, secrets, HMAC | `security-specialist` |
+| Load budgets, bundle size | `performance-analyst` |
+| Testability and acceptance criteria | `qa-lead` |
+| Overall shape and boundaries | `app-architect`, `technical-director` |
+
+Collect their findings; do not let one specialist's opinion override a
+contradiction found in Phase 3.
+
+## Phase 7 — Report the verdict
+
+Output in this order, nothing else:
+
+```text
+DESIGN REVIEW — <path> (<app>, <doc type>)
+Depth: <full|lean|solo> | Review mode: <full|lean|solo>
+
+VERDICT: APPROVED | NEEDS REVISION | MAJOR REVISION NEEDED
+
+BLOCKERS (n)
+1. <finding> — <file>:<line> — <what to change>
+
+MAJOR (n)
+MINOR (n)
+
+COVERAGE
+- Requirements found: n | with all 8 sections: n
+- Screens in requirements: n | with UX specs: n
+- API operations cited: n | present in pinned reference: n
+- Accessibility checks passed: n/9
 ```
 
----
+Verdict rules:
 
-**Final closing widget — always show after all file writes complete:**
+- **APPROVED** — no blockers, no majors, and every cited API operation exists in
+  the pinned reference.
+- **NEEDS REVISION** — blockers or majors with local fixes only; the spec's
+  intent stands.
+- **MAJOR REVISION NEEDED** — the spec contradicts an Accepted ADR, misses a
+  whole requirement area, or its merchant job does not match the concept.
 
-Once the systems-index and review-log widgets are answered, check project state and show one final `AskUserQuestion`, `request_user_input` or `clarify`:
+Then offer exactly one next action: fix the listed items and re-run
+`/design-review`, or escalate with `/architecture-decision` when the finding is
+really an unmade decision.
 
-Before building options, read:
-- `design/gdd/systems-index.md` — find any system with Status: In Review or NEEDS REVISION (other than the one just reviewed)
-- Count `.md` files in `design/gdd/` (excluding game-concept.md, systems-index.md) to determine if `/review-all-gdds` is worth offering (≥2 GDDs)
-- Find the next system with Status: Not Started in design order
+## Editing rules
 
-Build the option list dynamically — only include options that are genuinely next:
-- `[_] Run /design-review [other-gdd-path] — [system name] is still [In Review / NEEDS REVISION]` (include if another GDD needs review)
-- `[_] Run /consistency-check — verify this GDD's values don't conflict with existing GDDs` (always include if ≥1 other GDD exists)
-- `[_] Run /review-all-gdds — holistic design-theory review across all designed systems` (include if ≥2 GDDs exist)
-- `[_] Run /design-system [next-system] — next in design order` (always include, name the actual system)
-- `[_] Stop here`
+- Default is report-only.
+- With explicit permission: fix typos, broken links, and missing IDs. Do not
+  rewrite behaviour, numbers, or scope — those go back to the author.
+- Never edit `requirements.yaml` in a review pass; a requirement change needs an
+  owning story or a proposal.
 
-Assign letters A, B, C… only to included options. Mark the most pipeline-advancing option as `(recommended)`.
+## Hand off
 
-Never end the skill with plain text after file writes. Always close with this widget.
+- Spec passes and is a UX doc → `/ux-review <path>` for the Polaris and
+  accessibility deep pass.
+- Spec passes and is architecture → `/architecture-review <app>`.
+- Spec passes and is requirements → `/create-stories <app>`.
+- Verdict is MAJOR → back to `/brainstorm` or the requirements author with the
+  quoted objection.

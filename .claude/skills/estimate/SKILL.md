@@ -11,9 +11,13 @@ model: sonnet
 
 Read the task description from the argument. If the description is too vague to estimate meaningfully, ask for clarification before proceeding.
 
-Read CLAUDE.md for project context: tech stack, coding standards, architectural patterns, and any estimation guidelines.
+Read `AGENTS.md` (and `CLAUDE.md` if present) for project context: stack, coding standards, architectural patterns, and any estimation guidelines.
 
-Read relevant design documents from `design/gdd/` if the task relates to a documented feature or system.
+Read the relevant per-app documents if the task relates to a documented requirement or decision:
+
+- `docs/architecture/apps/[app]/requirements.yaml` — what the acceptance criteria actually demand
+- `docs/architecture/apps/[app]/ADR-*.md` — constraints already decided (these shrink the estimate; unresolved questions grow it)
+- `apps/[app]/status.md` — current stage and blockers
 
 ---
 
@@ -22,7 +26,7 @@ Read relevant design documents from `design/gdd/` if the task relates to a docum
 Identify files and modules that would need to change:
 
 - Assess complexity (size, dependency count, cyclomatic complexity)
-- Identify integration points with other systems
+- Identify integration points with other modules and external APIs
 - Check for existing test coverage in the affected areas
 - Read past sprint data from `production/sprints/` for similar completed tasks and historical velocity
 
@@ -33,11 +37,11 @@ Identify files and modules that would need to change:
 **Code Complexity:**
 - Lines of code in affected files
 - Number of dependencies and coupling level
-- Whether this touches core/engine code vs leaf/feature code
+- Whether this touches shared/core modules or leaf/feature modules
 - Whether existing patterns can be followed or new patterns are needed
 
 **Scope:**
-- Number of systems touched
+- Number of modules touched
 - New code vs modification of existing code
 - Amount of new test coverage required
 - Data migration or configuration changes needed
@@ -46,7 +50,8 @@ Identify files and modules that would need to change:
 - New technology or unfamiliar libraries
 - Unclear or ambiguous requirements
 - Dependencies on unfinished work
-- Cross-system integration complexity
+- Cross-module integration complexity
+- Platform limits (API rate/cost budgets, webhook timing, extension constraints)
 - Performance sensitivity
 
 ---
@@ -64,15 +69,15 @@ Generated: [Date]
 
 | Factor | Assessment | Notes |
 |--------|-----------|-------|
-| Systems affected | [List] | [Core, gameplay, UI, etc.] |
+| Modules affected | [List] | [API, admin UI, jobs, config, etc.] |
 | Files likely modified | [Count] | [Key files listed below] |
 | New code vs modification | [Ratio] | |
-| Integration points | [Count] | [Which systems interact] |
+| Integration points | [Count] | [Which modules interact] |
 | Test coverage needed | [Low / Medium / High] | |
 | Existing patterns available | [Yes / Partial / No] | |
 
 **Key files likely affected:**
-- `[path/to/file1]` -- [what changes here]
+- `[apps/[app]/path/to/file1]` -- [what changes here]
 
 ### Effort Estimate
 

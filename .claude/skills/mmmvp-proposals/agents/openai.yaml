@@ -1,0 +1,6 @@
+interface:
+  display_name: "Mmmvp Proposals"
+  short_description: "Proposes minimal-market-viable slices for the current request: the smallest shippable version of a Shopify app that a merchant would pay for, with explicit c..."
+  default_prompt: "Use the $mmmvp-proposals skill for the requested task."
+policy:
+  allow_implicit_invocation: true

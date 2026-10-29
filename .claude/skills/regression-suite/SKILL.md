@@ -1,256 +1,194 @@
 ---
 name: regression-suite
-description: "Map test coverage to GDD critical paths, identify fixed bugs without regression tests, flag coverage drift from new features, and maintain tests/regression-suite.md. Run after implementing a bug fix or before a release gate."
-argument-hint: "[update | audit | report]"
+description: "Run the full Vitest regression suite across one app and shared code, with coverage gates on billing and webhook verification. Selects tests by changed surface, triages flakes instead of retrying blindly, and produces a PASS/FAIL report suitable as release evidence."
+argument-hint: "[app: <slug> | all] [--changed | --full] [--coverage]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Write, Edit, AskUserQuestion, request_user_input, clarify
+allowed-tools: Read, Glob, Grep, Bash, Write, AskUserQuestion, request_user_input, clarify
 model: sonnet
+agent: qa-lead
 ---
 
 # Regression Suite
 
-This skill ensures that every bug fix is backed by a test that would have
-caught the original bug — and that the regression suite stays current as the
-game evolves. It also detects when new features have been added without
-corresponding regression coverage.
+The deterministic half of quality: everything that can be executed without a
+human. Smoke check proves the deployed app still works; regression proves the
+committed code still behaves.
 
-A regression suite is not a new test category — it is a **curated list of
-tests already in `tests/`** that collectively cover the game's critical paths
-and known failure points. This skill maintains that list.
+**Output:** `production/apps/<app>/sprints/regression-<date>.md`
+(`all` mode writes one report at `production/session-state/regression-<date>.md`
+and per-app sections inside it.)
 
-**Output:** `tests/regression-suite.md`
-
-**When to run:**
-- After fixing a bug (confirm a regression test was written or identify gap)
-- Before a release gate (`/gate-check polish` requires regression suite exists)
-- As part of sprint close to detect coverage drift
+**Rules of the suite:**
+- Tests live **beside the source they cover**, inside `apps/<app>/` —
+  `discount.ts` and `discount.test.ts` in the same folder. There is no top-level
+  `tests/` directory; if one appears, it is a regression in project structure,
+  not a test target.
+- Framework is Vitest. Shared code in `src/` is covered by tests beside it too.
+- Coverage floor: **80% lines on shared modules, 100% on billing and on webhook
+  signature verification**. Those two are not negotiable — a miss there is a
+  security or revenue bug, not a coverage number.
 
 ---
 
 ## 1. Parse Arguments
 
-**Modes:**
-- `/regression-suite update` — scan new bug fixes this sprint and check
-  for regression test presence; add new tests to the suite manifest
-- `/regression-suite audit` — full audit of all GDD critical paths vs.
-  existing test coverage; flag paths with no regression test
-- `/regression-suite report` — read-only status report (no writes); suitable
-  for sprint reviews
-- No argument — if a sprint is clearly active (sprint plan exists with in-progress stories), run `update`. If ambiguous or no active sprint is detected, use `AskUserQuestion`, `request_user_input` or `clarify`:
-  - Prompt: "No subcommand specified. Which mode do you want to run?"
-  - Options:
-    - `[A] update — scan new bug fixes this sprint and add missing regression tests`
-    - `[B] audit — full audit of all GDD critical paths vs. existing test coverage`
-    - `[C] report — read-only status report (no writes)`
+- `--changed` (default) — run tests related to files changed since the last
+  approved gate or since `origin/main`, then widen if the diff touches shared
+  code, auth, billing, or webhook routes.
+- `--full` — the whole suite for every in-scope app. Required as release
+  evidence for `gate-4-release`.
+- `--coverage` — collect coverage and enforce the floors above.
+- `app: <slug> | all` — scope. `all` is a repo-wide sweep, allowed only in
+  `--full` mode to keep it meaningful.
 
 ---
 
-## 2. Load Context
+## 2. Build the Target Set
 
-### Step 2a — Load existing regression suite
-
-Read `tests/regression-suite.md` if it exists. Extract:
-- Total registered regression tests
-- Last updated date
-- Any tests flagged as `STALE` or `QUARANTINED`
-
-If it does not exist: note "No regression suite found — will create one."
-
-### Step 2b — Load test inventory
-
-Glob all test files:
-```
-tests/unit/**/*_test.*
-tests/integration/**/*_test.*
-tests/regression/**/*
-```
-
-For each file, note the system (from directory path) and file name.
-Do not read test file contents unless needed for name-to-test mapping.
-
-### Step 2c — Load GDD critical paths
-
-For `audit` mode: read `design/gdd/systems-index.md` to get all systems.
-For each MVP-tier system, read its GDD and extract:
-- Acceptance Criteria (these define the critical paths)
-- Formulas section (formulas must have regression tests)
-- Edge Cases section (known edge cases should have regression tests)
-
-For `update` mode: skip full GDD scan. Instead read the current sprint plan
-and story files to find stories with Status: Complete this sprint.
-
-### Step 2d — Load closed bugs
-
-Glob `production/qa/bugs/*.md` and filter for bugs with a `Status: Closed`
-or `Status: Fixed` field. Note:
-- Which story or system the bug was in
-- Whether a regression test was mentioned in the fix description
+1. Read `docs/registry/apps.json` for the app list; read each
+   `apps/<app>/status.md` for stage. An app still in `research` with no code has
+   nothing to regress — record it as `N/A — no implementation` rather than
+   failing.
+2. Determine the changed set:
+   - `git diff --name-only <base>...HEAD`
+   - `git status --porcelain` for uncommitted work, if the run is pre-commit.
+3. Map changed files to tests:
+   - A changed `*.ts`/`*.tsx` → its sibling `*.test.ts(x)`.
+   - A changed GraphQL document → the module that shapes its variables and the
+     tests for that module.
+   - A changed webhook route → the handler test **and** the signature
+     verification test.
+   - A changed migration or query layer → the integration tests that touch the
+     repository module.
+   - Anything under `src/` → every app that imports it. Shared-code changes are
+     cross-app by definition; say so in the report.
+4. Widen to `--full` automatically if the diff touches: `package.json`,
+   lockfile, `tsconfig*`, Vitest config, auth/session modules, billing modules,
+   webhook signature verification, or a pinned API version in
+   `shopify.app.toml`.
 
 ---
 
-## 3. Map Coverage — Critical Paths
+## 3. Execute
 
-For `audit` mode only:
+Run per app from the app's package root so path aliases resolve:
 
-For each GDD acceptance criterion, determine whether a test exists:
+```bash
+# unit + integration for one app
+npm test -- --run
 
-1. Grep `tests/unit/[system]/` and `tests/integration/[system]/` for file names
-   and function names related to the criterion's key noun/verb
-2. Assign coverage:
+# focused run on the derived target set
+npx vitest run <space-separated test files>
 
-| Status | Meaning |
-|--------|---------|
-| **COVERED** | A test file exists that targets this criterion's logic |
-| **PARTIAL** | A test exists but doesn't cover all cases (e.g. happy path only) |
-| **MISSING** | No test found for this critical path |
-| **EXEMPT** | Visual/Feel or UI criterion — not automatable by design |
-
-3. Elevate MISSING items that correspond to formulas or state machines to
-   **HIGH PRIORITY** gap — these are the most likely regression sources.
-
----
-
-## 4. Map Coverage — Fixed Bugs
-
-For each closed bug:
-
-1. Extract the system slug from the bug's metadata
-2. Grep `tests/unit/[system]/` and `tests/integration/[system]/` for a test
-   that references the bug ID or the specific failure scenario
-3. Assign:
-   - **HAS REGRESSION TEST** — a test was found that would catch this bug
-   - **MISSING REGRESSION TEST** — bug was fixed but no test guards against recurrence
-
-For MISSING REGRESSION TEST items:
-- Flag them as regression gaps
-- Suggest the test file path: `tests/unit/[system]/[bug-slug]_regression_test.[ext]`
-- Note: "Without this test, this bug can silently return in a future sprint."
-
----
-
-## 5. Detect Coverage Drift
-
-Coverage drift occurs when the game grows but the regression suite doesn't.
-
-Check for drift indicators:
-- Stories completed this sprint with no corresponding test files in `tests/`
-- New systems added to `systems-index.md` since the last regression-suite update
-- GDD sections added or revised since the regression suite was last updated
-  (use Grep on GDD file modification hints if available, or ask the user)
-- `tests/regression-suite.md` last-updated date vs. current date — if gap >
-  2 sprints, flag as likely stale
-
----
-
-## 6. Generate Report and Suite Manifest
-
-### Report format (in conversation)
-
-```
-## Regression Suite Status
-
-**Mode**: [update | audit | report]
-**Existing registered tests**: [N]
-**Test files scanned**: [N]
-
-### Critical Path Coverage (audit mode only)
-| System | Total ACs | Covered | Partial | Missing | Exempt |
-|--------|-----------|---------|---------|---------|--------|
-| [name] | [N] | [N] | [N] | [N] | [N] |
-
-**Coverage rate (non-exempt)**: [N]%
-
-### Bug Regression Coverage
-| Bug ID | System | Severity | Has Regression Test? |
-|--------|--------|----------|----------------------|
-| BUG-NNN | [system] | S[N] | YES / NO ⚠ |
-
-**Bugs without regression tests**: [N]
-
-### Coverage Drift Indicators
-[List new systems or stories with no test coverage, or "None detected."]
-
-### Recommended New Regression Tests
-| Priority | System | Suggested Test File | Covers |
-|----------|--------|---------------------|--------|
-| HIGH | [system] | `tests/unit/[system]/[slug]_regression_test.[ext]` | BUG-NNN / AC-[N] |
-| MEDIUM | [system] | `tests/unit/[system]/[slug]_test.[ext]` | [criterion] |
+# coverage with thresholds
+npx vitest run --coverage
 ```
 
-### Suite manifest format (`tests/regression-suite.md`)
+Capture, per app:
+- test files run, tests passed/failed/skipped
+- duration and the slowest three tests
+- coverage: lines, branches, and specifically the billing and webhook-signature
+  modules
+- full failure output for every failing test — assertion diff, not just the name
 
-The manifest is a curated index — not the tests themselves, but a registry
-of which tests should always pass before a release:
+If a test suite cannot start (config error, missing env), that is a **FAIL with
+reason `suite failed to start`**, not a skip. Report the first error verbatim.
+
+---
+
+## 4. Triage Failures — Do Not Retry to Green
+
+For each failure, classify before touching anything:
+
+| Class | Signal | Action |
+|-------|--------|--------|
+| Real regression | Assertion diff matches a recent change in the mapped source file | Report as S1/S2; route to the owning specialist |
+| Flake | Passes on isolated re-run, or fails only under parallel load, or depends on wall clock/random/network | Quarantine: file with reproduction, do not delete; note in report |
+| Environment | Missing env var, wrong API version fixture, unreachable tunnel | Fix the harness, then re-run once |
+| Test bug | Test asserts something the spec never promised | Fix the test in the same change as the code intent |
+
+Rules:
+- One isolated re-run is allowed to classify; a third attempt is not evidence.
+- Never widen a timeout to make a failure disappear. A test that needs 30 s is
+  an integration test — label it, do not paper over it.
+- Never mark a failing test `.skip` to get a PASS verdict. Quarantine must be
+  visible in the report with an owner.
+- Shared-code failures count against every app that imports the module; list
+  them under each affected app.
+
+---
+
+## 5. Report
 
 ```markdown
-# Regression Suite Manifest
+# Regression Suite — <app | all>
 
-> Last Updated: [date]
-> Total registered tests: [N]
-> Coverage: [N]% of GDD critical paths
+> Date: <date> | Commit: <sha> | Mode: changed | full
+> Base for diff: <ref> | Coverage: on | off | Generated by: /regression-suite
 
-## How to run
+## Scope decision
+Changed files: <n>. Widened to full? Y/N — reason: <shared code | config |
+auth/billing/webhook | pinned API version>.
 
-[Engine-specific command to run all regression tests]
+## Results per app
 
-## Registered Regression Tests
+### <app>
+| Metric | Value |
+|--------|-------|
+| Test files | |
+| Passed / Failed / Skipped | |
+| Duration | |
+| Coverage (lines) | |
+| Billing module coverage | (must be 100%) |
+| Webhook signature coverage | (must be 100%) |
 
-### [System Name]
+**Failures**
+| Test | Class (regression/flake/env/test bug) | Evidence | Owner |
+|------|--------------------------------------|----------|-------|
 
-| Test File | Test Function (if known) | Covers | Added |
-|-----------|--------------------------|--------|-------|
-| `tests/unit/[system]/[file]_test.[ext]` | `test_[scenario]` | AC-N / BUG-NNN | [date] |
+## Cross-app impact
+Files under `src/` changed: <list> → apps affected: <list>.
 
-## Known Gaps
+## Quarantined
+| Test | Since | Reason | Owner | Ticket |
+|------|-------|--------|-------|--------|
 
-Tests that should exist but don't yet:
-
-| Priority | System | Suggested Path | Covers | Reason Not Yet Written |
-|----------|--------|----------------|--------|------------------------|
-| HIGH | [system] | `tests/unit/[system]/[path]` | BUG-NNN | Bug fixed without test |
-
-## Quarantined Tests
-
-Tests that are flaky or disabled (do not run in CI):
-
-| Test File | Function | Reason | Quarantined Since |
-|-----------|----------|--------|-------------------|
-| (none) | | | |
+## Verdict: PASS / PASS WITH QUARANTINE / FAIL
 ```
 
----
-
-## 7. Write Output
-
-Ask: "May I write/update `tests/regression-suite.md` with the current
-regression suite manifest?"
-
-For `update` mode: append new entries; never remove existing entries
-(use `Edit` with targeted insertions).
-For `audit` mode: rewrite the full manifest with updated coverage data.
-For `report` mode: do not write anything.
-
-After writing (if approved):
-
-- For each HIGH priority gap: "Consider creating the missing regression test
-  before the next sprint. Run `/test-helpers` to scaffold the test file."
-- If bug regression gaps > 0: "These bugs can silently return without regression
-  tests. The next sprint should include a story to write the missing tests."
-- If coverage drift detected: "Regression suite may be drifting. Consider
-  running `/regression-suite audit` at the next sprint boundary."
-
-Verdict: **COMPLETE** — regression suite updated. (If user declined write: Verdict: **BLOCKED**.)
+Verdict rules:
+- **PASS** — zero failures, coverage floors met.
+- **PASS WITH QUARANTINE** — only flakes or environment failures, each listed
+  with an owner and a ticket; no real regression; coverage floors met.
+- **FAIL** — any real regression, any billing/webhook-signature test failing,
+  coverage below floor, or a suite that could not start.
 
 ---
 
-## Collaborative Protocol
+## 6. Write and Hand Off
 
-- **Never remove existing regression tests from the manifest** without
-  explicit user approval — removing a test that was deliberately written is a
-  regression risk itself
-- **Gaps are advisory, not blocking** — surface them clearly but do not prevent
-  other work from proceeding (except at release gate where regression suite is required)
-- **Quarantine is not deletion** — tests with intermittent failures should be
-  quarantined (noted in manifest) but not removed; they should be fixed by
-  `/test-flakiness`
-- **Ask before writing** — always confirm before creating or updating the manifest
+Ask: *"May I write this regression report to
+`production/apps/<app>/sprints/regression-<date>.md`?"*
+
+Then:
+1. Route failures by file type — `*.tsx` Polaris → `polaris-specialist`,
+   GraphQL → `graphql-specialist`, webhook → `webhooks-specialist`, billing →
+   `billing-specialist`, auth/session → `auth-specialist`, migrations/infra →
+   `devops-engineer`, general → `lead-engineer`.
+2. A FAIL blocks `gate-4-release`. A PASS WITH QUARANTINE does not, provided
+   every quarantine has an owner and the quarantined tests are not billing or
+   signature verification.
+3. If `--full` PASSed on this commit, cite this report path as the regression
+   evidence in `/gate-check gate-4-release <app>`.
+
+---
+
+## Anti-Patterns
+
+- Treating a green run on stale tests as confidence — check the tests cover the
+  changed surface.
+- Adding tests only for the happy path of a GraphQL mutation; assert the
+  variable shaping and the error path too.
+- Mocking the webhook signature check. Verify the real HMAC against a real
+  payload; the test is worthless otherwise.
+- Running the suite without `--run` and believing the watch-mode summary.

@@ -1,6 +1,6 @@
 interface:
   display_name: "Project Stage Detect"
-  short_description: "Automatically analyze project state, detect stage, identify gaps, and recommend next steps based on existing artifacts. Use when user asks 'where are we in d..."
+  short_description: "Detect each Shopify app's pipeline stage from the registry, its status.md, gate approvals, and the artefacts actually present on disk — then name the single..."
   default_prompt: "Use the $project-stage-detect skill for the requested task."
 policy:
   allow_implicit_invocation: true

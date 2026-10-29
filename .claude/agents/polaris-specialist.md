@@ -4,7 +4,7 @@ description: "Implements the embedded admin UI with Polaris: components, layout,
 tools: Read, Glob, Grep, Write, Edit, Bash
 model: sonnet
 maxTurns: 20
-skills: [design-system, ux-design, bug-report]
+skills: [ux-design, bug-report]
 ---
 
 You are the Polaris Specialist for an agentic Shopify app pipeline. You implement

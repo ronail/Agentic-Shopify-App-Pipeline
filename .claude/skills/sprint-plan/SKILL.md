@@ -1,6 +1,6 @@
 ---
 name: sprint-plan
-description: "Generates a new sprint plan or updates an existing one based on the current milestone, completed work, and available capacity. Pulls context from production documents and design backlogs."
+description: "Generates a new sprint plan or updates an existing one based on the current milestone, completed work, and available capacity. Pulls context from production documents, epics, and the story backlog."
 argument-hint: "[new|update|status] [--review full|lean|solo]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Task, AskUserQuestion, request_user_input, clarify
@@ -33,15 +33,23 @@ See `.claude/docs/director-gates.md` for the full check pattern.
 
 ## Phase 1: Gather Context
 
-1. **Read the current milestone** from `production/milestones/`.
+1. **Read the app scope.** Check `docs/registry/apps.json` and `apps/<app>/status.md`.
+   A sprint plan is written **per app** — if more than one app is active, ask which
+   app this sprint belongs to before planning.
 
-2. **Read the previous sprint** (if any) from `production/sprints/` to
+2. **Read the current milestone** from `production/milestones/`.
+
+3. **Read the previous sprint** (if any) from `production/sprints/` to
    understand velocity and carryover.
 
-3. **Scan design documents** in `design/gdd/` for features tagged as ready
-   for implementation.
+4. **Scan the story backlog** — Glob `production/epics/*/story-*.md` for stories
+   with `Status: Ready` or `Status: Not Started`, filtered to the app in scope.
+   These are the only candidates a sprint can pull in.
 
-4. **Check the risk register** at `production/risk-register/`.
+5. **Check requirement priority** in `docs/architecture/apps/[app]/requirements.yaml`
+   so high-priority requirements are not starved by low-priority work.
+
+6. **Check the risk register** at `production/risk-register/`.
 
 ---
 
@@ -54,6 +62,8 @@ For `new`:
 ```markdown
 # Sprint [N] — [Start Date] to [End Date]
 
+**App**: apps/[app]/
+
 ## Sprint Goal
 [One sentence describing what this sprint achieves toward the milestone]
 
@@ -65,27 +75,27 @@ For `new`:
 ## Tasks
 
 ### Must Have (Critical Path)
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Story | Requirement | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|-------|-------------|-------------|-----------|-------------|-------------------|
 
 ### Should Have
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Story | Requirement | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|-------|-------------|-------------|-----------|-------------|-------------------|
 
 ### Nice to Have
-| ID | Task | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
-|----|------|-------------|-----------|-------------|-------------------|
+| ID | Story | Requirement | Agent/Owner | Est. Days | Dependencies | Acceptance Criteria |
+|----|-------|-------------|-------------|-----------|-------------|-------------------|
 
 ## Carryover from Previous Sprint
-| Task | Reason | New Estimate |
-|------|--------|-------------|
+| Story | Reason | New Estimate |
+|-------|--------|-------------|
 
 ## Risks
 | Risk | Probability | Impact | Mitigation |
 |------|------------|--------|------------|
 
 ## Dependencies on External Factors
-- [List any external dependencies]
+- [List any external dependencies — platform API changes, store review, third-party services]
 
 ## Definition of Done for this Sprint
 - [ ] All Must Have tasks completed
@@ -93,9 +103,9 @@ For `new`:
 - [ ] QA plan exists (`production/qa/qa-plan-sprint-[N].md`)
 - [ ] All Logic/Integration stories have passing unit/integration tests
 - [ ] Smoke check passed (`/smoke-check sprint`)
-- [ ] QA sign-off report: APPROVED or APPROVED WITH CONDITIONS (`/team-qa sprint`)
+- [ ] QA sign-off report: APPROVED or APPROVED WITH CONDITIONS (from `qa-lead`)
 - [ ] No S1 or S2 bugs in delivered features
-- [ ] Design documents updated for any deviations
+- [ ] Requirement entries updated for any deviations
 - [ ] Code reviewed and merged
 ```
 
@@ -104,7 +114,7 @@ For `update`:
 **Update an existing sprint plan**:
 
 1. Read the most recent sprint plan from `production/sprints/`.
-2. Present the current story list with their current statuses from `production/sprint-status.yaml`.
+2. Present the current story list with their current statuses from `production/sprints/sprint-status.yaml`.
 3. Ask the user what to change: stories to add, remove, reprioritize, or re-estimate. Use `AskUserQuestion`, `request_user_input` or `clarify` to gather changes.
 4. Apply the changes and re-present the full revised plan for review.
 5. Re-run the producer feasibility gate (Phase 4) on the revised plan.
@@ -122,20 +132,20 @@ For `status`:
 ## Progress: [X/Y tasks complete] ([Z%])
 
 ### Completed
-| Task | Completed By | Notes |
-|------|-------------|-------|
+| Story | Completed By | Notes |
+|-------|-------------|-------|
 
 ### In Progress
-| Task | Owner | % Done | Blockers |
-|------|-------|--------|----------|
+| Story | Owner | % Done | Blockers |
+|-------|-------|--------|----------|
 
 ### Not Started
-| Task | Owner | At Risk? | Notes |
-|------|-------|----------|-------|
+| Story | Owner | At Risk? | Notes |
+|-------|-------|----------|-------|
 
 ### Blocked
-| Task | Blocker | Owner of Blocker | ETA |
-|------|---------|-----------------|-----|
+| Story | Blocker | Owner of Blocker | ETA |
+|-------|---------|-----------------|-----|
 
 ## Burndown Assessment
 [On track / Behind / Ahead]
@@ -149,7 +159,7 @@ For `status`:
 
 ## Phase 3: Prepare Sprint Status File
 
-After generating a new sprint plan, also prepare the `production/sprint-status.yaml` content.
+After generating a new sprint plan, also prepare the `production/sprints/sprint-status.yaml` content.
 This is the machine-readable source of truth for story status — read by
 `/sprint-status`, `/story-done`, and `/help` without markdown parsing.
 
@@ -170,6 +180,7 @@ Format:
 #   blocked        ↔  Blocked
 
 sprint: [N]
+app: "[app-name]"
 goal: "[sprint goal]"
 start: "[YYYY-MM-DD]"
 end: "[YYYY-MM-DD]"
@@ -177,9 +188,10 @@ generated: "[YYYY-MM-DD]"
 updated: "[YYYY-MM-DD]"
 
 stories:
-  - id: "[epic-story, e.g. 1-1]"
+  - id: "[epic-story, e.g. billing-api-1]"
     name: "[story name]"
-    file: "[production/stories/path.md]"
+    file: "[production/epics/[epic]/story-NNN-[slug].md]"
+    requirement: "REQ-[APP]-NNN"
     priority: must-have        # must-have | should-have | nice-to-have
     status: ready-for-dev      # backlog | ready-for-dev | in-progress | review | done | blocked
     owner: ""
@@ -211,7 +223,7 @@ Pass: proposed story list (titles, estimates, dependencies), total team capacity
 
 Present the producer's assessment.
 
-If UNREALISTIC: revise the story selection (defer stories to Should Have or Nice to Have) and re-present the updated plan before asking for write approval.
+If OVERSCOPED: revise the story selection (defer stories to Should Have or Nice to Have) and re-present the updated plan before asking for write approval.
 
 If CONCERNS, use `AskUserQuestion`, `request_user_input` or `clarify`:
 - Prompt: "Producer flagged concerns with this sprint plan. How do you want to proceed?"
@@ -224,7 +236,7 @@ If [A]: proceed to write approval.
 If [B]: revise the story list, re-present the updated plan, then proceed to write approval.
 If [C]: adjust sprint dates and capacity, re-present the updated plan, then proceed to write approval.
 
-After handling the producer's verdict, ask: "May I write the sprint plan to `production/sprints/sprint-[N].md` and `production/sprint-status.yaml`?" If yes, write both files (creating directories as needed). Verdict: **COMPLETE** — sprint plan and status file created. If no: Verdict: **BLOCKED** — user declined write.
+After handling the producer's verdict, ask: "May I write the sprint plan to `production/sprints/sprint-[N].md` and `production/sprints/sprint-status.yaml`?" If yes, write both files (creating directories as needed). Verdict: **COMPLETE** — sprint plan and status file created. If no: Verdict: **BLOCKED** — user declined write.
 
 After writing, add:
 
@@ -242,7 +254,7 @@ Use `Glob` to look for `production/qa/qa-plan-sprint-[N].md` or any file in `pro
 
 **If no QA plan exists**: do not silently proceed. Surface this explicitly:
 
-> "This sprint has no QA plan. A sprint plan without a QA plan means test requirements are undefined — developers won't know what 'done' looks like from a QA perspective, and the sprint cannot pass the Production → Polish gate without one.
+> "This sprint has no QA plan. A sprint plan without a QA plan means test requirements are undefined — developers won't know what 'done' looks like from a QA perspective, and the sprint cannot pass the release gate without one.
 >
 > Run `/qa-plan sprint` now, before starting any implementation. It takes one session and produces the test case requirements each story needs."
 
@@ -250,15 +262,15 @@ Use `AskUserQuestion`, `request_user_input` or `clarify`:
 - Prompt: "No QA plan found for this sprint. How do you want to proceed?"
 - Options:
   - `[A] Run /qa-plan sprint now — I'll do that before starting implementation (Recommended)`
-  - `[B] Skip for now — I understand QA sign-off will be blocked at the Production → Polish gate`
+  - `[B] Skip for now — I understand QA sign-off will be blocked at the release gate`
 
 If [A]: close with "Sprint plan written. Run `/qa-plan sprint` next — then begin implementation."
 If [B]: add a warning block to the sprint plan document:
 
 ```markdown
 > ⚠️ **No QA Plan**: This sprint was started without a QA plan. Run `/qa-plan sprint`
-> before the last story is implemented. The Production → Polish gate requires a QA
-> sign-off report, which requires a QA plan.
+> before the last story is implemented. The release gate requires a QA sign-off
+> report, which requires a QA plan.
 ```
 
 ---

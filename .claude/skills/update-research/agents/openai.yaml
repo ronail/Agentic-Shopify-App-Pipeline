@@ -1,0 +1,6 @@
+interface:
+  display_name: "Update Research"
+  short_description: "Refreshes existing market and competitor research for a Shopify app without losing prior findings: re-checks competitor listings, pricing and complaints, app..."
+  default_prompt: "Use the $update-research skill for the requested task."
+policy:
+  allow_implicit_invocation: true

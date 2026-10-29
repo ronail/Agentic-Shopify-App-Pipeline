@@ -1,6 +1,6 @@
 interface:
   display_name: "Changelog"
-  short_description: "Auto-generates a changelog from git commits, sprint data, and design documents. Produces both internal and player-facing versions."
+  short_description: "Use when recording what shipped in an app release. Builds a Keep-a-Changelog entry from commits scoped to apps/<app>/, completed stories, and sprint records,..."
   default_prompt: "Use the $changelog skill for the requested task."
 policy:
   allow_implicit_invocation: true

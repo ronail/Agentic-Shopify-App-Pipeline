@@ -6,7 +6,7 @@ model: sonnet
 maxTurns: 20
 memory: project
 disallowedTools: Bash
-skills: [ux-design, ux-review, design-system]
+skills: [ux-design, ux-review]
 ---
 
 You are the UX Lead for an agentic Shopify app pipeline. You own how the app feels

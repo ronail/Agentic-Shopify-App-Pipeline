@@ -1,182 +1,188 @@
 ---
 name: release-checklist
-description: "Generates a comprehensive pre-release validation checklist covering build verification, certification requirements, store metadata, and launch readiness."
-argument-hint: "[platform: pc|console|mobile|all]"
+description: "Use before submitting an app to the Shopify App Store. Generates the submission-readiness checklist for one app — scopes, billing, webhooks and compliance topics, privacy, Polaris and performance budgets, extension surfaces — and returns a READY / NOT READY verdict that feeds /release."
+argument-hint: "[app] [--version x.y.z] [--scope admin|extension|checkout|all]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write
 model: sonnet
 ---
 
-> **Explicit invocation only**: This skill should only run when the user explicitly requests it with `/release-checklist`. Do not auto-invoke based on context matching.
+> **Explicit invocation only**: run this skill when the user asks for `/release-checklist`.
+> Do not auto-invoke it from context matching.
 
 ## Phase 1: Parse Arguments
 
-Read the argument for the target platform (`pc`, `console`, `mobile`, or `all`). If no platform is specified, default to `all`.
+- `app` — the slug from `docs/registry/apps.json`; default to the app named in `request.md`
+  or the most recently modified `production/apps/<app>/session-state/active.md`
+- `--version` — the version being submitted; default to the newest entry in
+  `apps/<app>/CHANGELOG.md` or ask
+- `--scope` — `admin` (embedded admin app only), `extension` (adds theme app extension
+  checks), `checkout` (adds checkout extension checks), or `all` (default)
 
 ---
 
-## Phase 2: Load Project Context
+## Phase 2: Load App Context
 
-- Read `CLAUDE.md` for project context, version information, and platform targets.
-- Read the current milestone from `production/milestones/` to understand what features and content should be included in this release.
+- `apps/<app>/shopify.app.toml` — `api_version`, `access_scopes`, webhook subscriptions,
+  extension registrations
+- `apps/<app>/status.md` — stage, blockers, last approved gate
+- `docs/architecture/apps/<app>/control-manifest.md` — the guardrails this release must meet
+- Latest sprint record in `production/apps/<app>/sprints/` — what this release contains
+- `apps/<app>/CHANGELOG.md` — the entry for `--version` must already exist
+- `.claude/docs/technical-preferences.md` — budgets and forbidden patterns
 
----
-
-## Phase 3: Scan Codebase
-
-Scan for outstanding issues:
-
-- Count `TODO` comments
-- Count `FIXME` comments
-- Count `HACK` comments
-- Note their locations and severity
-
-Check for test results in any test output directories or CI logs if available.
+If `shopify.app.toml` is missing, stop. Verdict: **BLOCKED** — the app has no pinned
+API version, so nothing below can be verified.
 
 ---
 
-## Phase 4: Generate the Release Checklist
+## Phase 3: Scan the App
 
-```markdown
-## Release Checklist: [Version] -- [Platform]
-Generated: [Date]
+Static checks over `apps/<app>/` only:
+
+- `TODO`, `FIXME`, `HACK` counts, with the top locations named
+- `console.log`, `console.debug`, and debug flags left in production paths
+- Hardcoded API version strings outside `shopify.app.toml` and the ADR
+- Hardcoded dev values: `localhost`, tunnel hostnames, test shop domains, test tokens
+- `.env` files tracked in git (must be zero)
+- Access tokens written to logs or stored unencrypted
+- Admin API calls reachable from browser code
+- Scopes requested in `shopify.app.toml` that no code path uses
+
+---
+
+## Phase 4: Generate the Checklist
+
+````markdown
+## Release Checklist — [app] [version]
+Generated: [date]
+API version: [from shopify.app.toml]
+Scope: [admin | extension | checkout | all]
 
 ### Codebase Health
-- TODO count: [N] ([list top 5 if many])
-- FIXME count: [N] ([list all -- these are potential blockers])
-- HACK count: [N] ([list all -- these need review])
+- TODO: [N] · FIXME: [N] (must be 0) · HACK: [N] (each justified)
+- Debug output in production paths: [N] (must be 0)
+- Hardcoded API versions outside config: [N] (must be 0)
+- Tracked `.env` files: [N] (must be 0)
 
-### Build Verification
-- [ ] Clean build succeeds on all target platforms
-- [ ] No compiler warnings (zero-warning policy)
-- [ ] All assets included and loading correctly
-- [ ] Build size within budget ([target size])
-- [ ] Build version number correctly set ([version])
-- [ ] Build is reproducible from tagged commit
+### Install, Auth, Uninstall
+- [ ] Install completes from a clean store in one pass
+- [ ] Reinstall on a previously uninstalled store works
+- [ ] Session tokens verified on every embedded request; no cookie-only session
+- [ ] Access token stored encrypted, never logged
+- [ ] Uninstall triggers cleanup and the `shop/redact` path fires
+- [ ] OAuth round trip under 5 s on the dev store
 
-### Quality Gates
-- [ ] Zero S1 (Critical) bugs
-- [ ] Zero S2 (Major) bugs -- or documented exceptions with producer approval
-- [ ] All critical path features tested and signed off by QA
-- [ ] Performance within budgets:
-  - [ ] Target FPS met on minimum spec hardware
-  - [ ] Memory usage within budget
-  - [ ] Load times within budget
-  - [ ] No memory leaks over extended play sessions
-- [ ] No regression from previous build
-- [ ] Soak test passed (4+ hours continuous play)
+### Access Scopes
+- [ ] Every requested scope has a code path that needs it
+- [ ] Every scope is justified in the listing text where the merchant can see it
+- [ ] Protected scopes (customer data, `read_all_orders`) have the review justification ready
+- [ ] No scope is requested "for later"
 
-### Content Complete
-- [ ] All placeholder assets replaced with final versions
-- [ ] All TODO/FIXME in content files resolved or documented
-- [ ] All player-facing text proofread
-- [ ] All text localization-ready (no hardcoded strings)
-- [ ] Audio mix finalized and approved
-- [ ] Credits complete and accurate
-```
+### API Surface
+- [ ] `api_version` is pinned in `shopify.app.toml` and still supported by Shopify
+- [ ] No deprecated or removed field is used (checked against `docs/shopify-api-reference/[version]/`)
+- [ ] No field or mutation is used that the snapshot does not contain
+- [ ] GraphQL requested cost stays under 500 per request unless it is a bulk operation
 
-Add platform-specific sections based on the argument:
+### Billing
+- [ ] Plan and pricing configured for the target market
+- [ ] Test charges complete on the dev store for create, upgrade, downgrade, cancel
+- [ ] Feature gating enforced server-side, not only hidden in the UI
+- [ ] Trial and re-subscribe paths behave correctly
+- [ ] Billing failures degrade to a clear merchant-facing message
 
-**For `pc`:**
-```markdown
-### Platform Requirements: PC
-- [ ] Minimum and recommended specs verified and documented
-- [ ] Keyboard+mouse controls fully functional
-- [ ] Controller support tested (Xbox, PlayStation, generic)
-- [ ] Resolution scaling tested (1080p, 1440p, 4K, ultrawide)
-- [ ] Windowed, borderless, and fullscreen modes working
-- [ ] Graphics settings save and load correctly
-- [ ] Steam/Epic/GOG SDK integrated and tested
-- [ ] Achievements functional
-- [ ] Cloud saves functional
-- [ ] Steam Deck compatibility verified (if targeting)
-```
+### Webhooks
+- [ ] HMAC verified over the raw body before any side effect; failures return 401 and do nothing
+- [ ] Handlers are idempotent on the delivery/event ID
+- [ ] `customers/data_request`, `customers/redact`, `shop/redact` registered and tested
+- [ ] Subscriptions declared in config and reconciled on install and version change
+- [ ] Handler p95 acknowledged under 500 ms; slow work queued
+- [ ] A backfill path exists for missed deliveries
 
-**For `console`:**
-```markdown
-### Platform Requirements: Console
-- [ ] TRC/TCR/Lotcheck requirements checklist complete
-- [ ] Platform-specific controller prompts display correctly
-- [ ] Suspend/resume works correctly
-- [ ] User switching handled properly
-- [ ] Network connectivity loss handled gracefully
-- [ ] Storage full scenario handled
-- [ ] Parental controls respected
-- [ ] Platform-specific achievement/trophy integration tested
-- [ ] First-party certification submission prepared
-```
+### Merchant Data and Privacy
+- [ ] Privacy policy URL live and linked from the listing
+- [ ] Data retention and deletion behaviour documented
+- [ ] Customer PII never written to logs
+- [ ] Data export/delete requests can be satisfied within the committed window
 
-**For `mobile`:**
-```markdown
-### Platform Requirements: Mobile
-- [ ] App store guidelines compliance verified
-- [ ] All required device permissions justified and documented
-- [ ] Privacy policy linked and accurate
-- [ ] Data safety/nutrition labels completed
-- [ ] Touch controls tested on multiple screen sizes
-- [ ] Battery usage within acceptable range
-- [ ] Background behavior correct (pause, resume, terminate)
-- [ ] Push notification permissions handled correctly
-- [ ] In-app purchase flow tested (if applicable)
-- [ ] App size within store limits
-```
+### Admin UI
+- [ ] Renders embedded through App Bridge; no iframe-breaking navigation
+- [ ] Built from Polaris components; loading, empty, and error states present
+- [ ] Reachable and usable at 1280 px wide and at 100% zoom
+- [ ] WCAG 2.1 AA: keyboard reachable, visible focus, labelled controls, 4.5:1 text contrast
+- [ ] Admin route p75 under 1.5 s on a warm session
+- [ ] Initial route bundle under 250 KB gzipped
 
-**Store and launch sections (all platforms):**
-```markdown
-### Store / Distribution
-- [ ] Store page metadata complete and proofread
-  - [ ] Short description
-  - [ ] Long description
-  - [ ] Feature list
-  - [ ] System requirements (PC)
-- [ ] Screenshots up to date and per-platform resolution requirements met
-- [ ] Trailers up to date
-- [ ] Key art and capsule images current
-- [ ] Age rating obtained and configured:
-  - [ ] ESRB
-  - [ ] PEGI
-  - [ ] Other regional ratings as required
-- [ ] Legal notices, EULA, and privacy policy in place
-- [ ] Third-party license attributions complete
-- [ ] Pricing configured for all regions
+### Theme App Extension
+- [ ] App block installs on a clean unmodified theme and renders correctly
+- [ ] Block settings schema is complete and merchant-readable
+- [ ] No theme code edit is required from the merchant
+- [ ] Uninstall removes the block without leaving broken markup
 
-### Launch Readiness
-- [ ] Analytics / telemetry verified and receiving data
-- [ ] Crash reporting configured and dashboard accessible
-- [ ] Day-one patch prepared and tested (if needed)
-- [ ] On-call team schedule set for first 72 hours
-- [ ] Community launch announcements drafted
-- [ ] Press/influencer keys prepared for distribution
-- [ ] Support team briefed on known issues and FAQ
-- [ ] Rollback plan documented (if critical issues found post-launch)
+### Checkout Extension
+- [ ] Extension target valid on the pinned API version
+- [ ] Uses only APIs available to checkout extensions
+- [ ] Full checkout walkthrough passed on the dev store
+- [ ] Degrades safely when the extension cannot run
 
-### Go / No-Go: [READY / NOT READY]
+### Reliability
+- [ ] Error monitoring and alerting connected and firing on a synthetic error
+- [ ] Rate limits handled with backoff; no unbounded retry loop
+- [ ] Bulk operations used for sets above the single-request page limit
+- [ ] Job queue drains without manual intervention
+- [ ] Rollback path is documented and was exercised once
 
-**Rationale:**
-[Summary of readiness assessment. List any blocking items that must be
-resolved before launch. If NOT READY, list the specific items that need
-resolution and estimated time to address them.]
+### Listing and Review
+- [ ] App name, icon, and screenshots current and accurate
+- [ ] Pricing on the listing matches the billing configuration
+- [ ] Support contact and documentation links resolve
+- [ ] Review notes explain any unusual install or permission requirement
+- [ ] No claim in the listing that the app does not do
 
-**Sign-offs Required:**
-- [ ] QA Lead
-- [ ] Technical Director
-- [ ] Producer
-- [ ] Creative Director
-```
+### Engineering Hygiene
+- [ ] Full test suite green on the release commit
+- [ ] Billing and webhook signature verification at 100% line coverage
+- [ ] No open S1 bug; S2 bugs documented and accepted
+- [ ] `apps/<app>/CHANGELOG.md` has the `[version]` entry
+- [ ] Merchant-facing notes drafted with `/patch-notes [version]`
+````
+
+Add the `### Theme App Extension` and `### Checkout Extension` sections only when the
+scope or `shopify.app.toml` says those surfaces exist; otherwise write
+`Not applicable — no [extension surface] in this app`.
 
 ---
 
-## Phase 5: Save Checklist
+## Phase 5: Verdict and Write
 
-Present the checklist to the user with: total checklist items, number of known blockers (FIXME/HACK counts, known bugs).
+```
+### Verdict: [READY / NOT READY]
 
-Ask: "May I write this to `production/releases/release-checklist-[version].md`?"
+Blocking items:
+- [each unchecked BLOCKING item, with the owner agent that fixes it]
 
-If yes, write the file, creating the directory if needed.
+Accepted risks:
+- [item, reason, who accepted it]
+
+Next: /release runs the submission once this is READY.
+```
+
+Blocking by default: any install, auth, scope, billing, webhook-HMAC, compliance-topic,
+privacy, or deprecated-API item. Polaris polish and listing copy are advisory.
+
+Ask: "May I write this to `production/apps/<app>/release-checklist-<version>.md`?"
+Write on approval, creating the directory if needed. On decline:
+Verdict **COMPLETE** — checklist generated, not saved.
 
 ---
 
 ## Phase 6: Next Steps
 
-- Run `/gate-check` for a formal phase gate verdict before proceeding to release.
-- Coordinate final sign-offs via `/team-release`.
+- `/app-store-checklist [app]` — the listing-level detail behind the review submission
+- `/release [app] [version]` — the submission/publish flow, which consumes this file
+- `/deploy-to-test-store [app]` — if any dev-store verification above is still ❌
+- `/hotfix` — if a blocking defect is found after submission
+
+Totals to report in conversation: total items, blocking items, advisory items, and the
+surfaces that were out of scope.

@@ -1,0 +1,6 @@
+interface:
+  display_name: "Propose Updates"
+  short_description: "Turns observed pipeline friction into written proposals for changes to agents, skills, rules or hooks, with evidence and a risk note, parked for ratification..."
+  default_prompt: "Use the $propose-updates skill for the requested task."
+policy:
+  allow_implicit_invocation: true

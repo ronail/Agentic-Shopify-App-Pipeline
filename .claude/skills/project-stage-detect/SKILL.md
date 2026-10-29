@@ -1,195 +1,168 @@
 ---
 name: project-stage-detect
-description: "Automatically analyze project state, detect stage, identify gaps, and recommend next steps based on existing artifacts. Use when user asks 'where are we in development', 'what stage are we in', 'full project audit'."
-argument-hint: "[optional: role filter like 'programmer' or 'designer']"
+description: "Detect each Shopify app's pipeline stage from the registry, its status.md, gate approvals, and the artefacts actually present on disk — then name the single next action per app. Read-only. Use when the stage is unclear, after a merge, or at the start of a session you did not begin."
+argument-hint: "[app: <slug>] [--verbose]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Bash, Write
-model: haiku
-# Read-only diagnostic skill — no specialist agent delegation needed
+allowed-tools: Read, Glob, Grep, Bash
+model: sonnet
+agent: producer
 ---
 
-# Project Stage Detection
+# Project Stage Detect
 
-This skill scans your project to determine its current development stage, completeness
-of artifacts, and gaps that need attention. It's especially useful when:
-- Starting with an existing project
-- Onboarding to a codebase
-- Checking what's missing before a milestone
-- Understanding "where are we?"
+Answers one question per app: **where is this app in the pipeline, and what is
+the next action?** No writes, no fixes, no opinions about design quality.
+
+**Stage ladder** (each stage ends at a gate):
+
+| Stage | Gate that closes it | Ends when |
+|-------|--------------------|-----------|
+| `research` | `gate-1-research` | the merchant problem, market evidence and API feasibility are approved |
+| `architecture` | — (reviewed, not gated) | ADRs and requirements exist for the researched surface |
+| `prototype` | `gate-2-prototype` | a store-facing prototype exists under `apps/<app>/prototype/` and has been reviewed |
+| `scope` | `gate-3-scope` | scope is frozen against `request.md`; stories are estimable |
+| `build` | — (in progress) | sprints deliver against the frozen scope |
+| `release` | `gate-4-release` | App Store submission package, security and perf evidence complete |
+| `update` | `gate-5-update` | a researched update is planned and approved |
+
+An app can be *between* stages — gate passed, next stage's artefacts not started.
+Report that as `stage: prototype, state: not started`.
 
 ---
 
-## Workflow
+## 1. Read the Record
 
-### 1. Scan Key Directories
+1. `docs/registry/apps.json` — the app list, each app's `stage`,
+   `last_approved_gate`, `created`, `purpose`. This is the claimed truth.
+2. `apps/<app>/status.md` — `Stage:`, `Last approved gate:`, `Blockers:`.
+3. `apps/<app>/approvals.json` — the actual approvals, keyed by gate id.
+4. `apps/<app>/README.md` — purpose, for a sanity check against the registry.
 
-Analyze project structure and content:
+Never skip step 3. `status.md` and the registry are declarations; `approvals.json`
+is the record. When they disagree, say so and treat the *lowest* evidence as the
+stage — an unrecorded gate is not an approved gate (`gate-check` has the
+authority to add it, this skill does not).
 
-**Design Documentation** (`design/`):
-- Count GDD files in `design/gdd/*.md`
-- Check for game-concept.md, game-pillars.md, systems-index.md
-- If systems-index.md exists, count total systems vs. designed systems
-- Analyze completeness (Overview, Detailed Design, Edge Cases, etc.)
-- Count narrative docs in `design/narrative/`
-- Count level designs in `design/levels/`
+---
 
-**Source Code** (`src/`):
-- Count source files (language-agnostic)
-- Identify major systems (directories with 5+ files)
-- Check for core/, gameplay/, ai/, networking/, ui/ directories
-- Estimate lines of code (rough scale)
+## 2. Inspect the Artefacts
 
-**Production Artifacts** (`production/`):
-- Check for active sprint plans
-- Look for milestone definitions
-- Find roadmap documents
+Presence is evidence; absence is the finding.
 
-**Prototypes** (`prototypes/`):
-- Count prototype directories
-- Check for READMEs (documented vs undocumented)
-- Assess if prototypes are archived or active
+| Signal | Path | Indicates |
+|--------|------|-----------|
+| App scaffold | `apps/<app>/shopify.app.toml`, `package.json` | implementation started |
+| Requirements | `docs/architecture/apps/<app>/requirements.yaml` | requirements captured |
+| ADRs | `docs/architecture/apps/<app>/adr-*.md` or `ADR-*.md` | architecture decisions recorded |
+| Control manifest | `docs/architecture/apps/<app>/control-manifest.md` | programmer rules published |
+| Prototype | `apps/<app>/prototype/` with more than `.gitkeep` | prototype built |
+| Application source | `apps/<app>/` route/app modules beyond config | build underway |
+| Tests | any `*.test.ts(x)` beside source in `apps/<app>/` or `src/` | test coverage exists |
+| Sprints | files in `production/apps/<app>/sprints/` beyond `.gitkeep` | sprint activity |
+| Milestones | files in `production/apps/<app>/milestones/` beyond `.gitkeep` | milestone work |
+| Session state | files in `production/apps/<app>/session-state/` | recent work in flight |
+| Release evidence | security audit, perf profile, regression report in milestones/ | release preparation |
+| Store listing | App Store checklist artefacts | submission prep |
 
-**Architecture Docs** (`docs/architecture/`):
-- Count ADRs (Architecture Decision Records)
-- Check for overview/index documents
+Enumerate with `find`/`Glob`, then count real files (ignore `.gitkeep`). Report
+counts, not adjectives: "3 ADRs, 0 stories" beats "architecture mostly done".
 
-**Tests** (`tests/`):
-- Count test files
-- Estimate test coverage (rough heuristic)
+---
 
-### 2. Classify Project Stage
+## 3. Reconcile
 
-Based on scanned artifacts, determine stage. Check `production/stage.txt` first —
-if it exists, use its value (explicit override from `/gate-check`). Otherwise,
-auto-detect using these heuristics (check from most-advanced backward):
+For each app, derive three values and show the disagreement if any:
 
-| Stage | Indicators |
-|-------|-----------|
-| **Concept** | No game concept doc, brainstorming phase |
-| **Systems Design** | Game concept exists, systems index missing or incomplete |
-| **Technical Setup** | Systems index exists, engine not configured |
-| **Pre-Production** | Engine configured, `src/` has <10 source files |
-| **Production** | `src/` has 10+ source files, active development |
-| **Polish** | Explicit only (set by `/gate-check` Production → Polish gate) |
-| **Release** | Explicit only (set by `/gate-check` Polish → Release gate) |
+- **claimed** — registry `stage` + `last_approved_gate`
+- **declared** — `status.md`
+- **evidenced** — the lowest stage whose required artefacts are actually present
+  and whose gate is actually in `approvals.json`
 
-### 3. Collaborative Gap Identification
+Then classify the state:
 
-**DO NOT** just list missing files. Instead, **ask clarifying questions**:
+| State | Meaning |
+|-------|---------|
+| `aligned` | claimed == declared == evidenced |
+| `claim ahead of evidence` | a gate is claimed but not in `approvals.json`, or stage artefacts are missing |
+| `evidence ahead of claim` | work exists (e.g. ADRs, prototype) but no gate was recorded |
+| `stale` | `session-state` is old and no sprint/milestone activity since |
+| `blocked` | `status.md` lists a blocker; name it and the owner if recorded |
 
-- "I see combat code (`src/gameplay/combat/`) but no `design/gdd/combat-system.md`. Was this prototyped first, or should we reverse-document?"
-- "You have 15 ADRs but no architecture overview. Should I create one to help new contributors?"
-- "No sprint plans in `production/`. Are you tracking work elsewhere (Jira, Trello, etc.)?"
-- "I found a game concept but no systems index. Have you decomposed the concept into individual systems yet, or should we run `/map-systems`?"
-- "Prototypes directory has 3 projects with no READMEs. Were these experiments, or do they need documentation?"
+Do not decide which is right — name the divergence and hand the reconciliation
+to `producer`. Claiming a stage that the record does not support is a
+`consistency-check` critical.
 
-### 4. Generate Stage Report
+---
 
-Use template: `.claude/docs/templates/project-stage-report.md`
+## 4. Report
 
-**Report structure**:
 ```markdown
-# Project Stage Analysis
+# Project Stage Detect
 
-**Date**: [date]
-**Stage**: [Concept/Systems Design/Technical Setup/Pre-Production/Production/Polish/Release]
-**Stage Confidence**: [PASS — clearly detected / CONCERNS — ambiguous signals / FAIL — critical gaps block progress]
+> Date: <date> | Commit: <sha> | Apps: <n>
 
-## Completeness Overview
-- Design: [X%] ([N] docs, [gaps])
-- Code: [X%] ([N] files, [systems])
-- Architecture: [X%] ([N] ADRs, [gaps])
-- Production: [X%] ([status])
-- Tests: [X%] ([coverage estimate])
+## Portfolio
 
-## Gaps Identified
-1. [Gap description + clarifying question]
-2. [Gap description + clarifying question]
+| App | Claimed stage | Last gate (record) | State | Blockers | Next action |
+|-----|---------------|--------------------|-------|----------|-------------|
+| discount-bundles | research | gate-1-research | aligned | none | research the pricing surface, then write ADRs — `/gate-check gate-2-prototype discount-bundles` is not reachable until a prototype exists |
+| order-tags | research | gate-1-research | claim ahead of evidence | none | ... |
 
-## Recommended Next Steps
-[Priority-ordered list based on stage and role]
+## Per-app detail — <app>
+
+- Registry: stage `research`, last gate `gate-1-research`, created 2026-10-29
+- status.md: stage `research`, last gate `gate-1-research`, blockers `none`
+- approvals.json: `gate-1-research` approved 2026-10-29 by product-director
+- Artefacts: requirements.yaml — no | ADRs — 0 | control manifest — no |
+  prototype — empty | source — no | tests — 0 | sprints — 0 | milestones — 0
+- Divergence: none
+- **Next action:** <one command or one piece of work, with the skill that does it>
+
+## Portfolio gaps
+- Apps with a gate claimed but not recorded: <list>
+- Apps with work but no gate: <list>
+- Apps untouched for longer than a sprint: <list>
+
+## Recommended sequence
+1. <app> — <action> (`/<skill>`)
+2. ...
 ```
 
-### 5. Role-Filtered Recommendations (Optional)
-
-If user provided a role argument (e.g., `/project-stage-detect programmer`):
-
-**Programmer**:
-- Focus on architecture docs, test coverage, missing ADRs
-- Code-to-docs gaps
-
-**Designer**:
-- Focus on GDD completeness, missing design sections
-- Prototype documentation
-
-**Producer**:
-- Focus on sprint plans, milestone tracking, roadmap
-- Cross-team coordination docs
-
-**General** (no role):
-- Holistic view of all gaps
-- Highest-priority items across domains
-
-### 6. Request Approval Before Writing
-
-**Collaborative protocol**:
-```
-I've analyzed your project. Here's what I found:
-
-[Show summary]
-
-Gaps identified:
-1. [Gap 1 + question]
-2. [Gap 2 + question]
-
-Recommended next steps:
-- [Priority 1]
-- [Priority 2]
-- [Priority 3]
-
-May I write the full stage analysis to production/project-stage-report.md?
-```
-
-Wait for user approval before creating the file.
+`--verbose` adds the full artefact inventory per app instead of the summary
+line. Ask nothing, write nothing.
 
 ---
 
-## Example Usage
+## 5. Next-Action Rules
 
-```bash
-# General project analysis
-/project-stage-detect
+Pick exactly one, in this priority order:
 
-# Programmer-focused analysis
-/project-stage-detect programmer
+1. **Blocked** → resolve the blocker; name the owner.
+2. **No scaffold and research stage** → continue research
+   (`/research` for the app's problem space), then the research gate.
+3. **Research approved, no ADRs** → `/architecture-decision` for the approved
+   surface; then `/create-control-manifest`.
+4. **ADRs accepted, prototype empty** → `/build-prototype` (or `/prototype` for a
+   throwaway spike), then `/prototype-review`.
+5. **Prototype reviewed, scope not frozen** → `/scope-check`, then
+   `/gate-check gate-3-scope`.
+6. **Scope frozen, build stage with no sprint** → `/sprint-plan`.
+7. **Sprint in flight with ready stories** → `/dev-story <path>`; then
+   `/code-review`, `/story-done`.
+8. **Build complete, release evidence missing** → `/regression-suite --full`,
+   `/security-audit`, `/perf-profile`, then `/gate-check gate-4-release`.
+9. **All gates through release, update requested** → `/update-research`, then
+   `/gate-check gate-5-update`.
 
-# Designer-focused analysis
-/project-stage-detect designer
-```
+Never recommend a gate whose input artefacts do not exist. Recommending
+`/gate-check gate-2-prototype` for an app with an empty prototype directory
+wastes a review cycle and teaches the team to ignore gate recommendations.
 
 ---
 
-## Follow-Up Actions
+## Boundary
 
-After generating the report, suggest relevant next steps:
-
-- **Concept exists but no systems index?** → `/map-systems` to decompose into systems
-- **Missing design docs?** → `/reverse-document design src/[system]`
-- **Missing architecture docs?** → `/architecture-decision` or `/reverse-document architecture`
-- **Prototypes need documentation?** → `/reverse-document concept prototypes/[name]`
-- **No sprint plan?** → `/sprint-plan`
-- **Approaching milestone?** → `/milestone-review`
-
----
-
-## Collaborative Protocol
-
-This skill follows the collaborative design principle:
-
-1. **Question First**: Ask about gaps, don't assume
-2. **Present Options**: "Should I create X, or is it tracked elsewhere?"
-3. **User Decides**: Wait for direction
-4. **Show Draft**: Display report summary
-5. **Get Approval**: "May I write to production/project-stage-report.md?"
-
-**Never** silently write files. **Always** show findings and ask before creating artifacts.
+- Read-only. If reconciliation requires a write, hand it to `gate-check`
+  (gate records), `producer` (status/registry), or `consistency-check` (drift
+  report).
+- Do not judge whether an app *should* advance. That is `product-director`.

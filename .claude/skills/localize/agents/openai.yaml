@@ -1,6 +1,6 @@
 interface:
   display_name: "Localize"
-  short_description: "Full localization pipeline: scan for hardcoded strings, extract and manage string tables, validate translations, generate translator briefings, run cultural/..."
+  short_description: "Plan and implement merchant-facing localization for a Shopify app: Markets and regional settings, translation files, locale-aware money/date/address formatti..."
   default_prompt: "Use the $localize skill for the requested task."
 policy:
   allow_implicit_invocation: true

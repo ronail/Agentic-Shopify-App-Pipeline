@@ -1,156 +1,173 @@
 ---
 name: milestone-review
-description: "Generates a comprehensive milestone progress review including feature completeness, quality metrics, risk assessment, and go/no-go recommendation. Use at milestone checkpoints or when evaluating readiness for a milestone deadline."
-argument-hint: "[milestone-name|current] [--review full|lean|solo]"
+description: "Review a milestone in production/apps/<app>/milestones/: what was promised, what shipped, what the evidence actually supports, and whether the app can advance. Produces a SHIP / HOLD verdict with per-criterion evidence and named owners for anything short."
+argument-hint: "<app> <milestone-id | latest> [--strict]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Write, Task, AskUserQuestion, request_user_input, clarify
+allowed-tools: Read, Glob, Grep, Bash, Write, AskUserQuestion, request_user_input, clarify
 model: sonnet
+agent: producer
 ---
 
-## Phase 0: Parse Arguments
+# Milestone Review
 
-Extract the milestone name (`current` or a specific name) and resolve the review mode (once, store for all gate spawns this run):
-1. If `--review [full|lean|solo]` was passed → use that
-2. Else read `production/review-mode.txt` → use that value
-3. Else → default to `lean`
+A milestone review is not a status update. It answers: **did this milestone
+deliver what it claimed, is the evidence real, and may the app move on?**
 
-See `.claude/docs/director-gates.md` for the full check pattern.
+It reviews *one* app's milestone. Portfolio-level sequencing is
+`project-stage-detect`; gate authority is `gate-check`.
 
----
-
-## Phase 1: Load Milestone Data
-
-Read the milestone definition from `production/milestones/`. If the argument is `current`, use the most recently modified milestone file.
-
-Read all sprint reports for sprints within this milestone from `production/sprints/`.
+**Output:** `production/apps/<app>/milestones/<milestone-id>/review-<date>.md`
 
 ---
 
-## Phase 2: Scan Codebase Health
+## 1. Load the Milestone
 
-- Scan for `TODO`, `FIXME`, `HACK` markers that indicate incomplete work
-- Check the risk register at `production/risk-register/`
+- `production/apps/<app>/milestones/<milestone-id>/` — the milestone definition
+  and any artefacts attached to it (perf profile, security audit, soak,
+  regression reports, demo notes).
+- `production/apps/<app>/sprints/` — every sprint whose dates or ids fall inside
+  the milestone window.
+- `apps/<app>/status.md`, `apps/<app>/approvals.json` — stage and recorded gates.
+- `docs/architecture/apps/<app>/requirements.yaml` — the requirements the
+  milestone was supposed to advance.
+- `request.md` — the merchant problem the milestone serves, in the requester's
+  words.
+
+`latest` resolves to the milestone directory with the most recent modification.
+Verify the id matches a real directory; do not review a milestone that only
+exists in a conversation.
 
 ---
 
-## Phase 3: Generate the Milestone Review
+## 2. Build the Promise List
+
+Extract, with citations to the milestone file:
+
+| # | Promised outcome | Type (merchant value / technical / compliance) | Success criterion | Promised in |
+
+A promise is any of: a named feature, a metric target, a surface shipped, a
+requirement id claimed, a document produced. Ambiguous promises get flagged as
+ambiguous — "improve performance" with no number cannot be reviewed, and that
+is a finding about the milestone, not the code.
+
+If the milestone file has no explicit criteria, reconstruct them from the sprint
+plans and say so clearly in the report. Reconstruction is a yellow flag: it means
+the milestone was never falsifiable.
+
+---
+
+## 3. Check the Evidence, Not the Claim
+
+For every promise, find the artefact that proves it. Rank evidence by strength:
+
+| Strength | Evidence |
+|----------|----------|
+| Strong | A report on this commit: regression PASS, smoke PASS, perf numbers, security audit, test output; a verified store walkthrough with steps |
+| Medium | Code merged with tests beside it, review approved, but no runtime verification |
+| Weak | A sprint marked done, a status line, a chat summary |
+| None | Nothing on disk |
+
+Rules:
+- A promise proved only by a Weak source is **NOT VERIFIED**, not done. Say what
+  evidence would settle it.
+- "Tests pass" without a report path and commit hash is Weak.
+- A feature is not shipped because code exists; it is shipped because a merchant
+  flow on a dev store works and a webhook/API effect is observable.
+- Check the commit: evidence from a commit that is not an ancestor of the
+  milestone's head is stale. Record both shas.
+
+Also check for **silent scope change**: promises dropped from the milestone
+without a recorded decision. A dropped promise with no decision is worse than a
+missed one — say so.
+
+---
+
+## 4. Assess Each Area
+
+- **Merchant value** — does the milestone move the merchant problem in
+  `request.md`? Is the value observable in the admin, or only in logs?
+- **Scope discipline** — anything shipped that was not promised (scope creep)
+  and anything promised that vanished (silent cut). Cross-check with
+  `/scope-check`.
+- **Quality** — test evidence, review coverage, bug count by severity, any
+  open S1/S2 in the app's sprints.
+- **Security** — a security audit on this milestone? Any open Critical/High?
+  Missing audit before a release milestone is a HOLD.
+- **Performance** — budgets met on the primary path? Waiver recorded by
+  `technical-director` if not.
+- **Operability** — can the app be deployed, observed, and rolled back? Are
+  migrations reversible? Is there a runbook for the failure modes the milestone
+  introduces?
+- **Documentation** — ADRs updated for decisions made, control manifest current,
+  requirements registry reflects what shipped.
+- **Pipeline hygiene** — sprint records closed, gate records consistent, no
+  orphaned work.
+
+---
+
+## 5. Verdict
 
 ```markdown
-# Milestone Review: [Milestone Name]
+# Milestone Review — <app> / <milestone>
 
-## Overview
-- **Target Date**: [Date]
-- **Current Date**: [Today]
-- **Days Remaining**: [N]
-- **Sprints Completed**: [X/Y]
+> Date: <date> | Milestone head: <sha> | Evidence commits: <sha list>
+> Reviewer: producer | Mode: standard | strict
 
-## Feature Completeness
+## Promises vs outcome
 
-### Fully Complete
-| Feature | Acceptance Criteria | Test Status |
-|---------|-------------------|-------------|
+| # | Promised | Criterion | Status (met/partial/missed/ambiguous) | Evidence | Strength |
+|---|----------|-----------|---------------------------------------|----------|----------|
 
-### Partially Complete
-| Feature | % Done | Remaining Work | Risk to Milestone |
-|---------|--------|---------------|------------------|
+## Scope delta
+- Added without a decision: <list>
+- Dropped without a decision: <list>
+- Decision recorded: <list with link>
 
-### Not Started
-| Feature | Priority | Can Cut? | Impact of Cutting |
-|---------|----------|----------|------------------|
+## Area assessment
+| Area | Verdict | Basis |
+|------|---------|-------|
+| Merchant value | | |
+| Scope discipline | | |
+| Quality | | |
+| Security | | |
+| Performance | | |
+| Operability | | |
+| Documentation | | |
 
-## Quality Metrics
-- **Open S1 Bugs**: [N] -- [List]
-- **Open S2 Bugs**: [N]
-- **Open S3 Bugs**: [N]
-- **Test Coverage**: [X%]
-- **Performance**: [Within budget? Details]
+## Open issues
+| ID | Severity | Issue | Owner | Blocks advance? |
 
-## Code Health
-- **TODO count**: [N across codebase]
-- **FIXME count**: [N]
-- **HACK count**: [N]
-- **Technical debt items**: [List critical ones]
+## Verdict: SHIP / SHIP WITH CONDITIONS / HOLD
 
-## Risk Assessment
-| Risk | Status | Impact if Realized | Mitigation Status |
-|------|--------|-------------------|------------------|
+**Conditions (if any):** <numbered, each with an owner and a due date>
 
-## Velocity Analysis
-- **Planned vs Completed** (across all sprints): [X/Y tasks = Z%]
-- **Trend**: [Improving / Stable / Declining]
-- **Adjusted estimate for remaining work**: [Days needed at current velocity]
-
-## Scope Recommendations
-### Protect (Must ship with milestone)
-- [Feature and why]
-
-### At Risk (May need to cut or simplify)
-- [Feature and risk]
-
-### Cut Candidates (Can defer without compromising milestone)
-- [Feature and impact of cutting]
-
-## Go/No-Go Assessment
-
-**Recommendation**: [GO / CONDITIONAL GO / NO-GO]
-
-**Conditions** (if conditional):
-- [Condition 1 that must be met]
-- [Condition 2 that must be met]
-
-**Rationale**: [Explanation of the recommendation]
-
-## Action Items
-| # | Action | Owner | Deadline |
-|---|--------|-------|----------|
+## Carried into next milestone
+| Item | Why it slipped | Owner |
 ```
 
----
+Verdict rules:
+- **SHIP** — every promise met with strong evidence, no open S1/S2, security and
+  perf evidenced on this commit.
+- **SHIP WITH CONDITIONS** — minor gaps with owners and dates, nothing that
+  changes merchant behaviour badly, no security Critical/High.
+- **HOLD** — a core promise missed, evidence absent for a claimed outcome,
+  open S1/S2, missing security audit on a release milestone, or an undocumented
+  scope change.
 
-## Phase 3b: Producer Risk Assessment
-
-**Review mode check** — apply before spawning PR-MILESTONE:
-- `solo` → skip. Note: "PR-MILESTONE skipped — Solo mode." Present the Go/No-Go section without a producer verdict.
-- `lean` → skip (not a PHASE-GATE). Note: "PR-MILESTONE skipped — Lean mode." Present the Go/No-Go section without a producer verdict.
-- `full` → spawn as normal.
-
-Before generating the Go/No-Go recommendation, spawn `producer` via Task using gate **PR-MILESTONE** (`.claude/docs/director-gates.md`).
-
-Pass: milestone name and target date, current completion percentage, blocked story count, velocity data from sprint reports (if available), list of cut candidates.
-
-Present the producer's assessment inline within the Go/No-Go section. The producer's verdict (ON TRACK / AT RISK / OFF TRACK) informs the overall recommendation.
-
-If OFF TRACK, use `AskUserQuestion`, `request_user_input` or `clarify` before generating the recommendation:
-- Prompt: "Producer verdict: OFF TRACK. The milestone is in jeopardy. This review will recommend NO-GO. How do you want to proceed?"
-- Options:
-  - `[A] Accept NO-GO — generate the full review with that recommendation`
-  - `[B] Override to CONDITIONAL GO — I'll document the accepted risks myself`
-  - `[C] Stop — I want to address blockers before generating the review`
-
-If AT RISK, use `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "Producer verdict: AT RISK. Milestone may slip. How should the Go/No-Go section be framed?"
-- Options:
-  - `[A] CONDITIONAL GO — include producer's conditions in the review`
-  - `[B] NO-GO — conditions cannot be met in time`
-  - `[C] GO — I accept the risk and want to proceed`
-
-Do not issue a GO against an OFF TRACK verdict unless the user explicitly selects [B] above.
+`--strict` treats Medium evidence as NOT VERIFIED and ambiguity as HOLD. Use it
+for the milestone that precedes a release gate.
 
 ---
 
-## Phase 4: Save Review
+## 6. Write and Route
 
-Present the review to the user.
+Ask: *"May I write this review to
+`production/apps/<app>/milestones/<milestone-id>/review-<date>.md`?"*
 
-Ask: "May I write this to `production/milestones/[milestone-name]-review.md`?"
-
-If yes, write the file, creating the directory if needed. Verdict: **COMPLETE** — milestone review saved.
-
-If no, stop here. Verdict: **BLOCKED** — user declined write.
-
----
-
-## Phase 5: Next Steps
-
-- Run `/gate-check` for a formal phase gate verdict if this milestone marks a development phase boundary.
-- Run `/sprint-plan` to adjust the next sprint based on the scope recommendations above.
+Then:
+- HOLD on security → `security-specialist`; on performance →
+  `performance-analyst`; on test evidence → `qa-lead`; on scope → `product-director`.
+- A SHIP verdict does not approve a gate. Gates are recorded by
+  `/gate-check <gate-id> <app>` with the evidence paths from this review.
+- Carry every condition into the next milestone's definition with an owner; a
+  condition with no owner is a wish.

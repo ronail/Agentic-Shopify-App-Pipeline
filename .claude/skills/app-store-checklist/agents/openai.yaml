@@ -1,0 +1,6 @@
+interface:
+  display_name: "App Store Checklist"
+  short_description: "Runs the App Store submission readiness gate for a Shopify app: listing assets, pricing, permissions and scopes, install and uninstall behaviour, billing, su..."
+  default_prompt: "Use the $app-store-checklist skill for the requested task."
+policy:
+  allow_implicit_invocation: true

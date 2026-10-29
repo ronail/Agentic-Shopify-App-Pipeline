@@ -1,0 +1,6 @@
+interface:
+  display_name: "Research"
+  short_description: "Market research for a Shopify app: validates the merchant problem, maps competitors and their pricing and review complaints, and writes a build/kill recommen..."
+  default_prompt: "Use the $research skill for the requested task."
+policy:
+  allow_implicit_invocation: true

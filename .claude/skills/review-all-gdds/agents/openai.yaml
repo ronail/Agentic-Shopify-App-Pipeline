@@ -1,6 +1,0 @@
-interface:
-  display_name: "Review All Gdds"
-  short_description: "Holistic cross-GDD consistency and game design review. Reads all system GDDs simultaneously and checks for contradictions between them, stale references, own..."
-  default_prompt: "Use the $review-all-gdds skill for the requested task."
-policy:
-  allow_implicit_invocation: true

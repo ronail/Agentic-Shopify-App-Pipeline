@@ -1,140 +1,188 @@
 ---
 name: tech-debt
-description: "Track, categorize, and prioritize technical debt across the codebase. Scans for debt indicators, maintains a debt register, and recommends repayment scheduling."
-argument-hint: "[scan|add|prioritize|report]"
+description: "Maintain one app's tech-debt register in docs/architecture/apps/<app>/tech-debt.md: capture entries with evidence, price the interest per sprint, rank by merchant risk, and stop the list from becoming a graveyard. Use at sprint review, before release, and when a shortcut is taken."
+argument-hint: "[app: <slug>] [scan | add | rank | paydown] [--sprint]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Write, AskUserQuestion, request_user_input, clarify
+allowed-tools: Read, Glob, Grep, Bash, Write, Edit, AskUserQuestion, request_user_input, clarify
 model: sonnet
+agent: technical-director
 ---
 
-## Phase 1: Parse Subcommand
+# Tech Debt
 
-Determine the mode from the argument:
+Debt is a deliberate trade: you take on interest now to ship value sooner. It
+becomes a problem in exactly two ways — when nobody wrote it down, and when the
+interest is never paid.
 
-- `scan` — Scan the codebase for tech debt indicators
-- `add` — Add a new tech debt entry manually
-- `prioritize` — Re-prioritize the existing debt register
-- `report` — Generate a summary report of current debt status
+**Register:** `docs/architecture/apps/<app>/tech-debt.md` (one per app, lives
+with the architecture docs because the entries constrain architecture).
 
-If no subcommand is provided, output usage and stop. Verdict: **FAIL** — missing required subcommand.
-
----
-
-## Phase 2A: Scan Mode
-
-Search the codebase for debt indicators:
-
-- `TODO` comments (count and categorize)
-- `FIXME` comments (these are bugs disguised as debt)
-- `HACK` comments (workarounds that need proper solutions)
-- `@deprecated` markers
-- Duplicated code blocks (similar patterns in multiple files)
-- Files over 500 lines (potential god objects)
-- Functions over 50 lines (potential complexity)
-
-Categorize each finding:
-
-- **Architecture Debt**: Wrong abstractions, missing patterns, coupling issues
-- **Code Quality Debt**: Duplication, complexity, naming, missing types
-- **Test Debt**: Missing tests, flaky tests, untested edge cases
-- **Documentation Debt**: Missing docs, outdated docs, undocumented APIs
-- **Dependency Debt**: Outdated packages, deprecated APIs, version conflicts
-- **Performance Debt**: Known slow paths, unoptimized queries, memory issues
-
-Present the findings to the user.
-
-Ask: "May I write these findings to `docs/tech-debt-register.md`?"
-
-If yes, update the register (append new entries, do not overwrite existing ones). Verdict: **COMPLETE** — scan findings written to register.
-
-If no, stop here. Verdict: **BLOCKED** — user declined write.
+**Modes:**
+- `scan` — find debt in the code and record what is not already listed.
+- `add` — record one entry with evidence (the common case during a sprint).
+- `rank` — re-rank the register and pick the paydown set for the next sprint.
+- `paydown` — plan a paydown sprint against a ranked subset.
 
 ---
 
-## Phase 2B: Add Mode
+## 1. Entry Shape
 
-Ask the user for the description, affected files, and impact if left unfixed (plain text prompts).
-
-Then use `AskUserQuestion`, `request_user_input` or `clarify` to collect the **category**:
-- Prompt: "What category does this tech debt belong to?"
-- Options:
-  - `[A] Architecture Debt — wrong abstractions, missing patterns, coupling issues`
-  - `[B] Code Quality Debt — duplication, complexity, naming, missing types`
-  - `[C] Test Debt — missing tests, flaky tests, untested edge cases`
-  - `[D] Documentation Debt — missing/outdated docs, undocumented APIs`
-  - `[E] Dependency Debt — outdated packages, deprecated APIs, version conflicts`
-  - `[F] Performance Debt — known slow paths, memory issues, unoptimized queries`
-
-Then use `AskUserQuestion`, `request_user_input` or `clarify` to collect the **estimated fix effort**:
-- Prompt: "What is the estimated effort to fix this item?"
-- Options:
-  - `[A] S — Small (under 1 day)`
-  - `[B] M — Medium (1–3 days)`
-  - `[C] L — Large (3–7 days)`
-  - `[D] XL — Extra Large (over 1 week)`
-
-Present the complete new entry to the user.
-
-Ask: "May I append this entry to `docs/tech-debt-register.md`?"
-
-If yes, append the entry. Verdict: **COMPLETE** — entry added to register.
-
-If no, stop here. Verdict: **BLOCKED** — user declined write.
-
----
-
-## Phase 2C: Prioritize Mode
-
-Read the debt register at `docs/tech-debt-register.md`.
-
-Score each item by: `(impact_if_unfixed × frequency_of_encounter) / fix_effort`
-
-Re-sort the register by priority score and recommend which items to include in the next sprint.
-
-Present the re-prioritized register to the user.
-
-Ask: "May I write the re-prioritized register back to `docs/tech-debt-register.md`?"
-
-If yes, write the updated file. Verdict: **COMPLETE** — register re-prioritized and saved.
-
-If no, stop here. Verdict: **BLOCKED** — user declined write.
-
----
-
-## Phase 2D: Report Mode
-
-Read the debt register. Generate summary statistics:
-
-- Total items by category
-- Total estimated fix effort
-- Items added vs resolved since last report
-- Trending direction (growing / stable / shrinking)
-
-Flag any items that have been in the register for more than 3 sprints.
-
-Output the report to the user. This mode is read-only — no files are written. Verdict: **COMPLETE** — debt report generated.
-
----
-
-## Phase 3: Next Steps
-
-- Run `/sprint-plan` to schedule high-priority debt items into the next sprint.
-- Run `/tech-debt report` at the start of each sprint to track debt trends over time.
-
-### Debt Register Format
+Every entry, without exception:
 
 ```markdown
-## Technical Debt Register
-Last updated: [Date]
-Total items: [N] | Estimated total effort: [T-shirt sizes summed]
+### TD-<app>-<NNN> — <short imperative title>
 
-| ID | Category | Description | Files | Effort | Impact | Priority | Added | Sprint |
-|----|----------|-------------|-------|--------|--------|----------|-------|--------|
-| TD-001 | [Cat] | [Description] | [files] | [S/M/L/XL] | [Low/Med/High/Critical] | [Score] | [Date] | [Sprint to fix or "Backlog"] |
+- **Area**: admin-ui | app-server | graphql | webhooks | billing | auth | data | build | docs
+- **Introduced**: <date or commit sha> — <what change took the shortcut>
+- **Evidence**: `path/to/file.ts:120` — <what is wrong, factually>
+- **Interest**: <what it costs every sprint: slower changes, a bug class, an
+  on-call page, a blocked feature>
+- **Merchant risk**: high | medium | low — <who notices, and when>
+- **Payoff**: <what becomes possible or cheaper once paid>
+- **Effort**: S (< half day) | M (1–3 days) | L (> 3 days)
+- **Owner**: <agent or role>
+- **Status**: open | scheduled(<sprint>) | paid(<date, commit>) | accepted-risk(<approver>, <review date>)
 ```
 
-### Rules
-- Tech debt is not inherently bad — it is a tool. The register tracks conscious decisions.
-- Every debt entry must explain WHY it was accepted (deadline, prototype, missing info)
-- "Scan" should run at least once per sprint to catch new debt
-- Items older than 3 sprints without action should either be fixed or consciously accepted with a documented reason
+Rules:
+- No entry without evidence. "The code is messy" is not debt; "order-tags
+  repository builds SQL by string concatenation at
+  `apps/order-tags/src/db/orders.ts:88`" is.
+- No entry without interest. If it costs nothing per sprint and risks nothing,
+  it is a preference, not debt.
+- `accepted-risk` requires an approver and a review date. Accepted risk expires;
+  then it is open again.
+- Ids are stable and never reused. `TD-<app>-<NNN>` is monotonic; a deleted
+  entry keeps its number.
+
+---
+
+## 2. Scan — Where Debt Actually Hides
+
+Look for these, in this order of consequence:
+
+**Correctness/security class (highest)**
+- Webhook handlers that parse before verifying, or verify per-route with a
+  subtly different implementation.
+- Session token decoded, not verified; missing `aud`/`exp`/`dest` checks.
+- Admin API calls from the browser, or a client-trusted entitlement flag.
+- Queries missing the shop scoping predicate.
+- String-built SQL; unvalidated payloads reaching the query layer.
+- Access tokens stored or logged in plaintext.
+
+**Reliability class**
+- Synchronous external calls before a webhook ack.
+- Retry loops without backoff on throttle; fixed sleeps.
+- Unbounded tables (jobs, events, delivery logs) with no prune.
+- Fire-and-forget promises with no error path.
+- Migrations that cannot roll back.
+
+**Velocity class**
+- Duplicated GraphQL documents with slightly different field sets.
+- Business logic in route handlers instead of a module with tests.
+- Hand-rolled formatting instead of `Intl`; hardcoded currency or timezone.
+- A shared module under `src/` that every app imports and only one app needs.
+- Tests that assert implementation details, so every refactor breaks them.
+
+**Hygiene class (lowest)**
+- Dead routes, unused scopes, commented-out blocks.
+- Hardcoded API version outside `shopify.app.toml`.
+- Docs that describe a flow the code no longer has.
+
+For each finding, check the register first. Duplicate entries are worse than
+missing ones — the register loses credibility fast.
+
+---
+
+## 3. Rank — Price the Interest
+
+Rank by a simple, defensible function:
+
+```
+priority = merchant_risk × frequency × reach ÷ effort
+```
+
+- **merchant_risk** — high 3, medium 2, low 1. Anything in the
+  correctness/security class is high by default.
+- **frequency** — how often the affected path runs: every request 3, every
+  checkout/webhook 2, rarely 1.
+- **reach** — one app 1, every app via `src/` 3, every merchant 3.
+- **effort** — S 1, M 2, L 3.
+
+Do not invent decimals. The point is a defensible order, not a fake metric. Show
+the inputs so someone can disagree with the ranking rather than the list.
+
+Tie-break, in order: security exposure, blast radius on the merchant's primary
+path, effort (smaller first), age (older first).
+
+---
+
+## 4. Report / Update
+
+```markdown
+# Tech Debt — <app>
+
+> Last updated: <date> | Open: <n> | Accepted risk: <n> | Paid: <n>
+
+## Summary
+| Area | Open | Highest priority | Interest per sprint |
+
+## Ranked register
+
+| Rank | Id | Title | Area | Merchant risk | Effort | Interest | Status |
+
+## Detail
+<entries in Id order, full shape>
+
+## Paydown plan (next sprint)
+| Id | Why now | Effort | Owner | Verification |
+
+## Paid this period
+| Id | Paid in commit | Verification | Register updated |
+```
+
+Verification of a paid item is a test, a check, or a cited diff — not "cleaned
+up". An item marked paid without verification goes back to open.
+
+---
+
+## 5. Paydown Discipline
+
+- **Cap the debt budget.** No more than ~20% of a sprint unless
+  `product-director` approves more. Debt work that silently eats a sprint is how
+  roadmaps die.
+- **Pay the interest, not the principal, when time is short.** Example: add the
+  missing shop-scope predicate even if the query layer stays ugly.
+- **Never mix a paydown with a feature.** A paydown story that also adds a
+  feature cannot be reviewed or reverted cleanly.
+- **Security-class debt is not optional.** A Critical/High correctness or
+  security entry is paid before the next release gate, or explicitly waived by
+  `technical-director` with a compensating control recorded in the register.
+- **Retire accepted risks on schedule.** An accepted risk past its review date
+  is an open item — say so at sprint review.
+
+---
+
+## 6. Write Rules
+
+- Append and update entries; never delete one. Paid entries keep their row and
+  move status.
+- Create `docs/architecture/apps/<app>/tech-debt.md` on first use with the
+  header and an empty register.
+- Ask before the first write and before any bulk edit: *"May I update the tech
+  debt register at `docs/architecture/apps/<app>/tech-debt.md`?"* Individual
+  `add` operations during a sprint can be batched into one approval at sprint
+  review.
+- Do not create a repo-level debt file. Debt is per app; a shared list becomes a
+  place to avoid deciding.
+
+---
+
+## Boundary
+
+- Debt entries are findings, not commits. Fixes go through a story, `code-review`,
+  and tests beside the source.
+- Architecture-level debt (a decision that needs revisiting) belongs in
+  `/architecture-decision`, with the register entry linking to the ADR.
+- Cross-app debt in `src/` gets one entry per affected app, each linking to the
+  shared fix — do not let one app's register imply another app owns it.

@@ -1,6 +1,6 @@
 interface:
   display_name: "Create Control Manifest"
-  short_description: "After architecture is complete, produces a flat actionable rules sheet for programmers — what you must do, what you must never do, per system and per layer...."
+  short_description: "Use after an app's ADRs are accepted. Produces that app's flat programmer rules sheet — what you must do, must never do, and the guardrail limits, per layer..."
   default_prompt: "Use the $create-control-manifest skill for the requested task."
 policy:
   allow_implicit_invocation: true

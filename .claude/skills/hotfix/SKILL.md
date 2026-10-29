@@ -1,180 +1,222 @@
 ---
 name: hotfix
-description: "Emergency fix workflow that bypasses normal sprint processes with a full audit trail. Creates hotfix branch, tracks approvals, and ensures the fix is backported correctly."
-argument-hint: "[bug-id or description]"
+description: "Use when a shipped app is broken in production. Runs the emergency path: assess severity, mitigate, branch from the released tag, make the minimum fix with a reproducing test, verify on a test store, get sign-offs, deploy with a rollback plan, and record the incident."
+argument-hint: "[app] [incident description or bug id]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash, Task, AskUserQuestion, request_user_input, clarify
 model: sonnet
 ---
 
-> **Explicit invocation only**: This skill should only run when the user explicitly requests it with `/hotfix`. Do not auto-invoke based on context matching.
+> **Explicit invocation only**: run this skill when the user asks for `/hotfix`.
+> Do not auto-invoke it from context matching.
+
+A hotfix bypasses sprint process but never bypasses verification. The audit trail is
+the price of skipping the queue: every hotfix has a record, a reproducing test, a
+named approver, and a rollback plan **before** it deploys.
+
+---
 
 ## Phase 1: Assess Severity
 
-Read the bug description or ID. Assess severity using these criteria:
+Read the incident description, then classify:
 
-- **S1 (Critical)**: Game unplayable, data loss, security vulnerability
-- **S2 (Major)**: Significant feature broken, workaround exists
-- **S3 or lower**: Minor issue — normal bug fix workflow applies
+- **S1 (Critical)** — the app is down or unusable for merchants; merchant or customer
+  data is lost, corrupted, or exposed; access tokens or secrets are leaked; billing
+  charges the wrong amount; a theme app extension or checkout extension is breaking a
+  live storefront
+- **S2 (Major)** — a significant feature is broken with a workaround; webhook backlog
+  growing but recoverable; degraded performance inside budget breach
+- **S3 or lower** — cosmetic or edge-case defect: normal flow applies
 
 Confirm with `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "I've assessed this as **[assessed severity]** — [brief rationale]. Confirm severity to proceed:"
-- Options:
-  - `[A] S1 (Critical) — game unplayable, data loss, or security issue`
-  - `[B] S2 (Major) — significant feature broken, workaround exists`
-  - `[C] S3 or lower — redirect to normal bug fix workflow`
 
-If [C]: stop. Verdict: **REDIRECTED** — use the normal bug fix workflow for S3 and below.
+- `[A]` S1 (Critical) — down, data loss/exposure, wrong charge, broken storefront
+- `[B]` S2 (Major) — significant feature broken, workaround exists
+- `[C]` S3 or lower — redirect to the normal fix path
+
+If `[C]`: stop. Verdict **REDIRECTED** — use `/bug-report` then `/bug-triage`.
+
+Resolve the app slug from `docs/registry/apps.json` if not supplied.
 
 ---
 
-## Phase 2: Create Hotfix Record
+## Phase 2: Mitigate Before You Fix
 
-Draft the hotfix record:
+Ask one question before writing any code: **can the damage be stopped without a
+deploy?**
+
+Consider, in order of preference:
+
+1. Turn the feature off behind its flag
+2. Revert to the previous deployed version
+3. Pause the affected webhook subscription or background job
+4. Rate-limit or disable the failing endpoint
+5. Only then: ship a code fix
+
+Record which mitigation was used. A mitigation that stops merchant harm in two minutes
+beats a correct fix in two hours, and the fix still happens afterwards.
+
+---
+
+## Phase 3: Open the Incident Record
+
+Draft, then ask to write it to
+`production/apps/<app>/incidents/hotfix-<date>-<slug>.md`:
 
 ```markdown
-## Hotfix: [Short Description]
-Date: [Date]
-Severity: [S1/S2]
-Reporter: [Who found it]
+# Hotfix — [short description]
+
+App: [app]   Date: [date]   Severity: [S1/S2]
+Detected by: [monitoring / merchant report / internal]
 Status: IN PROGRESS
 
-### Problem
-[Clear description of what is broken and the player impact]
+## Impact
+[What merchants or their customers experienced, in merchant terms.]
+- Merchants affected: [count or estimate]
+- Surfaces affected: [admin | storefront | checkout | webhooks | billing]
+- Revenue or data at risk: [statement]
 
-### Root Cause
-[To be filled during investigation]
+## Timeline
+| Time (UTC) | Event |
+|-----------|-------|
+| [HH:MM] | Detected via [source] |
+| [HH:MM] | Mitigation: [flag off / revert / subscription paused] |
 
-### Fix
-[To be filled during implementation]
+## Root cause
+[Filled during investigation — the actual cause, not the symptom.]
 
-### Testing
-[What was tested and how]
+## Fix
+[Filled during implementation — what changed and why this is the minimum change.]
 
-### Approvals
-- [ ] Fix reviewed by lead-programmer
-- [ ] Regression test passed (qa-tester)
-- [ ] Release approved (producer)
+## Verification
+[Tests run, test store used, surfaces exercised.]
 
-### Rollback Plan
-[How to revert if the fix causes new issues]
+## Approvals
+- [ ] lead-engineer — fix reviewed
+- [ ] qa-lead — verification scope agreed and passed
+- [ ] release-manager — deploy and rollback ready
+- [ ] security-specialist — required if data, tokens, or permissions are involved
+
+## Rollback plan
+[How to revert, how long it takes, who decides.]
 ```
 
-Ask: "May I write this to `production/hotfixes/hotfix-[date]-[short-name].md`?"
-
-If yes, write the file, creating the directory if needed.
-
----
-
-## Phase 3: Create Hotfix Branch
-
-Check whether this is a git repository:
-
-`Bash: git rev-parse --is-inside-work-tree 2>/dev/null`
-
-If this command fails or returns empty: note "Not a git repository — create the branch manually." and skip branch creation.
-
-If the check passes, use `AskUserQuestion`, `request_user_input` or `clarify` before creating the branch:
-- Prompt: "Ready to create hotfix branch 'hotfix/[short-name]' from [base-ref]?"
-- Options:
-  - `[A] Yes — create branch`
-  - `[B] Use a different base ref — I'll specify it`
-  - `[C] Skip — I'll create the branch myself`
-
-Only run `git checkout -b hotfix/[short-name] [base-ref]` if user selects [A]. If [B]: ask the user for the base ref, then run the command with that ref. If [C]: skip branch creation and proceed to Phase 4.
+If a merchant-facing incident message is needed, `community-manager` drafts it from the
+Impact section; keep it factual and free of internal detail.
 
 ---
 
-## Phase 4: Investigate and Implement
+## Phase 4: Branch from the Release
 
-Focus on the minimal change that resolves the issue. Do NOT refactor, clean up, or add features alongside the hotfix.
+Check git first: `git rev-parse --is-inside-work-tree`. If this is not a repository,
+note it and skip branch creation.
 
-Validate the fix by running targeted tests for the affected system. Check for regressions in adjacent systems.
+Ask before branching:
 
-Update the hotfix record with root cause, fix details, and test results.
+- `[A]` create `hotfix/<app>-<slug>` from the tag of the currently deployed version
+- `[B]` use a different base ref (ask which)
+- `[C]` skip — the branch already exists
 
----
-
-## Phase 5: Collect Approvals
-
-Use the Task tool to request sign-off in parallel:
-
-- `subagent_type: lead-programmer` — Review the fix for correctness and side effects
-- `subagent_type: qa-tester` — Run targeted regression tests on the affected system
-- `subagent_type: producer` — Approve deployment timing and communication plan
-
-All three must return APPROVE before proceeding. If any returns CONCERNS or REJECT, do not deploy — surface the issue and resolve it first.
+Branch from the **deployed** tag, not from `main`. A hotfix cut from unreleased work
+carries unrelated changes into production.
 
 ---
 
-## Phase 5b: QA Re-Entry Gate
+## Phase 5: Reproduce, Then Fix
 
-After approvals, determine the QA scope required before deploying the hotfix. Spawn `qa-lead` via Task with:
-- The hotfix description and affected system
-- The regression test results from Phase 5
-- A list of all systems that touch the changed files (use Grep to find callers)
+1. **Write the failing test first.** It must fail for the reported reason. A fix with no
+   reproducing test is a guess that happens to deploy.
+2. **Make the minimum change.** No refactors, no dependency upgrades, no opportunistic
+   cleanups, no new features — every extra line is extra rollback risk.
+3. **Run the targeted suite** plus the suites that cover anything the change touches
+   (billing and webhook signature verification are at 100% coverage by project rule).
+4. **Update the incident record** with root cause, the diff summary, and test results.
 
-Ask qa-lead: **Is a full smoke check sufficient, or does this fix require a targeted team-qa pass?**
-
-Apply the verdict:
-- **Smoke check sufficient** — run `/smoke-check` against the hotfix build. If PASS, proceed to Phase 6.
-- **Targeted QA pass required** — run `/team-qa [affected-system]` scoped to the changed system only. If QA returns APPROVED or APPROVED WITH CONDITIONS, proceed to Phase 6.
-- **Full QA required** — S1 fixes that touch core systems may require a full `/team-qa sprint`. This delays deployment but prevents a bad patch.
-
-Do not skip this gate. A hotfix that breaks something else is worse than the original bug.
+If the honest fix needs more than four hours or touches the data model, stop and
+escalate to `technical-director` — a rushed schema change during an incident is how a
+short outage becomes a long one.
 
 ---
 
-## Phase 6: Update Bug Status and Deploy
+## Phase 6: Verification Gate
 
-Update the original bug file if one exists:
+Spawn `qa-lead` via Task with the incident summary, the failing-then-passing test, and
+the list of call sites for the changed modules (Grep for importers). Ask: what scope is
+required before this deploys?
 
-```markdown
-## Fix Record
-**Fixed in**: hotfix/[branch-name] — [commit hash or description]
-**Fixed date**: [date]
-**Status**: Fixed — Pending Verification
-```
+- **Smoke check sufficient** → run `/smoke-check <app>` and require PASS
+- **Targeted regression required** → run `/regression-suite` scoped to the affected area
+- **Full regression required** → S1 fixes touching auth, billing, webhooks, or data
 
-Set `**Status**: Fixed — Pending Verification` in the bug file header.
+Any surface a merchant touches must also be exercised on a real store: theme app
+extension or checkout extension changes require `/deploy-to-test-store <app>` and a
+walkthrough recorded under `production/apps/<app>/qa/evidence/`.
 
-Output a deployment summary:
+Do not skip this gate. A hotfix that breaks something else is worse than the original
+defect, because it arrives with the merchant's trust already spent.
+
+---
+
+## Phase 7: Approvals
+
+Spawn in parallel via Task and require APPROVE from all that apply:
+
+- `lead-engineer` — correctness and side effects of the fix
+- `qa-lead` — verification scope and results
+- `release-manager` — deploy window, monitoring, and rollback readiness
+- `security-specialist` — only when data, tokens, scopes, or permissions are involved
+
+Any CONCERNS or REJECT: do not deploy. Surface the objection, resolve it, re-run the
+gate. Record each verdict in the incident record.
+
+---
+
+## Phase 8: Deploy and Watch
+
+Before deploying, state the rollback trigger explicitly: which metric, error, or
+merchant report means "revert now". Ambiguity here is what turns a five-minute rollback
+into a two-hour debate.
+
+Output:
 
 ```
-## Hotfix Ready to Deploy: [short-name]
+## Hotfix Ready: [app] — [short description]
 
-**Severity**: [S1/S2]
-**Root cause**: [one line]
-**Fix**: [one line]
-**QA gate**: [Smoke check PASS / Team-QA APPROVED]
-**Approvals**: lead-programmer ✓ / qa-tester ✓ / producer ✓
-**Rollback plan**: [from Phase 2 record]
+Severity: [S1/S2]
+Root cause: [one line]
+Fix: [one line]
+Verification: [smoke PASS / targeted regression PASS / full regression PASS]
+Surfaces exercised: [admin | storefront | checkout | webhooks | billing]
+Approvals: lead-engineer ✓ / qa-lead ✓ / release-manager ✓ [/ security-specialist ✓]
+Rollback: [method, time to revert, decision owner]
 
-Merge to: release branch AND development branch
-Next: /bug-report verify [BUG-ID] after deploy to confirm resolution
+Branches: merge the hotfix into the release branch AND the development branch.
 ```
 
-### Rules
-- Hotfixes must be the MINIMUM change to fix the issue — no cleanup, no refactoring
-- Every hotfix must have a rollback plan documented before deployment
-- Hotfix branches merge to BOTH the release branch AND the development branch
-- All hotfixes require a post-incident review within 48 hours
-- If the fix is complex enough to need more than 4 hours, escalate to `technical-director`
+After deploy, watch for the agreed window. Verify against production behaviour, not
+against a local run: repeat the original reproduction steps on a test store and confirm
+the symptom is gone.
+
+- Fixed → record `Status: Fixed — verified` and close the incident
+- Still present → roll back immediately, reopen, escalate to `technical-director`
 
 ---
 
-## Phase 7: Post-Deploy Verification
+## Phase 9: Close Out
 
-After deploying, run `/bug-report verify [BUG-ID]` to confirm the fix resolved the issue in the deployed build.
+1. Update `apps/<app>/status.md` if the incident changed the stage or introduced a blocker.
+2. Add a **PATCH** entry to `apps/<app>/CHANGELOG.md` via `/changelog <app> <version>`.
+3. If merchants saw it, generate merchant-facing notes with `/patch-notes <app> <version>`.
+4. Schedule a post-incident review within 48 hours with `/retrospective hotfix`.
+5. Ask what next: `[A]` `/smoke-check <app>` · `[B]` `/patch-notes <app> <version>` ·
+   `[C]` `/regression-suite` to widen coverage · `[D]` stop here
 
-If VERIFIED FIXED: run `/bug-report close [BUG-ID]` to formally close it.
-If STILL PRESENT: the hotfix failed — immediately re-open, assess rollback, and escalate.
+---
 
-Schedule a post-incident review within 48 hours using `/retrospective hotfix`.
+## Rules
 
-Use `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "Hotfix complete. What's the next step?"
-- Options:
-  - `[A] Run /smoke-check to verify the fix`
-  - `[B] Run /patch-notes to document this hotfix`
-  - `[C] Stop here`
+- Minimum change only — a hotfix is not the place for the cleanup you have been putting off
+- Every hotfix has a reproducing test and a rollback plan before it deploys
+- Branches merge into both the release branch and the development branch, or the defect returns
+- Merchant communication goes out only after the fix is verified, and never promises a cause before the review confirms it
+- An outage is not closed until the record names what allowed it to happen — that is the input to the next `/security-audit` or `/regression-suite` run

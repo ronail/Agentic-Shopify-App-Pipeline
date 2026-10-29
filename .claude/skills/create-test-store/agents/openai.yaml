@@ -1,0 +1,6 @@
+interface:
+  display_name: "Create Test Store"
+  short_description: "Provisions a development and test store for a Shopify app: development store, test products and orders, the app install with scopes, and the credentials reco..."
+  default_prompt: "Use the $create-test-store skill for the requested task."
+policy:
+  allow_implicit_invocation: true

@@ -1,6 +1,6 @@
 ---
 name: bug-triage
-description: "Read all open bugs in production/qa/bugs/, re-evaluate priority vs. severity, assign to sprints, surface systemic trends, and produce a triage report. Run at sprint start or when the bug count grows enough to need re-prioritization."
+description: "Use at sprint start or when the open bug count needs re-prioritising. Reads the open bug backlog, re-evaluates priority against severity by merchant impact, assigns fixes to sprints, surfaces systemic trends, and writes a triage report."
 argument-hint: "[sprint | full | trend]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit
@@ -18,7 +18,8 @@ ensures no critical bug is lost between sprints.
 
 **When to run:**
 - Sprint start — assign open bugs to the new sprint or backlog
-- After `/team-qa` completes and new bugs have been filed
+- After a QA pass files new bugs — `/qa-plan` execution by `qa-lead` / `qa-tester`,
+  or a `/code-review` that turned up defects
 - When the bug count crosses 10+ open items
 
 ---
@@ -40,8 +41,9 @@ ensures no critical bug is lost between sprints.
 
 Glob for bug reports in priority order:
 1. `production/qa/bugs/*.md` — individual bug report files (preferred format)
-2. `production/qa/bugs.md` — single consolidated bug log (fallback)
-3. Any `production/qa/qa-plan-*.md` "Bugs Found" table (last resort)
+2. `docs/qa/bugs/*.md` — where `qa-lead` and `qa-tester` file their reports
+3. `production/qa/bugs.md` — single consolidated bug log (fallback)
+4. Any `production/apps/<app>/qa/qa-plan-*.md` "Bugs Found" table (last resort)
 
 If no bug files found:
 > "No bug files found in `production/qa/bugs/`. If bugs are tracked in a
@@ -52,7 +54,8 @@ Stop and report. Do not proceed if no bugs exist.
 
 ### Step 2b — Load sprint context
 
-Read the most recently modified file in `production/sprints/` to understand:
+Read the most recently modified sprint record — `production/sprints/` or
+`production/apps/<app>/sprints/`, whichever holds the current plan — to understand:
 - Current sprint number / name
 - Stories in scope (for assignment target)
 - Sprint capacity constraints (if noted)
@@ -62,7 +65,8 @@ If no sprint file exists: note "No sprint plan found — assigning to backlog on
 ### Step 2c — Load severity reference
 
 Read `.claude/docs/coding-standards.md` for severity/priority definitions if they
-exist. If they do not exist, use the standard definitions in Step 3.
+exist, and the app's control manifest for the guardrails that often decide severity
+(API cost, latency, data limits). If neither defines severity, use Step 3.
 
 ---
 
@@ -72,12 +76,15 @@ For each bug, extract or infer:
 
 ### Severity (impact of the bug)
 
+Merchant impact decides severity. Ask "what can the merchant no longer do?" —
+not "how wrong does the code look?".
+
 | Severity | Definition |
 |----------|-----------|
-| **S1 — Critical** | Game crashes, data loss, or complete feature failure. Cannot proceed past this point. |
-| **S2 — High** | Major feature broken but game is still playable. Significant wrong behaviour. |
-| **S3 — Medium** | Feature degraded but a workaround exists. Minor wrong behaviour. |
-| **S4 — Low** | Visual glitch, cosmetic issue, typo. No gameplay impact. |
+| **S1 — Critical** | Merchant is blocked or their data is wrong or lost: app will not load, checkout or order flow fails, unauthorised access, silent data corruption. No workaround. |
+| **S2 — High** | A core flow is broken but a workaround exists: syncs fail on some stores, webhooks drop, a billing gate misfires, an admin page errors on a common state. |
+| **S3 — Medium** | Degraded but usable: slow lists on large catalogs, misleading copy, a validation gap the merchant can step around, a single surface rendering incorrectly. |
+| **S4 — Low** | Cosmetic or internal only: spacing, wording, log noise, a tooltip. No merchant-visible effect on the task. |
 
 ### Priority (urgency of the fix)
 
@@ -102,8 +109,8 @@ P3+ to backlog.
 ### Deviation check
 
 Flag bugs that suggest **systematic problems**:
-- 3+ bugs from the same system in the same sprint → "Potential design or
-  implementation quality issue in [system]"
+- 3+ bugs from the same layer or module in the same sprint → "Potential design or
+  implementation quality issue in [layer/module]"
 - 2+ S1/S2 bugs in the same story → "Story may need to be reopened and
   re-reviewed before shipping"
 - Bug filed against a story marked Complete → "Regression in completed story —
@@ -121,9 +128,9 @@ After classifying all bugs, generate trend metrics:
 - Closed this sprint: [N]
 - Net change: [+N / -N]
 
-### System hot spots
-- Which system has the most open bugs?
-- Which system has the highest S1/S2 ratio?
+### Component hot spots
+- Which layer or module has the most open bugs?
+- Which one has the highest S1/S2 ratio?
 
 ### Age analysis
 - How many bugs are older than 2 sprints?
@@ -163,25 +170,25 @@ After classifying all bugs, generate trend metrics:
 
 ## P1 Bugs — Fix This Sprint
 
-| ID | System | Severity | Summary | Assigned to | Story |
-|----|--------|----------|---------|-------------|-------|
-| BUG-NNN | [system] | S[1-4] | [one-line description] | [sprint] | [story path] |
+| ID | Layer / Module | Severity | Summary | Assigned to | Story |
+|----|----------------|----------|---------|-------------|-------|
+| BUG-NNN | [layer/module] | S[1-4] | [one-line description] | [sprint] | [story path] |
 
 ---
 
 ## P2 Bugs — Fix Soon
 
-| ID | System | Severity | Summary | Target Sprint |
-|----|--------|----------|---------|---------------|
-| BUG-NNN | [system] | S[1-4] | [one-line description] | Sprint [N+1] |
+| ID | Layer / Module | Severity | Summary | Target Sprint |
+|----|----------------|----------|---------|---------------|
+| BUG-NNN | [layer/module] | S[1-4] | [one-line description] | Sprint [N+1] |
 
 ---
 
 ## P3/P4 Bugs — Backlog / Won't Fix
 
-| ID | System | Severity | Summary | Disposition |
-|----|--------|----------|---------|-------------|
-| BUG-NNN | [system] | S4 | [one-line description] | Backlog |
+| ID | Layer / Module | Severity | Summary | Disposition |
+|----|----------------|----------|---------|-------------|
+| BUG-NNN | [layer/module] | S4 | [one-line description] | Backlog |
 
 ---
 
@@ -194,7 +201,7 @@ After classifying all bugs, generate trend metrics:
 ## Trend Analysis
 
 **Volume**: [N] open / [+N] net change this sprint
-**Hot spot**: [system with most bugs]
+**Hot spot**: [layer/module with most bugs]
 **Regressions**: [N] bugs against completed stories
 **Aged bugs (>2 sprints old)**: [N]
 
@@ -207,7 +214,7 @@ After classifying all bugs, generate trend metrics:
 ## Recommended Actions
 
 1. [Most urgent action — usually "fix P1 bugs before QA hand-off"]
-2. [Second action — usually "investigate [hot spot system] quality"]
+2. [Second action — usually "investigate [hot spot layer/module] quality"]
 3. [Third action — optional improvement]
 ```
 

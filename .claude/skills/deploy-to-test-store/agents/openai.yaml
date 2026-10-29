@@ -1,0 +1,6 @@
+interface:
+  display_name: "Deploy To Test Store"
+  short_description: "Deploys a build of a Shopify app to its test store: pins the version, applies pending migrations, releases the app extension and config, updates the install,..."
+  default_prompt: "Use the $deploy-to-test-store skill for the requested task."
+policy:
+  allow_implicit_invocation: true

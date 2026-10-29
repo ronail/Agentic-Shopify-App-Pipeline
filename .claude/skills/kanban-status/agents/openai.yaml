@@ -1,0 +1,6 @@
+interface:
+  display_name: "Kanban Status"
+  short_description: "Renders the pipeline board across every app from docs/registry/apps.json and production/apps/<app>/: stage, gate state, open sprints, and what is blocked. Re..."
+  default_prompt: "Use the $kanban-status skill for the requested task."
+policy:
+  allow_implicit_invocation: true

@@ -1,263 +1,201 @@
 ---
 name: reverse-document
-description: "Generate design or architecture documents from existing implementation. Works backwards from code/prototypes to create missing planning docs."
-argument-hint: "<type> <path> (e.g., 'design src/gameplay/combat' or 'architecture src/core')"
+description: "Document existing app code into docs/architecture/apps/<app>/ — system overview, data flow, API surface, webhook map, and ADR candidates — grounded in file:line citations. Use for inherited apps, undocumented features, and before architecture review of an app whose code outran its docs."
+argument-hint: "[app: <slug>] [path: <subdir>] [--adr-candidates]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash
+allowed-tools: Read, Glob, Grep, Bash, Write, AskUserQuestion, request_user_input, clarify
 model: sonnet
-# Read-only diagnostic skill — no specialist agent delegation needed
+agent: app-architect
 ---
 
-# Reverse Documentation
+# Reverse Document
 
-This skill analyzes existing implementation (code, prototypes, systems) and generates
-appropriate design or architecture documentation. Use this when:
-- You built a feature without writing a design doc first
-- You inherited a codebase without documentation
-- You prototyped a mechanic and need to formalize it
-- You need to document "why" behind existing code
+Turns working code into architecture documentation. The output must describe
+what the code **does**, not what someone intended — every claim cites a file and
+line, and anything not evidenced is labelled as unknown.
+
+**Output:** `docs/architecture/apps/<app>/`
+
+- `system-overview.md` — what the app is, its surfaces, and its boundaries
+- `data-flow.md` — request → handler → data → response paths
+- `api-surface.md` — Admin API operations, scopes used, API version, cost notes
+- `webhook-map.md` — topic → route → side effects → idempotency
+- `adr-candidates.md` (only with `--adr-candidates`) — decisions worth recording
+  as ADRs, with the code evidence
+
+Do not overwrite an existing document silently. If one exists, produce a diff-style
+update and ask.
 
 ---
 
-## Workflow
+## 1. Inventory Before Reading
 
-## Phase 1: Parse Arguments
+Map the app's shape first:
 
-**Format**: `/reverse-document <type> <path>`
-
-**Type options**:
-- `design` → Generate a game design document (GDD section)
-- `architecture` → Generate an Architecture Decision Record (ADR)
-- `concept` → Generate a concept document from prototype
-
-**Path**: Directory or file to analyze
-- `src/gameplay/combat/` → All combat-related code
-- `src/core/event-system.cpp` → Specific file
-- `prototypes/stealth-mech/` → Prototype directory
-
-**Examples**:
 ```bash
-/reverse-document design src/gameplay/magic-system
-/reverse-document architecture src/core/entity-component
-/reverse-document concept prototypes/vehicle-combat
+# file inventory by extension, with sizes
+find apps/<app> -type f ! -path "*/node_modules/*" ! -path "*/prototype/*" \
+  | sed 's/.*\.//' | sort | uniq -c | sort -rn
+
+# entry points and routes
+grep -rn "export default\|export async function loader\|export async function action" \
+  apps/<app> --include=*.ts --include=*.tsx
+
+# GraphQL documents
+find apps/<app> -name "*.graphql" -o -name "*.gql"
+
+# webhook routes
+grep -rln "webhook\|webhooks" apps/<app> --include=*.ts
 ```
 
-## Phase 2: Analyze Implementation
+Record: route count, module count, GraphQL operation count, migration count,
+test count. Those numbers anchor the document's scope statement.
 
-**Read and understand the code/prototype**:
+---
 
-**For design docs (GDD):**
-- Identify mechanics, rules, formulas
-- Extract gameplay values (damage, cooldowns, ranges)
-- Find state machines, ability systems, progression
-- Detect edge cases handled in code
-- Map dependencies (what systems interact?)
+## 2. Read in Dependency Order
 
-**For architecture docs (ADR):**
-- Identify patterns (ECS, singleton, observer, etc.)
-- Understand technical decisions (threading, serialization, etc.)
-- Map dependencies and coupling
-- Assess performance characteristics
-- Find constraints and trade-offs
+1. `apps/<app>/shopify.app.toml` — embedded or not, scopes, webhook topics,
+   API version, redirect URLs. This is the app's contract with Shopify.
+2. Entry/config: `package.json`, route manifest, server bootstrap.
+3. Auth and session modules — how a request becomes an authorised shop context.
+4. Primary routes and their data loaders/actions.
+5. GraphQL operation files — the actual API surface.
+6. Webhook routes.
+7. Repository/query layer and migrations — the data model.
+8. Background jobs/workers.
+9. The app's tests — they encode intended behaviour and edge cases the code
+   hides.
 
-**For concept docs (prototype analysis):**
-- Identify core mechanic
-- Extract emergent gameplay patterns
-- Note what worked vs what didn't
-- Find technical feasibility insights
-- Document player fantasy / feel
+While reading, keep a running list of every file that matters. If a file is
+unreadable or a behaviour depends on a service you cannot see, write
+`UNKNOWN — <reason>` rather than inferring.
 
-## Phase 3: Ask Clarifying Questions
+---
 
-**DO NOT** just describe the code. **ASK** about intent:
+## 3. Extract Facts, Not Impressions
 
-**Design questions**:
-- "I see a [resource] system that depletes during [activity]. Was this for:
-  - Pacing (prevent spam)?
-  - Resource management (strategic depth)?
-  - Or something else?"
-- "The [mechanic] seems central. Is this a core pillar, or supporting feature?"
-- "[Value] scales exponentially with [factor]. Intentional design, or needs rebalancing?"
+For each document section, collect these facts with citations:
 
-**Architecture questions**:
-- "You're using a service locator pattern. Was this chosen for:
-  - Testability (mock dependencies)?
-  - Decoupling (reduce hard references)?
-  - Or inherited from existing code?"
-- "I see manual memory management instead of smart pointers. Performance requirement, or legacy?"
+**System overview**
+- Surfaces: embedded admin routes, theme app extension, checkout extension,
+  server endpoints, jobs.
+- External dependencies, each with the file that uses it.
+- Data stores: tables and their owning modules.
+- Scopes requested vs scopes actually exercised (mismatch is a finding).
 
-**Concept questions**:
-- "The prototype emphasizes stealth over combat. Is that the intended pillar?"
-- "Players seem to exploit the grappling hook for speed. Feature or bug?"
+**Data flow**
+- For each primary flow, the chain: UI component → route loader/action →
+  operation → API → persistence → response → rendered state.
+- Where errors are caught and what the merchant sees.
+- Where caching sits, and its invalidation trigger.
+- Any synchronous external call on a request path (latency and failure risk).
 
-## Phase 4: Present Findings
+**API surface**
+- Operation name, file, requested cost, pagination strategy, throttling
+  behaviour.
+- Pinned API version, and where it is read from (must be one place per app).
+- Deprecated fields in use — check against
+  `docs/shopify-api-reference/<version>/` deprecated list.
 
-Before drafting, show what you discovered:
+**Webhook map**
+- Topic → route file → work performed → what is queued → idempotency key.
+- Which topics are subscribed in toml but have no handler, and which handlers
+  exist for unsubscribed topics.
 
-```
-I've analyzed [path]/. Here's what I found:
+**Data model**
+- Tables, key columns, indexes that exist because a query needs them, and
+  foreign keys that enforce the shop boundary.
+- Rows that grow without bound (jobs, events, logs) and what prunes them.
 
-MECHANICS IMPLEMENTED:
-- [mechanic-a] with [property] (e.g. timing windows, cooldowns)
-- [mechanic-b] (e.g. interaction between two states)
-- [resource] system (depletes on [action], regens on [condition])
-- [state] system (builds up, triggers [effect])
+---
 
-FORMULAS DISCOVERED:
-- [Output] = [formula using discovered variables]
-- [Secondary output] = [formula]
+## 4. Write the Documents
 
-UNCLEAR INTENT AREAS:
-1. [Resource] system — pacing or resource management?
-2. [Mechanic] — core pillar or supporting feature?
-3. [Value] scaling — intentional design or needs tuning?
+Style rules:
+- Present tense, describing current behaviour.
+- Every non-obvious claim cites `path/to/file.ts:120`.
+- Distinguish **observed** (read in code), **inferred** (concluded from several
+  files — say so), and **unknown**.
+- No recommendations in the descriptive docs. Findings go in a final section or
+  in `adr-candidates.md`.
+- Diagrams in text (Mermaid) only when the flow is genuinely branching; a
+  three-step chain is prose.
 
-Before I draft the design doc, could you clarify these points?
-```
-
-Wait for user to clarify intent before drafting.
-
-## Phase 5: Draft Document Using Template
-
-Based on type, use appropriate template:
-
-| Type | Template | Output Path |
-|------|----------|-------------|
-| `design` | `templates/design-doc-from-implementation.md` | `design/gdd/[system-name].md` |
-| `architecture` | `templates/architecture-doc-from-code.md` | `docs/architecture/[decision-name].md` |
-| `concept` | `templates/concept-doc-from-prototype.md` | `prototypes/[name]/CONCEPT.md` or `design/concepts/[name].md` |
-
-**Draft structure**:
-- Capture **what exists** (mechanics, patterns, implementation)
-- Document **why it exists** (intent clarified with user)
-- Identify **what's missing** (edge cases not handled, gaps in design)
-- Flag **follow-up work** (balance tuning, missing features)
-
-## Phase 6: Show Draft and Request Approval
-
-**Collaborative protocol**:
-```
-I've drafted the [system-name] design doc based on your code and clarifications.
-
-[Show key sections: Overview, Mechanics, Formulas, Design Intent]
-
-ADDITIONS I MADE:
-- Documented [mechanic] as "[intent]" per your clarification
-- Added edge cases not in code (e.g., what if [resource] hits 0 mid-[action]?)
-- Flagged balance concern: [scaling type] scaling at [boundary condition]
-
-SECTIONS MARKED AS INCOMPLETE:
-- "[System] interaction with [other-system]" (not fully implemented yet)
-- "[Variant or feature]" (only [subset] implemented so far)
-
-May I write this to design/gdd/[system-name].md?
-```
-
-Wait for approval. User may request changes before writing.
-
-## Phase 7: Write Document with Metadata
-
-When approved, write the file with special markers:
+Template skeleton for `system-overview.md`:
 
 ```markdown
----
-status: reverse-documented
-source: [path/]
-date: [today]
-verified-by: [User name]
----
+# <app> — System Overview
 
-# [System Name] Design
+> Reverse-documented from commit <sha> on <date>. Sources cited inline.
 
-> **Note**: This document was reverse-engineered from the existing implementation.
-> It captures current behavior and clarified design intent. Some sections may be
-> incomplete where implementation is partial or intent was unclear.
+## What the app does
+<merchant-facing description, then the mechanism in one paragraph>
 
-[Rest of document...]
-```
+## Surfaces
+| Surface | Entry point | Notes |
 
-## Phase 8: Flag Follow-Up Work
+## Boundaries
+- Reads: <tables/APIs>
+- Writes: <tables/APIs>
+- Never touches: <explicit non-goals found in code>
 
-After writing, suggest next steps:
+## Request lifecycle
+<numbered chain with citations>
 
-```
-✅ Written to design/gdd/combat-system.md
+## Data stores
+| Store | Owner module | Growth bound |
 
-FOLLOW-UP RECOMMENDED:
-1. Run /balance-check on combat formulas (exponential scaling concern)
-2. Create ADR for stamina system architecture decision
-3. Implement missing edge cases:
-   - Stamina depletion mid-combo behavior
-   - Stagger state during dodge
-4. Extend design doc when weapon variety is implemented
-
-Would you like me to tackle any of these now?
+## Known gaps
+| Gap | Evidence | Impact |
 ```
 
 ---
 
-## Template Selection Logic
+## 5. Findings and ADR Candidates
 
-| If analyzing... | Use template... | Because... |
-|----------------|-----------------|------------|
-| `src/gameplay/*` | design-doc-from-implementation.md | Gameplay mechanics → GDD |
-| `src/core/*`, `src/ai/*` | architecture-doc-from-code.md | Core systems → ADR |
-| `prototypes/*` | concept-doc-from-prototype.md | Experiments → concept doc |
-| `src/networking/*` | architecture-doc-from-code.md | Technical systems → ADR |
-| `src/ui/*` | design-doc-from-implementation.md | UI/UX → design spec |
+Any of these becomes a documented finding, not a quiet fix:
+
+- a scope requested but never used, or used but not requested,
+- an Admin API call from the browser,
+- a webhook handler that parses before verifying,
+- a query without shop scoping,
+- hardcoded API version outside `shopify.app.toml`,
+- an unbounded table with no prune,
+- a synchronous third-party call before webhook ack.
+
+`--adr-candidates` adds a ranked list:
+
+```markdown
+# ADR Candidates — <app>
+
+| # | Decision | Evidence | Why it deserves an ADR | Constraints it creates |
+|---|----------|----------|------------------------|------------------------|
+```
+
+Only list decisions that constrain *other* work. "We use Postgres" from a shared
+preference doc is not an app ADR; "billing state is derived from
+`app_subscriptions/update` rather than polled" is.
 
 ---
 
-## Example Session: Reverse-Document a System
+## 6. Verify the Document Against the Code
 
-```
-User: /reverse-document design src/gameplay/[system]
+Before finishing, spot-check five citations at random against the files. A
+document with a wrong line reference is worse than no document — it teaches the
+team to trust stale facts.
 
-Agent: I'll analyze your [system] implementation to create a design doc.
-       [Reads code, discovers mechanics, formulas]
-
-Agent: I've analyzed src/gameplay/[system]/. Here's what I found:
-       [Shows mechanics, formulas, unclear areas]
-
-       Before drafting, could you clarify:
-       1. [Resource] system intent?
-       2. Is [mechanic] a core pillar?
-       3. [Value] scaling — intentional or needs tuning?
-
-User: 1. [Resource] is for pacing, prevent [unwanted behavior]
-      2. [Mechanic] is core — I want [design intent]
-      3. Yeah, exponential is too much, should be linear
-
-Agent: Perfect, that clarifies the vision. Let me draft the design doc.
-       [Shows draft with clarified intent]
-
-       May I write this to design/gdd/[system-name].md?
-
-User: Yes, write it.
-
-Agent: ✅ Written to design/gdd/[system-name].md
-       ✅ Marked as [REVERSE-DOCUMENTED]
-       ✅ Flagged [value] scaling for rebalancing
-
-       Next steps:
-       - Update [formula] to [corrected scaling]
-       - Run /balance-check to validate [curve]
-       - Document [mechanic] as core pillar in game-pillars.md
-```
+Then ask: *"May I write these documents to
+`docs/architecture/apps/<app>/`?"* List every file path in the approval request.
 
 ---
 
-## Collaborative Protocol
+## Boundary
 
-This skill follows the collaborative design principle:
-
-1. **Analyze First**: Read code, understand implementation
-2. **Question Intent**: Ask about "why", not just "what"
-3. **Present Findings**: Show discoveries, highlight unclear areas
-4. **User Clarifies**: Separate intent from accidents
-5. **Draft Document**: Create doc based on reality + intent
-6. **Show Draft**: Display key sections, explain additions
-7. **Get Approval**: "May I write to [filepath]?" On approval: Verdict: **COMPLETE** — document generated. On decline: Verdict: **BLOCKED** — user declined write.
-8. **Flag Follow-Up**: Suggest related work, don't auto-execute
-
-**Never assume intent. Always ask before documenting "why".**
+- Documenting only. Do not refactor code while documenting; file the finding.
+- Do not document the prototype directory — it is throwaway.
+- If the code contradicts an existing ADR, that is a finding for
+  `/architecture-review`, not something to quietly reconcile in prose.
+- Hand-off: findings → the owning specialist; ADR candidates →
+  `/architecture-decision`; requirement gaps →
+  `docs/architecture/apps/<app>/requirements.yaml` via `app-architect`.

@@ -1,6 +1,0 @@
-interface:
-  display_name: "Godot Screenshot"
-  short_description: "Capture an in-game screenshot from a running Godot project using the game's viewport, then verify and report the saved image path."
-  default_prompt: "Use the $godot-screenshot skill for the requested task."
-policy:
-  allow_implicit_invocation: true

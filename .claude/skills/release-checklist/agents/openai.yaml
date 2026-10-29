@@ -1,6 +1,6 @@
 interface:
   display_name: "Release Checklist"
-  short_description: "Generates a comprehensive pre-release validation checklist covering build verification, certification requirements, store metadata, and launch readiness."
+  short_description: "Use before submitting an app to the Shopify App Store. Generates the submission-readiness checklist for one app — scopes, billing, webhooks and compliance to..."
   default_prompt: "Use the $release-checklist skill for the requested task."
 policy:
   allow_implicit_invocation: true

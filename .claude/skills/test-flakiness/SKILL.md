@@ -1,6 +1,6 @@
 ---
 name: test-flakiness
-description: "Detect non-deterministic (flaky) tests by reading CI run logs or test result history. Aggregates pass rates per test, identifies intermittent failures, recommends quarantine or fix, and maintains a flaky test registry. Best run during Polish phase or after multiple CI runs."
+description: "Detect non-deterministic (flaky) tests by reading CI run logs or test result history. Aggregates pass rates per test, identifies intermittent failures, recommends quarantine or fix, and maintains a flaky test registry. Best run once the suite has accumulated several CI runs."
 argument-hint: "[ci-log-path | scan | registry]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash
@@ -18,7 +18,7 @@ explains likely causes, and recommends whether to quarantine or fix each one.
 `production/qa/flakiness-report-[date].md`
 
 **When to run:**
-- Polish phase (tests have had many runs; statistical signal is reliable)
+- Once the suite has had many runs (statistical signal is reliable)
 - When developers start dismissing CI failures as "probably flaky"
 - After `/regression-suite` identifies quarantined tests that need diagnosis
 
@@ -47,14 +47,9 @@ ls -t .github/ 2>/dev/null
 ls -t test-results/ 2>/dev/null
 ```
 
-For Godot projects: GdUnit4 outputs XML results compatible with JUnit format.
-Check `test-results/` for `.xml` files.
-
-For Unity projects: game-ci test runner outputs NUnit XML to `test-results/`
-by default.
-
-For Unreal projects: automation logs go to `Saved/Logs/`. Grep for
-`Result: Success` and `Result: Fail` patterns.
+Most JavaScript/TypeScript runners (Vitest, Jest, Playwright, node:test) can emit
+JUnit XML to `test-results/` — check for `.xml` files there. `gh run view --log`
+also works when the workflow stores its output only in the run log.
 
 ### Option B — Local log files
 
@@ -78,16 +73,16 @@ Stop and ask the user which option to pursue.
 
 For each CI log or result file found, parse:
 
-**JUnit XML format** (GdUnit4 / Unity):
+**JUnit XML format** (most common CI reporter output):
 - Grep for `<testcase name=` to get test names
 - Grep for `<failure` or `<error` to identify failures
 - Parse `classname` and `name` attributes for full test identifiers
 
 **Plain text logs**:
 - Grep for pass/fail patterns:
-  - Godot: `PASSED` / `FAILED` adjacent to test names
-  - Unreal: `Result: Success` / `Result: Fail`
-  - Unity: `Test passed` / `Test failed`
+  - `✓` / `✗` (Vitest, Jest verbose output)
+  - `passed` / `failed` / `flaky` (Playwright summary lines)
+  - `PASS` / `FAIL` adjacent to test names
 
 Build a table: `test_id → [run1_result, run2_result, run3_result, ...]`
 
@@ -110,16 +105,17 @@ For each flaky test, classify the likely cause:
 
 | Cause | Symptoms | Fix direction |
 |-------|----------|---------------|
-| **Timing / async** | Fails after awaiting signals or timers; pass rate correlates with system load | Add explicit await/synchronisation; avoid time-based delays |
+| **Timing / async** | Fails after awaiting events or timers; pass rate correlates with CI load | Await the real signal; replace fixed delays with polling/`waitFor` |
 | **Order dependency** | Fails when run after specific other tests; passes in isolation | Add proper setup/teardown; ensure test isolation |
-| **Random seed** | Fails intermittently with no pattern; involves RNG | Pass explicit seed; don't use `randf()` in tests |
-| **Resource leak** | Fails more often later in a test run | Fix cleanup in teardown; check orphan nodes (Godot) or object disposal (Unity) |
-| **External state** | Fails when a file, scene, or global exists from a prior test | Isolate test from file system; use in-memory mocks |
-| **Floating point** | Fails on comparisons like `== 0.5` | Use epsilon comparison (`is_equal_approx`, `Assert.AreApproximately`) |
-| **Scene/prefab load race** | Fails when scenes are not yet ready | Await one frame after instantiation; use `await get_tree().process_frame` |
+| **Random / generated data** | Fails intermittently with no pattern; uses `Math.random`, dates, or UUIDs | Inject a fixed seed or fixed clock; never assert on generated values |
+| **Shared state** | Fails more often later in a run; relies on a module-level cache or a record created by a prior test | Reset state in `beforeEach`; create fixtures per test |
+| **External dependency** | Fails when a network call, rate limit, or sandbox store is slow or absent | Mock the dependency in unit tests; hit a dedicated test store only in integration tests |
+| **Floating point** | Fails on comparisons like `=== 0.5` | Use `toBeCloseTo` / epsilon comparison |
+| **Race on render / load** | Fails when the DOM or data is not yet present | Await the visible state, not a fixed timeout |
+| **Timezone / locale** | Fails only on some machines or CI runners | Pin `TZ` and locale in the test config |
 
-Use Grep to check the test file for timing calls, randf, global state access,
-or equality comparisons on floats to narrow down the cause.
+Use Grep to check the test file for timers, randomness, global state access,
+network calls, or equality comparisons on floats to narrow down the cause.
 
 ---
 
@@ -129,9 +125,9 @@ For each flaky test:
 
 **Quarantine (High flakiness):**
 > "Quarantine this test immediately. Disable it in CI by adding
-> `@pytest.mark.skip` / `[Ignore]` / `GdUnitSkip` annotation. Log it in
-> `tests/regression-suite.md` quarantine section. The test is now opt-in only.
-> Fix the root cause before removing quarantine."
+> `test.skip` / `it.skip` / `describe.skip` (or the runner's equivalent).
+> Log it in `tests/regression-suite.md` quarantine section. The test is now
+> opt-in only. Fix the root cause before removing quarantine."
 
 **Investigate and fix soon (Moderate):**
 > "This test is intermittently unreliable. Root cause appears to be [cause].
@@ -156,11 +152,11 @@ For each flaky test:
 
 ### Flaky Tests Found
 
-| Test | System | Fail Rate | Likely Cause | Recommendation |
+| Test | Module | Fail Rate | Likely Cause | Recommendation |
 |------|--------|-----------|--------------|----------------|
-| [test_name] | [system] | [N]% | Timing | Quarantine + fix async |
-| [test_name] | [system] | [N]% | Float comparison | Fix: use epsilon compare |
-| [test_name] | [system] | [N]% | Order dependency | Investigate teardown |
+| [test_name] | [module] | [N]% | Timing | Quarantine + await real event |
+| [test_name] | [module] | [N]% | Float comparison | Fix: use epsilon compare |
+| [test_name] | [module] | [N]% | Order dependency | Investigate teardown |
 
 ### Clean Tests (no flakiness detected)
 
@@ -185,14 +181,14 @@ Ask (separately): "May I write a full flakiness report to
 `production/qa/flakiness-report-[date].md`?"
 
 The full report includes per-test analysis with cause details and
-engine-specific fix snippets.
+framework-specific fix snippets.
 
 After writing:
 
-- For each quarantined test: "Add the engine-specific skip annotation to
-  disable this test in CI. Re-enable after the root cause is fixed."
-- For fix-eligible tests: "The fix for [test] is straightforward —
-  change the equality comparison on line [N] to use `is_equal_approx`."
+- For each quarantined test: "Add the runner's skip annotation to disable this
+  test in CI. Re-enable after the root cause is fixed."
+- For fix-eligible tests: "The fix for [test] is straightforward — replace the
+  equality comparison on line [N] with a tolerance-based assertion."
 - Summary: "Once all quarantine annotations are applied, CI should run green.
   Schedule fix work for the [N] quarantined tests before the release gate."
 

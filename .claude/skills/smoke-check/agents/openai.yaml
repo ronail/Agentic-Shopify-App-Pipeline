@@ -1,6 +1,6 @@
 interface:
   display_name: "Smoke Check"
-  short_description: "Run the critical path smoke test gate before QA hand-off. Executes the automated test suite, verifies core functionality, and produces a PASS/FAIL report. Ru..."
+  short_description: "Post-deploy smoke test on the dev store: walk the critical merchant flows of one Shopify app — install, embedded admin load, primary action, billing, webhook..."
   default_prompt: "Use the $smoke-check skill for the requested task."
 policy:
   allow_implicit_invocation: true

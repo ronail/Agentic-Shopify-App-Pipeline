@@ -1,308 +1,171 @@
 ---
 name: consistency-check
-description: "Scan all GDDs against the entity registry to detect cross-document inconsistencies: same entity with different stats, same item with different values, same formula with different variables. Grep-first approach — reads registry then targets only conflicting GDD sections rather than full document reads."
-argument-hint: "[full | since-last-review | entity:<name> | item:<name>]"
+description: "Detect drift between the app registry, app directories, status files, gate approvals, architecture docs, and pinned Shopify API versions. Read-only audit with a drift table and a recommended owner per mismatch. Run after any structural change, and before gate-4-release."
+argument-hint: "[app: <slug> | all] [--fix-plan]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash, AskUserQuestion, request_user_input, clarify
+allowed-tools: Read, Glob, Grep, Bash, AskUserQuestion, request_user_input, clarify
 model: sonnet
+agent: technical-director
 ---
 
 # Consistency Check
 
-Detects cross-document inconsistencies by comparing all GDDs against the
-entity registry (`design/registry/entities.yaml`). Uses a grep-first approach:
-reads the registry once, then targets only the GDD sections that mention
-registered names — no full document reads unless a conflict needs investigation.
+The pipeline's integrity rests on a handful of files agreeing with each other.
+When they drift, agents act on lies: a gate that was never approved, an app
+that exists in the registry but not on disk, an ADR pinning an API version the
+app does not run.
 
-**This skill is the write-time safety net.** It catches what `/design-system`'s
-per-section checks may have missed and what `/review-all-gdds`'s holistic review
-catches too late.
+**This skill is read-only.** It reports drift and names the owner; it does not
+"helpfully" rewrite files.
 
-**When to run:**
-- After writing each new GDD (before moving to the next system)
-- Before `/review-all-gdds` (so that skill starts with a clean baseline)
-- Before `/create-architecture` (inconsistencies poison downstream ADRs)
-- On demand: `/consistency-check entity:[name]` to check one entity specifically
-
-**Output:** Conflict report + optional registry corrections
+**Output:** conversation report. With `--report`, write to
+`production/session-state/consistency-<date>.md` (per-session, never a shared
+accumulating log).
 
 ---
 
-## Phase 1: Parse Arguments and Load Registry
+## 1. Sources of Truth
 
-**Modes:**
-- No argument / `full` — check all registered entries against all GDDs
-- `since-last-review` — check only GDDs modified since the last review report
-- `entity:<name>` — check one specific entity across all GDDs
-- `item:<name>` — check one specific item across all GDDs
+| Fact | Authoritative source | Mirrors that must agree |
+|------|----------------------|-------------------------|
+| Which apps exist | `docs/registry/apps.json` | `apps/<app>/` dirs, `production/apps/<app>/` dirs |
+| App stage | `apps/<app>/status.md` | registry `stage`, registry `last_approved_gate` |
+| Gate approval | `apps/<app>/approvals.json` | status.md `Last approved gate`, registry `last_approved_gate` |
+| App purpose | registry `purpose` | `apps/<app>/README.md` first paragraph |
+| Pinned API version | `apps/<app>/shopify.app.toml` | ADR `Shopify API Surface`, `docs/shopify-api-reference/<version>/` existence |
+| Scopes | `shopify.app.toml` | ADR Shopify API Surface, OAuth/session code paths |
+| Webhook topics | `shopify.app.toml` | route handlers, ADR Shopify API Surface |
+| Requirements | `docs/architecture/apps/<app>/requirements.yaml` | ADR "App Requirements Addressed", stories |
+| Architecture decisions | `docs/architecture/apps/<app>/` ADRs | `docs/registry/architecture.yaml` stances |
+| Request scope | `request.md` | `request-history.md`, `apps/<app>/request-history.md` |
 
-**Load the registry:**
-
-```
-Read path="design/registry/entities.yaml"
-```
-
-If the file does not exist or has no entries:
-> "Entity registry is empty. Run `/design-system` to write GDDs — the registry
-> is populated automatically after each GDD is completed. Nothing to check yet."
-
-Stop and exit.
-
-Build four lookup tables from the registry:
-- **entity_map**: `{ name → { source, attributes, referenced_by } }`
-- **item_map**: `{ name → { source, value_gold, weight, ... } }`
-- **formula_map**: `{ name → { source, variables, output_range } }`
-- **constant_map**: `{ name → { source, value, unit } }`
-
-Count total registered entries. Report:
-```
-Registry loaded: [N] entities, [N] items, [N] formulas, [N] constants
-Scope: [full | since-last-review | entity:name]
-```
+Read `docs/registry/apps.json` first. Every other check is expressed relative to
+it — an app missing from the registry is invisible to the whole pipeline, which
+is the most damaging drift of all.
 
 ---
 
-## Phase 2: Locate In-Scope GDDs
+## 2. Checks
 
-```
-Glob pattern="design/gdd/*.md"
-```
+### C1 — Registry ↔ directories
+- For each registry entry: `apps/<slug>/` exists, contains `README.md`,
+  `status.md`, `approvals.json`.
+- For each `apps/<app>/` directory: an entry exists in the registry. A directory
+  with no entry is **critical** — no gate can ever be recorded for it.
+- For each registry entry: `production/apps/<slug>/` exists with `sprints/`,
+  `milestones/`, `session-state/`.
+- Orphan directories under `production/apps/` with no registry entry → critical.
+- Registry entries are append-only: check git history for deleted or reordered
+  entries (`git log -p -- docs/registry/apps.json`). A deleted entry is a
+  finding even if the current file looks fine.
 
-Exclude: `game-concept.md`, `systems-index.md`, `game-pillars.md` — these are
-not system GDDs.
+### C2 — Stage and gates agree
+- Parse `gate-N-*` keys from `approvals.json` and compare with `status.md`
+  `Last approved gate` and the registry's `last_approved_gate`.
+- Gate sequence must be monotonic: you cannot hold `gate-3-scope` without
+  `gate-1-research` and `gate-2-prototype`. A gap is **critical** — later gates
+  were approved against unapproved foundations.
+- Valid ids only: `gate-1-research`, `gate-2-prototype`, `gate-3-scope`,
+  `gate-4-release`, `gate-5-update`. Anything else is a typo finding.
+- Each gate entry carries `id`, `timestamp`, `approver`; a missing approver means
+  the approval is unattributable — treat as not approved.
+- Stage string in `status.md` must be a known stage name
+  (`research`, `architecture`, `prototype`, `scope`, `build`, `release`,
+  `update`) and must be consistent with the last approved gate (an app whose
+  last gate is `gate-3-scope` is in `build`, not `research`).
 
-For `since-last-review` mode:
-```bash
-git log --name-only --pretty=format: -- design/gdd/ | grep "\.md$" | sort -u
-```
-Limit to GDDs modified since the most recent `design/gdd/gdd-cross-review-*.md`
-file's creation date.
+### C3 — Cross-doc: API version and surfaces
+- Extract the API version from `apps/<app>/shopify.app.toml`.
+- Find every ADR in `docs/architecture/apps/<app>/` and read its *Shopify API
+  Surface* section. Versions must match the toml. A mismatch is **high**: the
+  ADR is the document stories are built against.
+- `docs/shopify-api-reference/<version>/` must exist and be readable. A pinned
+  version with no snapshot means agents will invent field names — high.
+- Scopes: set-compare `scopes` in toml against the scopes listed in the ADR and
+  the scopes actually referenced by code paths. Extra scope in toml = medium
+  (over-permissioned); scope used in code but absent from toml = high (the call
+  will fail at runtime for every merchant).
+- Webhook topics: set-compare toml subscriptions against handler routes. A
+  subscribed topic with no handler = high (silent delivery failures after
+  Shopify's retry window); a handler for an unsubscribed topic = medium (dead
+  code or a config omission).
 
-Report the in-scope GDD list before scanning.
+### C4 — Requirements and stories
+- Every requirement id in `docs/architecture/apps/<app>/requirements.yaml` that
+  is claimed by an ADR exists in the registry (no renumbering drift).
+- Requirement ids referenced by sprint/story files under
+  `production/apps/<app>/sprints/` resolve. A dangling id means the story was
+  written against a deleted requirement.
+- Requirement ids are unique, stable, and match `REQ-<AREA>-<NNN>`. Detect
+  duplicates and gaps introduced by renumbering.
 
----
+### C5 — App-local docs
+- `apps/<app>/README.md` purpose line matches registry `purpose`.
+- `apps/<app>/request-history.md` exists and its latest entry is not older than
+  the last change to `request.md` that names this app.
+- `design/` and `src/` shared assets are not duplicated inside an app directory
+  (isolation contract: shared assets live at the top level).
 
-## Phase 3: Grep-First Conflict Scan
-
-For each registered entry, grep every in-scope GDD for the entry's name.
-Do NOT do full reads — extract only the matching lines and their immediate
-context (-C 3 lines).
-
-This is the core optimization: instead of reading 10 GDDs × 400 lines each
-(4,000 lines), you grep 50 entity names × 10 GDDs (50 targeted searches,
-each returning ~10 lines on a hit).
-
-### 3a: Entity Scan
-
-For each entity in entity_map:
-
-```
-Grep pattern="[entity_name]" glob="design/gdd/*.md" output_mode="content" -C 3
-```
-
-For each GDD hit, extract the values mentioned near the entity name:
-- any numeric attributes (counts, costs, durations, ranges, rates)
-- any categorical attributes (types, tiers, categories)
-- any derived values (totals, outputs, results)
-- any other attributes registered in entity_map
-
-Compare extracted values against the registry entry.
-
-**Conflict detection:**
-- Registry says `[entity_name].[attribute] = [value_A]`. GDD says `[entity_name] has [value_B]`. → **CONFLICT**
-- Registry says `[item_name].[attribute] = [value_A]`. GDD says `[item_name] is [value_B]`. → **CONFLICT**
-- GDD mentions `[entity_name]` but doesn't specify the attribute. → **NOTE** (no conflict, just unverifiable)
-
-### 3b: Item Scan
-
-For each item in item_map, grep all GDDs for the item name. Extract:
-- sell price / value / gold value
-- weight
-- stack rules (stackable / non-stackable)
-- category
-
-Compare against registry entry values.
-
-### 3c: Formula Scan
-
-For each formula in formula_map, grep all GDDs for the formula name. Extract:
-- variable names mentioned near the formula
-- output range or cap values mentioned
-
-Compare against registry entry:
-- Different variable names → **CONFLICT**
-- Output range stated differently → **CONFLICT**
-
-### 3d: Constant Scan
-
-For each constant in constant_map, grep all GDDs for the constant name. Extract:
-- Any numeric value mentioned near the constant name
-
-Compare against registry value:
-- Different number → **CONFLICT**
+### C6 — Pipeline artefacts
+- Sprint files under `production/apps/<app>/sprints/` reference stories that
+  exist, and the sprint id sequence has no gaps.
+- Source code does not live under `production/apps/<app>/`. A source file there
+  is a **high** isolation breach — it will not be built or tested.
+- No app directory contains another app's slug in an import path. Cross-app
+  imports are an isolation breach by definition.
 
 ---
 
-## Phase 4: Deep Investigation (Conflicts Only)
-
-For each conflict found in Phase 3, do a targeted full-section read of the
-conflicting GDD to get precise context:
-
-```
-Read path="design/gdd/[conflicting_gdd].md"
-```
-(Or use Grep with wider context if the file is large)
-
-Confirm the conflict with full context. Determine:
-1. **Which GDD is correct?** Check the `source:` field in the registry — the
-   source GDD is the authoritative owner. Any other GDD that contradicts it
-   is the one that needs updating.
-2. **Is the registry itself out of date?** If the source GDD was updated after
-   the registry entry was written (check git log), the registry may be stale.
-3. **Is this a genuine design change?** If the conflict represents an intentional
-   design decision, the resolution is: update the source GDD, update the registry,
-   then fix all other GDDs.
-
-For each conflict, classify:
-- **🔴 CONFLICT** — same named entity/item/formula/constant with different values
-  in different GDDs. Must resolve before architecture begins.
-- **⚠️ STALE REGISTRY** — source GDD value changed but registry not updated.
-  Registry needs updating; other GDDs may be correct already.
-- **ℹ️ UNVERIFIABLE** — entity mentioned but no comparable attribute stated.
-  Not a conflict; just noting the reference.
-
----
-
-## Phase 5: Output Report
-
-```
-## Consistency Check Report
-Date: [date]
-Registry entries checked: [N entities, N items, N formulas, N constants]
-GDDs scanned: [N] ([list names])
-
----
-
-### Conflicts Found (must resolve before architecture)
-
-🔴 [Entity/Item/Formula/Constant Name]
-   Registry (source: [gdd]): [attribute] = [value]
-   Conflict in [other_gdd].md: [attribute] = [different_value]
-   → Resolution needed: [which doc to change and to what]
-
----
-
-### Stale Registry Entries (registry behind the GDD)
-
-⚠️ [Entry Name]
-   Registry says: [value] (written [date])
-   Source GDD now says: [new value]
-   → Update registry entry to match source GDD, then check referenced_by docs.
-
----
-
-### Unverifiable References (no conflict, informational)
-
-ℹ️ [gdd].md mentions [entity_name] but states no comparable attributes.
-   No conflict detected. No action required.
-
----
-
-### Clean Entries (no issues found)
-
-✅ [N] registry entries verified across all GDDs with no conflicts.
-
----
-
-Verdict: PASS | CONFLICTS FOUND
-```
-
-**Verdict:**
-- **PASS** — no conflicts. Registry and GDDs agree on all checked values.
-- **CONFLICTS FOUND** — one or more conflicts detected. List resolution steps.
-
----
-
-## Phase 6: Registry Corrections
-
-If stale registry entries were found, ask:
-> "May I update `design/registry/entities.yaml` to fix the [N] stale entries?"
-
-For each stale entry:
-- Update the `value` / attribute field
-- Set `revised:` to today's date
-- Add a YAML comment with the old value: `# was: [old_value] before [date]`
-
-If new entries were found in GDDs that are not in the registry, ask:
-> "Found [N] entities/items mentioned in GDDs that aren't in the registry yet.
-> May I add them to `design/registry/entities.yaml`?"
-
-Only add entries that appear in more than one GDD (true cross-system facts).
-
-**Never delete registry entries.** Set `status: deprecated` if an entry is removed
-from all GDDs.
-
-After writing: Verdict: **COMPLETE** — consistency check finished.
-If conflicts remain unresolved: Verdict: **BLOCKED** — [N] conflicts need manual resolution before architecture begins.
-
-### 6b: Append to Reflexion Log
-
-If any 🔴 CONFLICT entries were found (regardless of whether they were resolved),
-append an entry to `docs/consistency-failures.md` for each conflict:
+## 3. Report Format
 
 ```markdown
-### [YYYY-MM-DD] — /consistency-check — 🔴 CONFLICT
-**Domain**: [system domain(s) involved]
-**Documents involved**: [source GDD] vs [conflicting GDD]
-**What happened**: [specific conflict — entity name, attribute, differing values]
-**Resolution**: [how it was fixed, or "Unresolved — manual action needed"]
-**Pattern**: [generalised lesson, e.g. "Item values defined in combat GDD were not
-referenced in economy GDD before authoring — always check entities.yaml first"]
+# Consistency Check — <scope>
+
+> Date: <date> | Commit: <sha> | Apps checked: <n>
+
+## Summary
+| Check | Findings | Worst severity |
+|-------|----------|----------------|
+| C1 registry ↔ dirs | | |
+| C2 stage ↔ gates | | |
+| C3 API version & surfaces | | |
+| C4 requirements & stories | | |
+| C5 app-local docs | | |
+| C6 pipeline artefacts | | |
+
+## Findings
+
+| ID | Check | Severity | App | Expected | Actual | Owner | Fix |
+|----|-------|----------|-----|----------|--------|-------|-----|
+| CONS-001 | C2 | critical | order-tags | gates 1,2,3 present | gate-3 without gate-2 | producer | record or remove gate-3 |
+
+## Verified clean
+<list the checks that found nothing — absence of evidence matters>
+
+## Verdict: CONSISTENT / DRIFT DETECTED (n critical, n high)
 ```
 
-If `docs/consistency-failures.md` does not exist, create it with this header before appending:
-
-```markdown
-# Consistency Failure Log
-
-<!-- Auto-maintained by /consistency-check. Do not edit manually. -->
-<!-- One entry per detected conflict, in chronological order. -->
-
-| Date | GDD A | GDD B | Conflict Type | Status |
-|------|-------|-------|---------------|--------|
-```
-
-Then append the new conflict entries. Never skip logging — a missing file is not a reason to lose conflict history.
+Severity definitions:
+- **critical** — the pipeline's own record is wrong (missing registry entry,
+  gate gap, stage contradiction). Any agent acting on it will do the wrong work.
+- **high** — a document contradicts code/config in a way that produces broken
+  calls or unhandled deliveries.
+- **medium** — over-permission, dead config, or a mirror that is stale but not
+  yet misleading.
+- **low** — naming, ordering, cosmetic.
 
 ---
 
-## Phase 7: Session State and Closing
+## 4. After the Report
 
-Silently append to `production/session-state/active.md` (create the file if it does not exist):
-
-```
-<!-- CONSISTENCY-CHECK: [date] | GDDs checked: [N] | Conflicts found: [N] | Report: docs/consistency-report-[date].md -->
-```
-
-Then close with an `AskUserQuestion`, `request_user_input` or `clarify` widget:
-
-- **Prompt**: "Consistency check complete — [N] conflicts found. What next?"
-- **Options**:
-  - `[A] Fix the highest-priority conflict now`
-  - `[B] Save full report and stop`
-  - `[C] Run /design-review on the most conflicted GDD`
-  - `[D] Stop here`
-
-Never end the skill with plain text. Always close with this widget.
-
----
-
-## Recovery / Reference
-
-- **If PASS**: Run `/review-all-gdds` for holistic design-theory review, or
-  `/create-architecture` if all MVP GDDs are complete.
-- **If CONFLICTS FOUND**: Fix the flagged GDDs, then re-run
-  `/consistency-check` to confirm resolution.
-- **If STALE REGISTRY**: Update the registry (Phase 6), then re-run to verify.
-- Run `/consistency-check` after writing each new GDD to catch issues early,
-  not at architecture time.
+- Do not fix silently. Route each finding:
+  registry/status/approvals → `producer` (or `product-director` when a gate
+  record is in question)
+  API version, scopes, webhook topics → `api-lead` with `app-bridge-specialist`
+  or `webhooks-specialist` as applicable
+  requirements and ADR linkage → `app-architect`
+  source under `production/` or cross-app imports → `lead-engineer`
+  request/prototype drift → `scope-check` next
+- Critical findings block `/gate-check` for the affected app until resolved.
+- If `--fix-plan` was passed, append an ordered remediation plan grouped by
+  owner, smallest safe change first, with the check ids it closes.

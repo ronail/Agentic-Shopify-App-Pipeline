@@ -1,6 +1,6 @@
 interface:
   display_name: "Milestone Review"
-  short_description: "Generates a comprehensive milestone progress review including feature completeness, quality metrics, risk assessment, and go/no-go recommendation. Use at mil..."
+  short_description: "Review a milestone in production/apps/<app>/milestones/: what was promised, what shipped, what the evidence actually supports, and whether the app can advanc..."
   default_prompt: "Use the $milestone-review skill for the requested task."
 policy:
   allow_implicit_invocation: true

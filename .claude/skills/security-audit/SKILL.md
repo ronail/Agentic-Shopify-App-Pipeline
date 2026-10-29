@@ -1,245 +1,211 @@
 ---
 name: security-audit
-description: "Audit the game for security vulnerabilities: save tampering, cheat vectors, network exploits, data exposure, and input validation gaps. Produces a prioritised security report with remediation guidance. Run before any public release or multiplayer launch."
-argument-hint: "[full | network | save | input | quick]"
+description: "Audit one Shopify app's security posture: OAuth install flow, session-token verification, access-token storage, webhook HMAC, scope minimisation, protected customer data handling, and compliance webhooks. Produces severity-ranked findings with concrete exploit paths. Run before gate-4-release and after any auth, billing, or webhook change."
+argument-hint: "[app: <slug>] [focus: auth | webhooks | data | scopes | all]"
 user-invocable: true
-allowed-tools: Read, Glob, Grep, Bash, Write, Task
+allowed-tools: Read, Glob, Grep, Bash, Write, AskUserQuestion, request_user_input, clarify
 model: sonnet
-agent: security-engineer
+agent: security-specialist
 ---
 
 # Security Audit
 
-Security is not optional for any shipped game. Even single-player games have
-save tampering vectors. Multiplayer games have cheat surfaces, data exposure
-risks, and denial-of-service potential. This skill systematically audits the
-codebase for the most common game security failures and produces a prioritised
-remediation plan.
+The app holds a merchant's store data and a token that can act as the app on
+that store. One leaked token or one unverified endpoint is a merchant-facing
+incident, not a code smell.
 
-**Run this skill:**
-- Before any public release (required for the Polish → Release gate)
-- Before enabling any online/multiplayer feature
-- After implementing any system that reads from disk or network
-- When a security-related bug is reported
+**Output:** `production/apps/<app>/milestones/security-audit-<date>.md`
+(sprint-scoped review → `production/apps/<app>/sprints/security-audit-<date>.md`)
 
-**Output:** `production/security/security-audit-[date].md`
+**When to run:** before `gate-4-release`; after any change to auth, session,
+webhook, billing, or data-export code; when a new scope is requested; when
+App Store review feedback mentions security or data handling.
 
----
-
-## Phase 1: Parse Arguments and Scope
-
-**Modes:**
-- `full` — all categories (recommended before release)
-- `network` — network/multiplayer only
-- `save` — save file and serialization only
-- `input` — input validation and injection only
-- `quick` — high-severity checks only (fastest, for iterative use)
-- No argument — run `full`
-
-Read `.claude/docs/technical-preferences.md` to determine:
-- Engine and language (affects which patterns to search for)
-- Target platforms (affects which attack surfaces apply)
-- Whether multiplayer/networking is in scope
+**Never** paste a live token, webhook secret, or customer record into the report.
+Reference the field and the file, not the value.
 
 ---
 
-## Phase 2: Spawn Security Engineer
+## 1. Load Context
 
-Spawn `security-engineer` via Task. Pass:
-- The audit scope/mode
-- Engine and language from technical preferences
-- A manifest of all source directories: `src/`, `assets/data/`, any config files
-
-The security-engineer runs the audit across 6 categories (see Phase 3). Collect their full findings before proceeding.
-
----
-
-## Phase 3: Audit Categories
-
-The security-engineer evaluates each of the following. Skip categories not applicable to the project scope.
-
-### Category 1: Save File and Serialization Security
-- Are save files validated before loading? (no blind deserialization)
-- Are save file paths constructed from user input? (path traversal risk)
-- Are save files checksummed or signed? (tamper detection)
-- Does the game trust numeric values from save files without bounds checking?
-- Are there any eval() or dynamic code execution calls near save loading?
-
-Grep patterns: `File.open`, `load`, `deserialize`, `JSON.parse`, `from_json`, `read_file` — check each for validation.
-
-### Category 2: Network and Multiplayer Security (skip if single-player only)
-- Is game state authoritative on the server, or does the client dictate outcomes?
-- Are incoming network packets validated for size, type, and value range?
-- Are player positions and state changes validated server-side?
-- Is there rate limiting on any network calls?
-- Are authentication tokens handled correctly (never sent in plaintext)?
-- Does the game expose any debug endpoints in release builds?
-
-Grep for: `recv`, `receive`, `PacketPeer`, `socket`, `NetworkedMultiplayerPeer`, `rpc`, `rpc_id` — check each call site for validation.
-
-### Category 3: Input Validation
-- Are any player-supplied strings used in file paths? (path traversal)
-- Are any player-supplied strings logged without sanitization? (log injection)
-- Are numeric inputs (e.g., item quantities, character stats) bounds-checked before use?
-- Are achievement/stat values checked before being written to any backend?
-
-Grep for: `get_input`, `Input.get_`, `input_map`, user-facing text fields — check validation.
-
-### Category 4: Data Exposure
-- Are any API keys, credentials, or secrets hardcoded in `src/` or `assets/`?
-- Are debug symbols or verbose error messages included in release builds?
-- Does the game log sensitive player data to disk or console?
-- Are any internal file paths or system information exposed to players?
-
-Grep for: `api_key`, `secret`, `password`, `token`, `private_key`, `DEBUG`, `print(` in release-facing code.
-
-### Category 5: Cheat and Anti-Tamper Vectors
-- Are gameplay-critical values stored only in memory, not in easily-editable files?
-- Are any critical game progression flags (e.g., "has paid for DLC") validated server-side?
-- Is there any protection against memory editing tools (Cheat Engine, etc.) for multiplayer?
-- Are leaderboard/score submissions validated before acceptance?
-
-Note: Client-side anti-cheat is largely unenforceable. Focus on server-side validation for anything competitive or monetised.
-
-### Category 6: Dependency and Supply Chain
-- Are any third-party plugins or libraries used? List them.
-- Do any plugins have known CVEs in the version being used?
-- Are plugin sources verified (official marketplace, reviewed repository)?
-
-Glob for: `addons/`, `plugins/`, `third_party/`, `vendor/` — list all external dependencies.
+- `apps/<app>/shopify.app.toml` — scopes, redirect URLs, embedded setting,
+  webhook subscriptions, API version.
+- `apps/<app>/status.md`, `apps/<app>/approvals.json` — stage and prior gates.
+- The app's OAuth/session modules, webhook routes, repository layer, and any
+  export/report route.
+- Documentation for the pinned Admin API version in
+  `docs/shopify-api-reference/<version>/` — scope names, protected customer data
+  fields, and compliance webhook contracts change between versions.
+- `.claude/docs/technical-preferences.md` — hosting, DB, storage, and the
+  forbidden-patterns list. Those forbidden patterns are mandatory checks here.
 
 ---
 
-## Phase 4: Classify Findings
+## 2. Attack Surface Checklist
 
-For each finding, assign:
+### A. Install / OAuth
+- [ ] `state` is generated per install, is unpredictable, is bound to the
+      session, and is verified on callback. A static or absent state = CSRF.
+- [ ] The callback verifies Shopify's HMAC over the query string with a
+      timing-safe comparison before exchanging the code.
+- [ ] The shop domain is validated against `*.myshopify.com` before it is used
+      in a request or a DB key. Unvalidated `shop` = SSRF / token leak to an
+      attacker domain.
+- [ ] Redirect URIs in `shopify.app.toml` are exact-match allowlists — no
+      wildcard, no open redirect parameter.
+- [ ] The code exchange happens server-side only; app secret never reaches the
+      browser.
+- [ ] Re-install after uninstall re-runs OAuth rather than reusing a stale
+      token.
 
-**Severity:**
-| Level | Definition |
-|-------|-----------|
-| **CRITICAL** | Remote code execution, data breach, or trivially-exploitable cheat that breaks multiplayer integrity |
-| **HIGH** | Save tampering that bypasses progression, credential exposure, or server-side authority bypass |
-| **MEDIUM** | Client-side cheat enablement, information disclosure, or input validation gap with limited impact |
-| **LOW** | Defence-in-depth improvement — hardening that reduces attack surface but no direct exploit exists |
+### B. Session and tokens
+- [ ] Every embedded request verifies the App Bridge session token: signature
+      with the app secret, `aud` equals the app's client id, `iss`/`dest` match
+      the shop, `exp`/`nbf` within tolerance. Decoding without verification is
+      the most common failure in this codebase class.
+- [ ] Session tokens are never trusted from headers other than the documented
+      `Authorization` bearer, and never from a query parameter.
+- [ ] Offline access tokens are stored encrypted at rest (DB column or KMS,
+      not plaintext) and never logged.
+- [ ] Token refreshes and rotations update storage; no token is written to a
+      cookie, localStorage, or an error payload.
+- [ ] Session rows are scoped by shop; a query that takes a shop id from the
+      request cannot read another shop's session.
+- [ ] Admin API calls originate server-side only — the forbidden pattern list
+      bans browser-side Admin API calls and the check is real.
 
-**Status:** Open / Accepted Risk / Out of Scope
+### C. Webhooks
+- [ ] Every webhook route verifies HMAC-SHA256 over the **raw** body with a
+      timing-safe compare, before any parsing side effect, and returns 401 on
+      mismatch.
+- [ ] Verification happens once, in shared middleware — not copy-pasted per
+      route with one copy subtly wrong.
+- [ ] Handler processing is idempotent on the delivery/event id, so a replayed
+      delivery cannot double-apply.
+- [ ] No webhook handler trusts `X-Shopify-Shop-Domain` without also verifying
+      the signature.
+- [ ] Payloads are validated (schema at the boundary) before they reach the
+      query layer.
+
+### D. Data and privacy
+- [ ] The app requests only scopes it uses. Every scope in `shopify.app.toml`
+      is justified by a code path; list any that are not.
+- [ ] Protected customer data fields are only fetched where the merchant-facing
+      feature genuinely needs them, and only the fields required.
+- [ ] Compliance webhooks are implemented and reachable:
+      `customers/data_request`, `customers/redact`, `shop/redact` — each with a
+      real handler and an audit trail of what was deleted.
+- [ ] Customer data is not written to logs, error trackers, or analytics
+      payloads. Search for logging of request bodies on routes that touch orders
+      or customers.
+- [ ] Data retention: uninstall and `shop/redact` remove or anonymise stored
+      merchant data per the documented policy.
+- [ ] Exports (CSV/report downloads) are authorised per shop and not served
+      from a predictable unauthenticated URL.
+
+### E. Application-level
+- [ ] SQL access goes through parameterised queries or the repository layer; no
+      string-built SQL anywhere.
+- [ ] The query layer scopes every read/write by shop id — a missing
+      `where shop = ?` is a cross-tenant leak.
+- [ ] Secrets come from environment/KMS; no secret literal in the repo, no
+      secret in a committed `.env`-like file.
+- [ ] Billing entitlements are re-checked server-side on every paid action; a
+      client-supplied plan flag is not authorisation.
+- [ ] Error responses do not leak stack traces, SQL, or token fragments to the
+      browser.
+- [ ] Dependencies: no unmaintained package on the auth/webhook path; check for
+      known-vulnerable versions of the approved dependency set.
 
 ---
 
-## Phase 5: Generate Report
+## 3. Verify, Do Not Assume
+
+For each checklist item, record how it was confirmed:
+
+- **Read the code path** and cite `file:line`.
+- **Exercise the failure mode** where safe: send an unsigned webhook (expect
+  401 and no side effect), send a session token with a wrong `aud` (expect
+  rejection), request another shop's record id (expect 404/403, never data).
+- A check that could not be verified gets status `UNVERIFIED` — never `PASS`.
+
+Checks that are cheap and decisive — unsigned webhook, wrong-audience token,
+cross-shop id — should always be exercised, not just read. Reading a middleware
+file and concluding "looks fine" is how bypass paths survive.
+
+---
+
+## 4. Report
 
 ```markdown
-# Security Audit Report
+# Security Audit — <app>
 
-**Date**: [date]
-**Scope**: [full | network | save | input | quick]
-**Engine**: [engine + version]
-**Audited by**: security-engineer via /security-audit
-**Files scanned**: [N source files, N config files]
+> Date: <date> | Commit: <sha> | API version: <v>
+> Auditor: security-specialist | Scope: auth | webhooks | data | scopes | all
 
----
+## Scope justification
+| Scope in toml | Used by | Justified? |
 
-## Executive Summary
+## Findings
 
-| Severity | Count | Must Fix Before Release |
-|----------|-------|------------------------|
-| CRITICAL | [N] | Yes — all |
-| HIGH | [N] | Yes — all |
-| MEDIUM | [N] | Recommended |
-| LOW | [N] | Optional |
+| ID | Area | Severity | Finding | Exploit path | Fix | Owner |
+|----|------|----------|---------|--------------|-----|-------|
+| SEC-001 | auth | Critical/High/Medium/Low | | | | auth-specialist |
 
-**Release recommendation**: [CLEAR TO SHIP / FIX CRITICALS FIRST / DO NOT SHIP]
+## Verified controls
+| Control | Status (PASS/FAIL/UNVERIFIED) | Evidence |
+|---------|-------------------------------|----------|
+| OAuth state verified | | file:line + exercised |
+| Session token audience checked | | |
+| Webhook HMAC verified | | |
+| Raw body used for HMAC | | |
+| Compliance webhooks implemented | | |
+| Scopes minimal | | |
+| Tokens encrypted at rest | | |
+| Cross-shop access blocked | | |
+| No PII in logs | | |
 
----
+## Secrets hygiene
+Literal scan result: <n matches | none>. Uncommitted `.env`-class files tracked
+by git: <n | none>.
 
-## CRITICAL Findings
-
-### SEC-001: [Title]
-**Category**: [Save / Network / Input / Data / Cheat / Dependency]
-**File**: `[path]` line [N]
-**Description**: [What the vulnerability is]
-**Attack scenario**: [How a malicious user would exploit it]
-**Remediation**: [Specific code change or pattern to apply]
-**Effort**: [Low / Medium / High]
-
-[repeat per finding]
-
----
-
-## HIGH Findings
-
-[same format]
-
----
-
-## MEDIUM Findings
-
-[same format]
-
----
-
-## LOW Findings
-
-[same format]
-
----
-
-## Accepted Risk
-
-[Any findings explicitly accepted by the team with rationale]
-
----
-
-## Dependency Inventory
-
-| Plugin / Library | Version | Source | Known CVEs |
-|-----------------|---------|--------|------------|
-| [name] | [version] | [source] | [none / CVE-XXXX-NNNN] |
-
----
-
-## Remediation Priority Order
-
-1. [SEC-NNN] — [1-line description] — Est. effort: [Low/Medium/High]
-2. ...
-
----
-
-## Re-Audit Trigger
-
-Run `/security-audit` again after remediating any CRITICAL or HIGH findings.
-The Polish → Release gate requires this report with no open CRITICAL or HIGH items.
+## Verdict: PASS / PASS WITH FINDINGS / FAIL
 ```
 
----
+Severity:
+- **Critical** — token/secret exposure, signature bypass, cross-tenant data
+  access, or unauthenticated Admin API access. Blocks release unconditionally.
+- **High** — exploitable with a crafted request from a merchant session; missing
+  idempotency on a money path; scope overreach that touches customer data.
+- **Medium** — defence-in-depth gap, verbose errors, log hygiene.
+- **Low** — hardening, dependency freshness, documentation.
 
-## Phase 6: Write Report
-
-Present the report summary (executive summary + CRITICAL/HIGH findings only) in conversation.
-
-Ask: "May I write the full security audit report to `production/security/security-audit-[date].md`?"
-
-Write only after approval.
-
----
-
-## Phase 7: Gate Integration
-
-This report is a required artifact for the **Polish → Release gate**.
-
-After remediating findings, re-run: `/security-audit quick` to confirm CRITICAL/HIGH items are resolved before running `/gate-check release`.
-
-If CRITICAL findings exist:
-> "⛔ CRITICAL security findings must be resolved before any public release. Do not proceed to `/launch-checklist` until these are addressed."
-
-If no CRITICAL/HIGH findings:
-> "✅ No blocking security findings. Report written to `production/security/`. Include this path when running `/gate-check release`."
+`gate-4-release` cannot pass with any open Critical or High finding. Medium and
+Low need an owner and a date.
 
 ---
 
-## Collaborative Protocol
+## 5. Write and Route
 
-- **Never assume a pattern is safe** — flag it and let the user decide
-- **Accepted risk is a valid outcome** — some LOW findings are acceptable trade-offs for a solo team; document the decision
-- **Multiplayer games have a higher bar** — any HIGH finding in a multiplayer context should be treated as CRITICAL
-- **This is not a penetration test** — this audit covers common patterns; a real pentest by a human security professional is recommended before any competitive or monetised multiplayer launch
+Ask: *"May I write this audit to
+`production/apps/<app>/milestones/security-audit-<date>.md`?"*
+
+Route by area:
+- OAuth, session token, token storage → `auth-specialist`
+- Webhook signature, replay, idempotency → `webhooks-specialist`
+- Scope minimisation, API version behaviour → `api-lead`
+- Entitlement enforcement → `billing-specialist`
+- Query scoping, migrations, secret handling → `devops-engineer`
+- PII in UI, error surfaces → `polaris-specialist` / `ux-lead`
+
+Every Critical/High finding must come back for re-verification on the fixed
+commit — a fix without a re-audit is a claim, not a control.
+
+---
+
+## Rules
+
+- Do not fix code in this skill. Findings go to the owning specialist.
+- Do not run exploit traffic against a production store. Dev store only.
+- Do not downgrade a severity because "the merchant would have to try". The
+  attacker is the one trying.

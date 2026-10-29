@@ -1,7 +1,7 @@
 ---
 name: architecture-review
-description: "Validates completeness and consistency of the project architecture against all GDDs. Builds a traceability matrix mapping every GDD technical requirement to ADRs, identifies coverage gaps, detects cross-ADR conflicts, verifies engine compatibility consistency across all decisions, and produces a PASS/CONCERNS/FAIL verdict. The architecture equivalent of /design-review."
-argument-hint: "[focus: full | coverage | consistency | engine | single-gdd path/to/gdd.md]"
+description: "Use when reviewing one app's architecture. Validates the per-app ADR set against that app's requirement registry, builds a REQ -> ADR traceability matrix, detects conflicting decisions, cross-checks every decision against the pinned Shopify API snapshot, and returns a PASS/CONCERNS/FAIL verdict."
+argument-hint: "[app] [focus: full | coverage | consistency | api | rtm]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Task, AskUserQuestion, request_user_input, clarify
 agent: technical-director
@@ -10,656 +10,481 @@ model: opus
 
 # Architecture Review
 
-The architecture review validates that the complete body of architectural decisions
-covers all game design requirements, is internally consistent, and correctly targets
-the project's pinned engine version. It is the quality gate between Technical Setup
-and Pre-Production.
+The architecture review validates that one app's body of architecture decisions
+covers that app's requirements, is internally consistent, and matches the Shopify
+API version the app actually pins. It is the quality gate between technical setup
+and story creation for that app.
+
+**Scope: one app.** Every app owns its ADR set, requirement registry, and control
+manifest under `docs/architecture/apps/<app>/`. There is no cross-app architecture
+document, and a review never mixes two apps' decisions.
 
 **Argument modes:**
-- **No argument / `full`**: Full review — all phases
-- **`coverage`**: Traceability only — which GDD requirements have no ADR
-- **`consistency`**: Cross-ADR conflict detection only
-- **`engine`**: Engine compatibility audit only
-- **`single-gdd [path]`**: Review architecture coverage for one specific GDD
-- **`rtm`**: Requirements Traceability Matrix — extends the standard matrix
-  to include story file paths and test file paths; outputs
-  `docs/architecture/requirements-traceability.md` with the full
-  GDD requirement → ADR → Story → Test chain. Use in Production phase when
-  stories and tests exist.
+
+- **No argument / `full`**: full review — all phases
+- **`coverage`**: traceability only — which requirement IDs have no ADR
+- **`consistency`**: cross-ADR conflict detection only
+- **`api`**: Shopify API surface audit only (version, scopes, topics, deprecated fields)
+- **`rtm`**: Requirements Traceability Matrix — extends the matrix to story and
+  test paths and writes `docs/architecture/apps/<app>/requirements-traceability.md`
+
+Report after loading: `Loaded [N] ADRs, [M] requirements — app: [app], API version: [version].`
 
 ---
 
-## Phase 1: Load Everything
+## Phase 1: Resolve the App and Load Inputs
 
-### Phase 1a — L0: Summary Scan (fast, low tokens)
+### 1a — Resolve the app
 
-Before reading any full document, use Grep to extract `## Summary` sections
-from all GDDs and ADRs:
+Read `docs/registry/apps.json`. The first argument token is the app slug.
+
+- Slug found in the registry → use it.
+- No argument → take the app named in `request.md`, else the app whose
+  `production/apps/<app>/session-state/active.md` is most recently modified.
+- Slug not in the registry → stop and list the registered slugs. Never invent one.
+
+Every path below is relative to that app. Never read another app's directory.
+
+### 1b — L0 summary scan
+
+Before full reads, Grep the app's ADR summaries:
 
 ```
-Grep pattern="## Summary" glob="design/gdd/*.md" output_mode="content" -A 4
-Grep pattern="## Summary" glob="docs/architecture/adr-*.md" output_mode="content" -A 3
+Grep pattern="## Summary" path="docs/architecture/apps/<app>" glob="adr-*.md" output_mode="content" -A 3
 ```
 
-For `single-gdd [path]` mode: use the target GDD's summary to identify which
-ADRs reference the same system (Grep ADRs for the system name), then full-read
-only those ADRs. Skip full-reading unrelated GDDs entirely.
+In `coverage` mode this scan plus `requirements.yaml` is usually enough to name the
+gaps; full-read only the ADRs whose summaries touch the same area.
 
-For `engine` mode: only full-read ADRs — GDDs are not needed for engine checks.
+### 1c — Full load
 
-For `coverage` or `full` mode: proceed to full-read everything below.
+**Architecture records**
 
-### Phase 1b — L1/L2: Full Document Load
+- `docs/architecture/apps/<app>/adr-*.md` — read every file completely in `full`,
+  `consistency`, `api`, and `rtm` modes
+- `docs/architecture/apps/<app>/requirements.yaml` — the requirement registry
+- `docs/architecture/apps/<app>/control-manifest.md` — for the staleness check only
+- `docs/architecture/apps/<app>/architecture.md` — if it exists
 
-Read all inputs appropriate to the mode:
+**App configuration**
 
-### Design Documents
-- All in-scope GDDs in `design/gdd/` — read every file completely
-- `design/gdd/systems-index.md` — the authoritative list of systems
+- `apps/<app>/shopify.app.toml` — pinned `api_version`, `access_scopes`, webhook
+  subscription list, extension registrations
+- `apps/<app>/README.md`, `apps/<app>/status.md` — purpose, stage, known blockers
 
-### Architecture Documents
-- All in-scope ADRs in `docs/architecture/` — read every file completely
-- `docs/architecture/architecture.md` if it exists
+**Pinned API reference**
 
-### Engine Reference
-- `docs/engine-reference/[engine]/VERSION.md`
-- `docs/engine-reference/[engine]/breaking-changes.md`
-- `docs/engine-reference/[engine]/deprecated-apis.md`
-- All files in `docs/engine-reference/[engine]/modules/`
+- `docs/shopify-api-reference/<version>/` — schema snapshot, changelog notes,
+  deprecated-field list, per-surface notes for the version in `shopify.app.toml`
 
-### Project Standards
-- `.claude/docs/technical-preferences.md`
+**Project standards**
 
-Report a count: "Loaded [N] GDDs, [M] ADRs, engine: [name + version]."
+- `.claude/docs/technical-preferences.md` — stack, budgets, forbidden patterns,
+  specialist routing
 
-**Also read `docs/consistency-failures.md`** if it exists. Extract entries with
-Domain matching the systems under review (Architecture, Engine, or any GDD domain
-being covered). Surface recurring patterns as a "Known conflict-prone areas" note
-at the top of the Phase 4 conflict detection output.
+**Requirement sources** (whatever exists)
+
+- `apps/<app>/docs/*.md`, that app's `request-history.md`, and `request.md`
+- `design/` documents that name this app
+
+If the snapshot directory for the pinned version is missing, record a blocking
+finding and continue with the phases that do not need it.
 
 ---
 
-## Phase 2: Extract Technical Requirements from Every GDD
+## Phase 2: Extract Requirements
 
-### Pre-load the TR Registry
+### 2a — Pre-load the requirement registry
 
-Before extracting any requirements, read `docs/architecture/tr-registry.yaml`
-if it exists. Index existing entries by `id` and by normalized `requirement`
-text (lowercase, trimmed). This prevents ID renumbering across review runs.
+Read `docs/architecture/apps/<app>/requirements.yaml` before extracting anything.
+Index entries by `id` and by normalized `requirement` text.
 
-For each requirement you extract, the matching rule is:
-1. **Exact/near match** to an existing registry entry for the same system →
-   reuse that entry's TR-ID unchanged. Update the `requirement` text in the
-   registry only if the GDD wording changed (same intent, clearer phrasing) —
-   add a `revised: [date]` field.
-2. **No match** → assign a new ID: next available `TR-[system]-NNN` for that
-   system, starting from the highest existing sequence + 1.
-3. **Ambiguous** (partial match, intent unclear) → ask the user:
-   > "Does '[new requirement text]' refer to the same requirement as
-   > `TR-[system]-NNN: [existing text]'`, or is it a new requirement?"
-   User answers: "Same requirement" (reuse ID) or "New requirement" (new ID).
+The registry is **append-only**:
 
-For any requirement with `status: deprecated` in the registry — skip it.
-It was removed from the GDD intentionally.
+1. **Match to an existing entry in the same area** → reuse that `REQ-<AREA>-NNN`
+   unchanged. If the wording changed but the intent did not, update the
+   `requirement` text and add `revised: [date]`.
+2. **No match** → assign the next free sequence for that area (`REQ-BILL-002`).
+   Never renumber to tidy the file.
+3. **Ambiguous** → ask: "Does '[new text]' restate `REQ-[AREA]-NNN: [existing text]`,
+   or is it a new requirement?"
+4. **`status: deprecated`** entries → skip; they were removed deliberately.
 
-For each GDD, read it and extract all **technical requirements** — things the
-architecture must provide for the system to work. A technical requirement is any
-statement that implies a specific architectural decision.
+### 2b — Extract from requirement sources
 
-Categories to extract:
+A requirement is any statement the architecture must satisfy for the app to work on
+Shopify. Extract by area:
 
-| Category | Example |
-|----------|---------|
-| **Data structures** | "Each entity has health, max health, status effects" → needs a component/data schema |
-| **Performance constraints** | "Collision detection must run at 60fps with 200 entities" → physics budget ADR |
-| **Engine capability** | "Inverse kinematics for character animation" → IK system ADR |
-| **Cross-system communication** | "Damage system notifies UI and audio simultaneously" → event/signal architecture ADR |
-| **State persistence** | "Player progress persists between sessions" → save system ADR |
-| **Threading/timing** | "AI decisions happen off the main thread" → concurrency ADR |
-| **Platform requirements** | "Supports keyboard, gamepad, touch" → input system ADR |
+| Area | Example |
+|------|---------|
+| **Data model** | "Bundle rules persist per shop and survive reinstall" → schema and migration decision |
+| **API surface** | "Create discounts with `discountCodeBasicCreate`" → version and mutation choice |
+| **Scopes** | "Read orders to tag them" → scope justification and review risk |
+| **Webhooks** | "React to order cancellation" → topic registration and handler contract |
+| **Billing** | "Charge per bundle tier" → plan model and gating decision |
+| **Admin UI** | "Rule editor in the embedded admin" → Polaris and App Bridge decision |
+| **Theme extension** | "Render bundle price on the product page" → app block contract |
+| **Checkout extension** | "Show bundle contents at checkout" → extension target and limits |
+| **Auth/sessions** | "Session tokens only, no cookie session" → auth decision |
+| **Jobs** | "Sync 50k variants without timing out" → queue and bulk-operation decision |
+| **Performance** | "Admin route under 1.5 s p75" → budget allocation decision |
+| **Isolation/compliance** | "Never mix two shops' data in one query" → tenancy decision |
 
-For each GDD, produce a structured list:
+Output per source document:
 
 ```
-GDD: [filename]
-System: [system name]
-Technical Requirements:
-  TR-[GDD]-001: [requirement text] → Domain: [Physics/Rendering/etc]
-  TR-[GDD]-002: [requirement text] → Domain: [...]
+Source: apps/<app>/docs/pricing-rules.md
+Requirements:
+  REQ-BILL-001: Tiered monthly plans, gated per feature -> Area: Billing
+  REQ-DATA-002: Shop-scoped rows keyed by shop domain  -> Area: Data model
 ```
 
-This becomes the **requirements baseline** — the complete set of what the
-architecture must cover.
+The union of these is the **requirements baseline**.
 
 ---
 
 ## Phase 3: Build the Traceability Matrix
 
-For each technical requirement extracted in Phase 2, search the ADRs:
+For each requirement, determine coverage from the ADRs:
 
-1. Read every ADR's "GDD Requirements Addressed" section
-2. Check if it explicitly references the requirement or its GDD
-3. Check if the ADR's decision text implicitly covers the requirement
-4. Mark coverage status:
+1. Read each ADR's **App Requirements Addressed** section (required by the ADR template).
+2. Check whether the decision text implicitly covers the requirement.
+3. Assign status:
 
 | Status | Meaning |
 |--------|---------|
-| ✅ **Covered** | An ADR explicitly addresses this requirement |
-| ⚠️ **Partial** | An ADR partially covers this, or coverage is ambiguous |
-| ❌ **Gap** | No ADR addresses this requirement |
-
-Build the full matrix:
+| ✅ **Covered** | An Accepted ADR addresses it explicitly |
+| ⚠️ **Partial** | An ADR touches it but leaves the contract ambiguous, or the ADR is still `Proposed` |
+| ❌ **Gap** | No ADR addresses it |
 
 ```
 ## Traceability Matrix
 
-| Requirement ID | GDD | System | Requirement | ADR Coverage | Status |
-|---------------|-----|--------|-------------|--------------|--------|
-| TR-combat-001 | combat.md | Combat | Hitbox detection < 1 frame | ADR-0003 | ✅ |
-| TR-combat-002 | combat.md | Combat | Combo window timing | — | ❌ GAP |
-| TR-inventory-001 | inventory.md | Inventory | Persistent item storage | ADR-0005 | ✅ |
+| Requirement | Area | Requirement text | ADR | Status |
+|-------------|------|------------------|-----|--------|
+| REQ-BILL-001 | Billing | Tiered plans gated per feature | ADR-0004 | ✅ |
+| REQ-WHK-002 | Webhooks | Handle order cancellation idempotently | — | ❌ GAP |
+| REQ-DATA-002 | Data model | Shop-scoped tenancy | ADR-0002 | ⚠️ Partial |
 ```
 
-Count the totals: X covered, Y partial, Z gaps.
+Totals: X covered, Y partial, Z gaps.
 
 ---
 
-## Phase 3b: Story and Test Linkage (RTM mode only)
+## Phase 3b: Story and Test Linkage (`rtm` mode)
 
-*Skip this phase unless the argument is `rtm` or `full` with stories present.*
+Skip unless the argument includes `rtm`.
 
-This phase extends the Phase 3 matrix to include the story that implements
-each requirement and the test that verifies it — producing the full
-Requirements Traceability Matrix (RTM).
+1. Glob `production/epics/**/story-*.md` and keep only stories whose header names
+   this app (`App: <app>`). Another app's stories are out of scope — they never count
+   as linkage for this app's requirements.
+2. Per kept story, extract its `REQ-` reference from the Context section, its Status,
+   and the test path stated under `## Test Evidence`.
+3. Confirm via Glob that each stated test path exists; tests live beside the source
+   they cover inside `apps/<app>/`.
+4. Extend the matrix with Story, Test File, and Test Status:
 
-### Step 3b-1 — Load stories
-
-Glob `production/epics/**/*.md` (excluding EPIC.md index files). For each
-story file:
-- Extract `TR-ID` from the story's Context section
-- Extract story file path, title, Status
-- Extract `## Test Evidence` section — the stated test file path
-
-### Step 3b-2 — Load test files
-
-Glob `tests/unit/**/*_test.*` and `tests/integration/**/*_test.*`.
-Build an index: system → [test file paths].
-
-For each test file path from Step 3b-1, confirm via Glob whether the file
-actually exists. Note MISSING if the stated path does not exist.
-
-### Step 3b-3 — Build the extended RTM
-
-For each TR-ID in the Phase 3 matrix, add:
-- **Story**: the story file path(s) that reference this TR-ID (may be multiple)
-- **Test File**: the test file path stated in the story's Test Evidence section
-- **Test Status**: COVERED (test file exists) / MISSING (path stated but not
-  found) / NONE (no test path stated, story type may be Visual/Feel/UI) /
-  NO STORY (requirement has no story yet — pre-production gap)
-
-Extended matrix format:
+| Status | Meaning |
+|---|---|
+| COVERED | Test file exists at the stated path |
+| MISSING | Path stated but the file is absent |
+| NONE | No test stated (expected for Admin UI / Extension stories carrying walkthrough evidence) |
+| NO STORY | Requirement has no story yet |
 
 ```
 ## Requirements Traceability Matrix (RTM)
 
-| TR-ID | GDD | Requirement | ADR | Story | Test File | Test Status |
-|-------|-----|-------------|-----|-------|-----------|-------------|
-| TR-combat-001 | combat.md | Hitbox < 1 frame | ADR-0003 | story-001-hitbox.md | tests/unit/combat/hitbox_test.gd | COVERED |
-| TR-combat-002 | combat.md | Combo window | — | story-002-combo.md | — | NONE (Visual/Feel) |
-| TR-inventory-001 | inventory.md | Persistent storage | ADR-0005 | — | — | NO STORY |
+| REQ | Requirement | ADR | Story | Test File | Status |
+|-----|-------------|-----|-------|-----------|--------|
+| REQ-BILL-001 | Tiered plan gating | ADR-0004 | story-012-plan-gating.md | apps/<app>/billing/plans.test.ts | COVERED |
+| REQ-WHK-002 | Order cancellation | ADR-0006 | story-014-order-cancel.md | — | MISSING |
+| REQ-DATA-002 | Shop-scoped tenancy | ADR-0002 | — | — | NO STORY |
 ```
 
-RTM coverage summary:
-- COVERED: [N] — requirements with ADR + story + passing test
-- MISSING test: [N] — story exists but test file not found
-- NO STORY: [N] — requirements with ADR but no story yet
-- NO ADR: [N] — requirements without architectural coverage (from Phase 3 gaps)
-- Full chain complete (COVERED): [N/total] ([%])
+Report `full chain complete: N/total (%)`.
 
 ---
 
 ## Phase 4: Cross-ADR Conflict Detection
 
-Compare every ADR against every other ADR to detect contradictions. A conflict
-exists when:
+Compare every ADR pair. A conflict exists when two accepted decisions cannot both
+be implemented:
 
-- **Data ownership conflict**: Two ADRs claim exclusive ownership of the same data
-- **Integration contract conflict**: ADR-A assumes System X has interface Y, but
-  ADR-B defines System X with a different interface
-- **Performance budget conflict**: ADR-A allocates N ms to physics, ADR-B allocates
-  N ms to AI, together they exceed the total frame budget
-- **Dependency cycle**: ADR-A says System X initialises before Y; ADR-B says Y
-  initialises before X
-- **Architecture pattern conflict**: ADR-A uses event-driven communication for a
-  subsystem; ADR-B uses direct function calls to the same subsystem
-- **State management conflict**: Two ADRs define authority over the same game state
-  (e.g. both Combat ADR and Character ADR claim to own the health value)
+- **Scope ownership** — two ADRs both claim an access scope, or both mutate the same
+  resource family with incompatible contracts
+- **Data ownership** — two ADRs claim to be the writer of the same table, session
+  store, or merchant setting
+- **API version** — ADRs pin different Admin API versions, or one relies on a field
+  removed in the app's pinned version
+- **Webhook overlap** — two decisions define handlers for the same topic, or a topic
+  is subscribed twice
+- **Billing** — two plan models, or gating enforced in two places that disagree
+- **Performance budget** — allocated costs exceed the route budget (`p75 < 1.5 s`),
+  the webhook budget (`p95 < 500 ms`), or the GraphQL cost ceiling
+- **Pattern** — one ADR routes Admin API calls through the app server while another
+  calls the API from the browser; one uses App Bridge navigation, another bypasses it
+- **Tenancy** — one ADR scopes queries by shop domain, another queries by shop ID with
+  no mapping between them
 
-For each conflict found:
+For each conflict:
 
 ```
-## Conflict: [ADR-NNNN] vs [ADR-MMMM]
-Type: [Data ownership / Integration / Performance / Dependency / Pattern / State]
-ADR-NNNN claims: [...]
-ADR-MMMM claims: [...]
-Impact: [What breaks if both are implemented as written]
+## Conflict: ADR-NNNN vs ADR-MMMM
+Type: [Scope / Data ownership / API version / Webhook / Billing / Performance / Pattern / Tenancy]
+ADR-NNNN states: [...]
+ADR-MMMM states: [...]
+Impact: [what breaks if both ship — duplicated webhook processing, scope review rejection, cross-shop leak]
 Resolution options:
   1. [Option A]
   2. [Option B]
 ```
 
-### ADR Dependency Ordering
+### ADR dependency ordering
 
-After conflict detection, analyse the dependency graph across all ADRs:
-
-1. **Collect all `Depends On` fields** from every ADR's "ADR Dependencies" section
-2. **Topological sort**: Determine the correct implementation order — ADRs with no
-   dependencies come first (Foundation), ADRs that depend on those come next, etc.
-3. **Flag unresolved dependencies**: If ADR-A's "Depends On" field references an ADR
-   that is still `Proposed` or does not exist, flag it:
-   ```
-   ⚠️  ADR-0005 depends on ADR-0002 — but ADR-0002 is still Proposed.
-       ADR-0005 cannot be safely implemented until ADR-0002 is Accepted.
-   ```
-4. **Cycle detection**: If ADR-A depends on ADR-B and ADR-B depends on ADR-A (directly
-   or transitively), flag it as a `DEPENDENCY CYCLE`:
-   ```
-   🔴 DEPENDENCY CYCLE: ADR-0003 → ADR-0006 → ADR-0003
-      This cycle must be broken before either can be implemented.
-   ```
-5. **Output recommended implementation order**:
-   ```
-   ### Recommended ADR Implementation Order (topologically sorted)
-   Foundation (no dependencies):
-     1. ADR-0001: [title]
-     2. ADR-0003: [title]
-   Depends on Foundation:
-     3. ADR-0002: [title] (requires ADR-0001)
-     4. ADR-0005: [title] (requires ADR-0003)
-   Feature layer:
-     5. ADR-0004: [title] (requires ADR-0002, ADR-0005)
-   ```
+1. Collect every `Depends On` entry from each ADR's **ADR Dependencies** section.
+2. Topologically sort into implementation order: data model and auth first, then API
+   surface, then admin UI and extensions.
+3. Flag dependencies on a `Proposed` or missing ADR:
+   `⚠️ ADR-0005 depends on ADR-0002, still Proposed — downstream work is blocked.`
+4. Flag cycles: `🔴 DEPENDENCY CYCLE: ADR-0003 → ADR-0006 → ADR-0003`.
+5. Output the sorted order grouped by dependency level.
 
 ---
 
-## Phase 5: Engine Compatibility Cross-Check
+## Phase 5: Shopify API Surface Audit
 
-Across all ADRs, check for engine consistency:
+Cross-check each ADR's **Shopify API Surface** section against reality. Model
+training data predates the pinned version — the snapshot under
+`docs/shopify-api-reference/<version>/` is the only authority.
 
-### Version Consistency
-- Do all ADRs that mention an engine version agree on the same version?
-- If any ADR was written for an older engine version, flag it as potentially stale
+### Version consistency
 
-### Post-Cutoff API Consistency
-- Collect all "Post-Cutoff APIs Used" fields from all ADRs
-- For each, verify against the relevant module reference doc
-- Check that no two ADRs make contradictory assumptions about the same post-cutoff API
+- Does every ADR name the same version as `apps/<app>/shopify.app.toml`?
+- Any ADR written against an older version → flag as stale.
 
-### Deprecated API Check
-- Grep all ADRs for API names listed in `deprecated-apis.md`
-- Flag any ADR referencing a deprecated API
+### Deprecated and removed fields
 
-### Missing Engine Compatibility Sections
-- List all ADRs that are missing the Engine Compatibility section entirely
-- These are blind spots — their engine assumptions are unknown
+- Grep the ADRs for every field, mutation, and topic on the snapshot's deprecated and
+  removed lists.
+- Flag each hit with the replacement the snapshot names.
 
-Output format:
+### Scopes
+
+- Collect every scope the ADRs reference.
+- Compare against `access_scopes` in `shopify.app.toml`: a decision needing a scope the
+  app does not request is unimplementable; a requested scope no decision needs is a
+  review risk and must be justified or dropped.
+- Flag scopes that require Shopify review (protected customer data, for example) as
+  schedule risks, not only technical ones.
+
+### Webhooks
+
+- Every topic an ADR depends on must exist in the pinned version and be listed in the
+  app's subscription config.
+- The mandatory compliance topics — `customers/data_request`, `customers/redact`,
+  `shop/redact` — must appear in some decision. Their absence is a submission blocker.
+
+### Beyond-cutoff usage
+
+- Anything the model cannot verify from memory must appear in the snapshot. If an ADR
+  uses a field, argument, or target absent from the snapshot, flag it as unverified
+  instead of assuming it exists.
+
+### Missing sections
+
+- List ADRs with no **Shopify API Surface** section. Their API assumptions are unknown
+  and cannot be audited.
+
 ```
-### Engine Audit Results
-Engine: [name + version]
-ADRs with Engine Compatibility section: X / Y total
+### API Audit Results
+App: [app]   Pinned version: [version]   Snapshot present: [yes/no]
+ADRs with a Shopify API Surface section: X / Y
 
-Deprecated API References:
-  - ADR-0002: uses [deprecated API] — deprecated since [version]
-
-Stale Version References:
-  - ADR-0001: written for [older version] — current project version is [version]
-
-Post-Cutoff API Conflicts:
-  - ADR-0004 and ADR-0007 both use [API] with incompatible assumptions
+Deprecated usage:
+  - ADR-0003: [field] removed in [version] — use [replacement]
+Scope mismatches:
+  - ADR-0004 needs `read_all_orders`; absent from shopify.app.toml
+Missing compliance topics:
+  - no decision registers `customers/redact`
+Unverified usage:
+  - ADR-0006: [argument] not found in the pinned snapshot
 ```
+
+### Specialist consultation (`full` and `api` modes)
+
+Spawn via Task, in parallel, only for surfaces the ADR set actually touches:
+
+- `api-lead` — confirm or challenge the version, scope, and mutation findings; name
+  anything the audit missed
+- `webhooks-specialist` — subscription, verification, and idempotency decisions
+- `billing-specialist` — plan model, gating, and test-charge decisions
+- `polaris-specialist` — admin UI and App Bridge decisions
+- `checkout-specialist` — checkout extension decisions
+
+Pass each the relevant ADRs, the snapshot paths, and the Phase 5 findings. Record their
+conclusions under `### Specialist Findings`; they weigh the same as audit findings.
+A specialist returning BLOCKED follows the Error Recovery Protocol.
 
 ---
 
-### Engine Specialist Consultation
+## Phase 5b: Requirement Revision Flags
 
-After completing the engine audit above, spawn the **primary engine specialist** via Task for a domain-expert second opinion:
-- Read `.claude/docs/technical-preferences.md` `Engine Specialists` section to get the primary specialist
-- If no engine is configured, skip this consultation
-- Spawn `subagent_type: [primary specialist]` with: all ADRs that contain engine-specific decisions or `Post-Cutoff APIs Used` fields, the engine reference docs, and the Phase 5 audit findings. Ask them to:
-  1. Confirm or challenge each audit finding — specialists may know of engine nuances not captured in the reference docs
-  2. Identify engine-specific anti-patterns in the ADRs that the audit may have missed (e.g., using the wrong Godot node type, Unity component coupling, Unreal subsystem misuse)
-  3. Flag ADRs that make assumptions about engine behaviour that differ from the actual pinned version
+For each HIGH-risk API finding, check whether a requirement source assumes behaviour
+the snapshot contradicts:
 
-Incorporate additional findings under `### Engine Specialist Findings` in the Phase 5 output. These feed into the final verdict — specialist-identified issues carry the same weight as audit-identified issues.
-
----
-
-## Phase 5b: Design Revision Flags (Architecture → GDD Feedback)
-
-For each **HIGH RISK engine finding** from Phase 5, check whether any GDD makes an
-assumption that the verified engine reality contradicts.
-
-Specific cases to check:
-
-1. **Post-cutoff API behaviour differs from training-data assumptions**: If an ADR
-   records a verified API behaviour that differs from the default LLM assumption,
-   check all GDDs that reference the related system. Look for design rules written
-   around the old (assumed) behaviour.
-
-2. **Known engine limitations in ADRs**: If an ADR records a known engine limitation
-   (e.g. "Jolt ignores HingeJoint3D damp", "D3D12 is now the default backend"), check
-   GDDs that design mechanics around the affected feature.
-
-3. **Deprecated API conflicts**: If Phase 5 flagged a deprecated API used in an ADR,
-   check whether any GDD contains mechanics that assume the deprecated API's behaviour.
-
-For each conflict found, record it in the GDD Revision Flags table:
+1. A field the requirement is built on is deprecated or removed.
+2. A scope the requirement needs is gated behind review or unavailable to the app type.
+3. An extension target cannot do what the design assumes (checkout extensibility
+   limits, app block placement limits).
+4. A cost or rate limit makes the described flow impossible in one request.
 
 ```
-### GDD Revision Flags (Architecture → Design Feedback)
-These GDD assumptions conflict with verified engine behaviour or accepted ADRs.
-The GDD should be revised before its system enters implementation.
-
-| GDD | Assumption | Reality (from ADR/engine-reference) | Action |
-|-----|-----------|--------------------------------------|--------|
-| combat.md | "Use HingeJoint3D damp for weapon recoil" | Jolt ignores damp — ADR-0003 | Revise GDD |
+### Requirement Revision Flags
+| Source | Assumption | Reality (ADR / snapshot) | Action |
+|--------|-----------|--------------------------|--------|
+| apps/<app>/docs/pricing-rules.md | "Bulk-price 50k variants in one call" | per-request cost ceiling — ADR-0007 | Revise requirement |
 ```
 
-If no revision flags are found, write: "No GDD revision flags — all GDD assumptions
-are consistent with verified engine behaviour."
-
-Before asking, display the proposed change inline — show the current systems-index row for each flagged GDD and the proposed updated row side by side so the user can see exactly what will change.
-
-Then use `AskUserQuestion`, `request_user_input` or `clarify`:
-- "I found [N] GDD revision flag(s). May I update the systems index?"
-  - [A] Yes — apply all [N] updates to the systems index now
-  - [B] Show me the full diff first, then ask again
-  - [C] No — leave the systems index unchanged for now
-
-If [A]: apply the updates. Status field must be exactly `Needs Revision` — no parentheticals
-(other skills match that exact string and parentheticals break the match).
-If [B]: display the complete proposed systems-index section, then re-ask with `AskUserQuestion`, `request_user_input` or `clarify`.
+Offer `/update-request` for each flag; do not edit `request.md` from this skill.
+If none: `No revision flags — requirement sources agree with verified API behaviour.`
 
 ---
 
 ## Phase 6: Architecture Document Coverage
 
-If `docs/architecture/architecture.md` exists, validate it against GDDs:
+If `docs/architecture/apps/<app>/architecture.md` exists, validate it:
 
-- Does every system from `systems-index.md` appear in the architecture layers?
-- Does the data flow section cover all cross-system communication defined in GDDs?
-- Do the API boundaries support all integration requirements from GDDs?
-- Are there systems in the architecture doc that have no corresponding GDD
-  (orphaned architecture)?
+- Does every area in the requirement registry appear in the document?
+- Does the data-flow section cover every cross-surface call the ADRs define?
+- Do module boundaries match the ADR decisions?
+- Are there modules with no ADR and no requirement (orphaned design)?
 
 ---
 
-## Phase 7: Output the Review Report
+## Phase 7: Report
 
 ```
-## Architecture Review Report
+## Architecture Review — [app]
 Date: [date]
-Engine: [name + version]
-GDDs Reviewed: [N]
-ADRs Reviewed: [M]
-
----
+API version: [version]   ADRs reviewed: [M]   Requirements: [N]
 
 ### Traceability Summary
-Total requirements: [N]
-✅ Covered: [X]
-⚠️ Partial: [Y]
-❌ Gaps: [Z]
+Covered: [X]   Partial: [Y]   Gaps: [Z]
 
-### Coverage Gaps (no ADR exists)
-For each gap:
-  ❌ TR-[id]: [GDD] → [system] → [requirement]
-     Suggested ADR: "/architecture-decision [suggested title]"
-     Domain: [Physics/Rendering/etc]
-     Engine Risk: [LOW/MEDIUM/HIGH]
+### Coverage Gaps (no ADR)
+❌ REQ-[AREA]-NNN: [requirement]
+   Suggested ADR: "/architecture-decision [title]"
+   Risk: [LOW / MEDIUM / HIGH]
 
 ### Cross-ADR Conflicts
-[List all conflicts from Phase 4]
+[Phase 4 conflicts, or "None"]
 
 ### ADR Dependency Order
-[Topologically sorted implementation order from Phase 4 — dependency ordering section]
-[Unresolved dependencies and cycles if any]
+[Topologically sorted list; unresolved dependencies and cycles]
 
-### GDD Revision Flags
-[GDD assumptions that conflict with verified engine behaviour — from Phase 5b]
-[Or: "None — all GDD assumptions consistent with verified engine behaviour"]
+### Requirement Revision Flags
+[Phase 5b table, or "None"]
 
-### Engine Compatibility Issues
-[List all engine issues from Phase 5]
+### Shopify API Issues
+[Phase 5 findings]
 
 ### Architecture Document Coverage
-[List missing systems and orphaned architecture from Phase 6]
-
----
+[Phase 6 findings, or "No architecture.md — skipped"]
 
 ### Verdict: [PASS / CONCERNS / FAIL]
 
-PASS: All requirements covered, no conflicts, engine consistent
-CONCERNS: Some gaps or partial coverage, but no blocking conflicts
-FAIL: Critical gaps (Foundation/Core layer requirements uncovered),
-      or blocking cross-ADR conflicts detected
+PASS: every requirement covered by an Accepted ADR, no conflicts, API surface verified
+CONCERNS: partial coverage or stale ADRs, no blocking conflict
+FAIL: a data-model, auth, billing, or compliance requirement has no ADR, or two
+      accepted ADRs cannot both be implemented
 
-### Blocking Issues (must resolve before PASS)
-[List items that must be resolved — FAIL verdict only]
+### Blocking Issues
+[FAIL only]
 
 ### Required ADRs
-[Prioritised list of ADRs to create, most foundational first]
+[Prioritised; data model and auth first]
 ```
 
 ---
 
-## Phase 8: Write and Update Traceability Index
+## Phase 8: Write
 
-Use `AskUserQuestion`, `request_user_input` or `clarify` for the write approval:
-- "Review complete. What would you like to write?"
-  - [A] Write all three files (review report + traceability index + TR registry)
-  - [B] Write review report only — `docs/architecture/architecture-review-[date].md`
-  - [C] Don't write anything yet — I need to review the findings first
+Ask once, listing every file and what changes:
 
-### RTM Output (rtm mode only)
+- `[A]` write all approved files (report + registry updates + RTM)
+- `[B]` write the review report only
+- `[C]` write nothing yet
 
-For `rtm` mode, use `AskUserQuestion`, `request_user_input` or `clarify`:
-- "May I write the full Requirements Traceability Matrix?"
-  - [A] Yes — write to `docs/architecture/requirements-traceability.md`
-  - [B] Not yet — show me the full RTM data first, then ask again
+Approved writes:
 
-RTM file format:
+1. **Review report** → `docs/architecture/apps/<app>/architecture-review-<date>.md`
+2. **Requirement registry** → `docs/architecture/apps/<app>/requirements.yaml`: append
+   new IDs, update reworded entries with `revised`, mark removed entries
+   `status: deprecated` after confirmation, update `last_updated`. Never renumber or
+   delete.
+3. **RTM** (`rtm` mode) → `docs/architecture/apps/<app>/requirements-traceability.md`
+   with the matrix, coverage summary, and a History table (date, full-chain %).
+4. **Session state** → append to `production/apps/<app>/session-state/active.md`
+   (create if absent):
 
-```markdown
-# Requirements Traceability Matrix (RTM)
-
-> Last Updated: [date]
-> Mode: /architecture-review rtm
-> Coverage: [N]% full chain complete (GDD → ADR → Story → Test)
-
-## How to read this matrix
-
-| Column | Meaning |
-|--------|---------|
-| TR-ID | Stable requirement ID from tr-registry.yaml |
-| GDD | Source design document |
-| ADR | Architectural decision governing implementation |
-| Story | Story file that implements this requirement |
-| Test File | Automated test file path |
-| Test Status | COVERED / MISSING / NONE / NO STORY |
-
-## Full Traceability Matrix
-
-| TR-ID | GDD | Requirement | ADR | Story | Test File | Status |
-|-------|-----|-------------|-----|-------|-----------|--------|
-[Full matrix rows from Phase 3b]
-
-## Coverage Summary
-
-| Status | Count | % |
-|--------|-------|---|
-| COVERED — full chain complete | [N] | [%] |
-| MISSING test — story exists, no test | [N] | [%] |
-| NO STORY — ADR exists, not yet implemented | [N] | [%] |
-| NO ADR — architectural gap | [N] | [%] |
-| **Total requirements** | **[N]** | **100%** |
-
-## Uncovered Requirements (Priority Fix List)
-
-Requirements where the full chain is broken, prioritised by layer:
-
-### Foundation layer gaps
-[list with suggested action per gap]
-
-### Core layer gaps
-[list]
-
-### Feature / Presentation layer gaps
-[list — lower priority]
-
-## History
-
-| Date | Full Chain % | Notes |
-|------|-------------|-------|
-| [date] | [%] | Initial RTM |
+```
+## Session Extract — /architecture-review [date]
+- Verdict: [PASS / CONCERNS / FAIL]
+- Requirements: [N] — [X] covered, [Y] partial, [Z] gaps
+- New REQ IDs: [N, or "None"]
+- Revision flags: [sources, or "None"]
+- Top gaps: [top 3]
 ```
 
-### TR Registry Update
-
-Also ask: "May I update `docs/architecture/tr-registry.yaml` with new requirement
-IDs from this review?"
-
-If yes:
-- **Append** any new TR-IDs that weren't in the registry before this review
-- **Update** `requirement` text and `revised` date for any entries whose GDD
-  wording changed (ID stays the same)
-- **Mark** `status: deprecated` for any registry entries whose GDD requirement
-  no longer exists (confirm with user before marking deprecated)
-- **Never** renumber or delete existing entries
-- Update the `last_updated` and `version` fields at the top
-
-This ensures all future story files can reference stable TR-IDs that persist
-across every subsequent architecture review.
-
-### Reflexion Log Update
-
-After writing the review report, append any 🔴 CONFLICT entries found in Phase 4
-to `docs/consistency-failures.md` (if the file exists):
-
-```markdown
-### [YYYY-MM-DD] — /architecture-review — 🔴 CONFLICT
-**Domain**: Architecture / [specific domain e.g. State Ownership, Performance]
-**Documents involved**: [ADR-NNNN] vs [ADR-MMMM]
-**What happened**: [specific conflict — what each ADR claims]
-**Resolution**: [how it was or should be resolved]
-**Pattern**: [generalised lesson for future ADR authors in this domain]
-```
-
-Only append CONFLICT entries — do not log GAP entries (missing ADRs are expected
-before the architecture is complete). Do not create the file if missing — only
-append when it already exists.
-
-### Session State Update
-
-After writing all approved files, silently append to
-`production/session-state/active.md`:
-
-    ## Session Extract — /architecture-review [date]
-    - Verdict: [PASS / CONCERNS / FAIL]
-    - Requirements: [N] total — [X] covered, [Y] partial, [Z] gaps
-    - New TR-IDs registered: [N, or "None"]
-    - GDD revision flags: [comma-separated GDD names, or "None"]
-    - Top ADR gaps: [top 3 gap titles from the report, or "None"]
-    - Report: docs/architecture/architecture-review-[date].md
-
-If `active.md` does not exist, create it with this block as the initial content.
-Confirm in conversation: "Session state updated."
-
-The traceability index format:
-
-```markdown
-# Architecture Traceability Index
-Last Updated: [date]
-Engine: [name + version]
-
-## Coverage Summary
-- Total requirements: [N]
-- Covered: [X] ([%])
-- Partial: [Y]
-- Gaps: [Z]
-
-## Full Matrix
-[Complete traceability matrix from Phase 3]
-
-## Known Gaps
-[All ❌ items with suggested ADRs]
-
-## Superseded Requirements
-[Requirements whose GDD was changed after the ADR was written]
-```
+If the control manifest's `Manifest Version:` predates the newest accepted ADR, say the
+manifest is stale and that `/create-control-manifest update` regenerates it. Do not edit
+it here.
 
 ---
 
 ## Phase 9: Handoff
 
-After completing the review and writing approved files, present:
+1. **Top 3 actions** — highest-impact gaps first, data model and auth before UI.
+2. **Pre-gate checklist** — Glob and mark each:
+   - `apps/<app>/shopify.app.toml` with a pinned `api_version` — else `/scaffold`
+   - test runner configured inside the app — else `/test-setup`
+   - `docs/architecture/apps/<app>/control-manifest.md` — else `/create-control-manifest`
+   - a dev store recorded for the app — else `/create-test-store`
+   Do not offer `/gate-check` while any item is ❌; offer the missing skill instead.
+3. **Rerun trigger**: "Re-run `/architecture-review <app>` after each new ADR is
+   accepted; coverage should only move up."
 
-1. **Immediate actions**: List the top 3 ADRs to create (highest-impact gaps first,
-   Foundation layer before Feature layer)
-2. **Pre-gate checklist**: Check whether these exist via Glob and mark each ✅ or ❌:
-   - `tests/unit/` and `tests/integration/` directories — if ❌: run `/test-setup`
-   - `.github/workflows/tests.yml` — if ❌: run `/test-setup`
-   - `design/accessibility-requirements.md` — if ❌: run `/ux-design`
-   - `design/ux/interaction-patterns.md` — if ❌: run `/ux-design`
-   Present ❌ items as required steps before gate-check. Do not offer `/gate-check`
-   as an option if any item is ❌ — offer the missing skill to run instead.
-3. **Rerun trigger**: "Re-run `/architecture-review` after each new ADR is written
-   to verify coverage improves"
+Close with `AskUserQuestion`, `request_user_input` or `clarify`:
 
-Then close with `AskUserQuestion`, `request_user_input` or `clarify` tailored to the pre-gate checklist state:
-- If ADR gaps remain or any pre-gate item is ❌:
-  - "Architecture review complete. What would you like to do next?"
-    - [A] Write a missing ADR — open a fresh session and run `/architecture-decision [system]`
-    - [B] Run `/test-setup` — required before gate-check (only show if test infrastructure is ❌)
-    - [C] Run `/ux-design` — required before gate-check (only show if UX/accessibility files are ❌)
-    - [D] Stop here for this session
-- If all pre-gate checklist items are ✅ and no blocking ADR gaps remain:
-  - "Architecture review complete. All pre-gate items confirmed. What would you like to do next?"
-    - [A] Run `/gate-check pre-production`
-    - [B] Write a missing ADR — open a fresh session and run `/architecture-decision [system]`
-    - [C] Stop here for this session
+- Gaps or ❌ items: `[A]` write the next ADR with `/architecture-decision` ·
+  `[B]` regenerate the control manifest · `[C]` run the missing pre-gate skill ·
+  `[D]` stop here
+- Clean: `[A]` `/create-control-manifest update` · `[B]` `/create-stories` ·
+  `[C]` `/qa-plan` · `[D]` stop here
 
 ---
 
 ## Error Recovery Protocol
 
-If any spawned agent returns BLOCKED, errors, or fails to complete:
+If a spawned specialist returns BLOCKED or errors:
 
-1. **Surface immediately**: Report "[AgentName]: BLOCKED — [reason]" before continuing
-2. **Assess dependencies**: If the blocked agent's output is required by a later phase, do not proceed past that phase without user input
-3. **Offer options** via AskUserQuestion, request_user_input or clarify with three choices:
-   - Skip this agent and note the gap in the final report
-   - Retry with narrower scope (fewer GDDs, single-system focus)
-   - Stop here and resolve the blocker first
-4. **Always produce a partial report** — output whatever was completed so work is not lost
+1. Surface it immediately: `[agent]: BLOCKED — [reason]`.
+2. If a later phase depends on that output, do not pass that phase without user input.
+3. Offer: skip and record the gap · retry with a narrower scope (one surface, one ADR) ·
+   stop and resolve the blocker.
+4. Always produce a partial report; never discard completed findings.
 
 ---
 
 ## Collaborative Protocol
 
-1. **Read silently** — do not narrate every file read
-2. **Show the matrix** — present the full traceability matrix before asking for
-   anything; let the user see the state
-3. **Don't guess** — if a requirement is ambiguous, ask: "Is [X] a technical
-   requirement or a design preference?"
-4. **Draft before approval** — always show the content that will be written (the
-   report, the updated ADR section, the systems-index row) inline in the conversation
-   before requesting approval. Never ask to write something the user has not yet seen.
-5. **Use `AskUserQuestion`, `request_user_input` or `clarify` for write approvals** — plain text "May I?" is not
-   sufficient. Use the structured tool with labeled options [A]/[B]/[C] so the
-   user can choose between "write now", "show full draft first", and "not yet".
-   Multi-file changesets must list every file and what changes, then ask once
-   with grouped options — not a separate plain-text question per file.
-6. **Non-blocking** — the verdict is advisory; the user decides whether to continue
-   despite CONCERNS or even FAIL findings
+1. **Read silently** — do not narrate every file read.
+2. **Show the matrix before asking anything** — the user should see the state first.
+3. **Do not guess** — if a statement is ambiguous, ask whether it is a requirement or a
+   preference.
+4. **Draft before approval** — show the exact content that will be written.
+5. **One approval per changeset** — list every file and what changes, then ask once with
+   `AskUserQuestion`, `request_user_input` or `clarify` (labeled options, never a
+   plain-text "May I?").
+6. **Advisory verdict** — CONCERNS and FAIL inform the decision; the user decides
+   whether to proceed.

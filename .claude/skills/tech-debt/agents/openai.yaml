@@ -1,6 +1,6 @@
 interface:
   display_name: "Tech Debt"
-  short_description: "Track, categorize, and prioritize technical debt across the codebase. Scans for debt indicators, maintains a debt register, and recommends repayment scheduling."
+  short_description: "Maintain one app's tech-debt register in docs/architecture/apps/<app>/tech-debt.md: capture entries with evidence, price the interest per sprint, rank by mer..."
   default_prompt: "Use the $tech-debt skill for the requested task."
 policy:
   allow_implicit_invocation: true

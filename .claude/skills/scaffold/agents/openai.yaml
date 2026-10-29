@@ -1,0 +1,6 @@
+interface:
+  display_name: "Scaffold"
+  short_description: "Creates the per-app directory skeleton for a Shopify app: apps/<app>/ with README, status, approvals and prototype, the production/apps/<app> work folders, a..."
+  default_prompt: "Use the $scaffold skill for the requested task."
+policy:
+  allow_implicit_invocation: true

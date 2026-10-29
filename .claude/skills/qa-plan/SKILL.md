@@ -1,7 +1,7 @@
 ---
 name: qa-plan
-description: "Generate a QA test plan for a sprint or feature. Reads GDDs and story files, classifies stories by test type (Logic/Integration/Visual/UI), and produces a structured test plan covering automated tests required, manual test cases, smoke test scope, and playtest sign-off requirements. Run before sprint begins or when starting a major feature."
-argument-hint: "[sprint | feature: system-name | story: path]"
+description: "Use before a sprint or feature starts. Builds that app's QA plan: classifies each story by test type, specifies the automated tests, GraphQL and webhook fixtures, manual dev-store checks, accessibility and performance verification, and the smoke scope — then writes it under production/apps/<app>/qa/."
+argument-hint: "[app] [sprint | feature: area | story: path | app]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, AskUserQuestion, request_user_input, clarify
 model: sonnet
@@ -10,269 +10,241 @@ agent: qa-lead
 
 # QA Plan
 
-This skill generates a structured QA plan for a sprint, feature, or individual
-story. It reads all in-scope story files and their referenced GDDs, classifies
-each story by test type, and produces a plan that tells developers exactly what
-to automate, what to verify manually, what the smoke test scope is, and when
-to bring in a playtester.
+Generates a structured QA plan for one app's sprint, feature, or story. It reads the
+story files, classifies each by test type, and states exactly what to automate, which
+fixtures are needed, what must be verified on a dev store, and when accessibility and
+performance verification happen.
 
-Run this before a sprint begins so the team knows upfront what testing work
-is required. A test plan written after implementation is a post-mortem, not a
-plan.
+A plan written after implementation is a post-mortem, not a plan. Run this before the
+sprint starts.
 
-**Output:** `production/qa/qa-plan-[sprint-slug]-[date].md`
+**Output:** `production/apps/<app>/qa/qa-plan-<scope-slug>-<date>.md`
 
 ---
 
 ## Phase 1: Parse Scope
 
-**Argument:** `$ARGUMENTS` (blank = ask user via AskUserQuestion, request_user_input or clarify)
+**Argument:** `[app] [sprint | feature: area | story: path | app]`
 
-Determine scope from the argument:
+- `app` — slug from `docs/registry/apps.json`; default to the app named in `request.md`
+- **`sprint`** — read the most recent record in `production/apps/<app>/sprints/` and take
+  every story path it references
+- **`feature: [area]`** — Glob `production/epics/**/story-*.md`, keep stories whose header
+  names this app and whose path or title matches the area
+- **`story: [path]`** — validate the path and load that file alone
+- **`app`** — every open story for the app
+- **No argument** — ask via `AskUserQuestion`, `request_user_input` or `clarify`:
+  current sprint · specific feature · specific story · whole app
 
-- **`sprint`** — read the most recent file in `production/sprints/`, extract
-  every story file path referenced. If `production/sprint-status.yaml` exists,
-  use it as the primary story list and fall back to the sprint plan for story
-  metadata.
-- **`feature: [system-name]`** — glob `production/epics/*/story-*.md`, filter
-  to stories whose file path or title contains the system name. Also check the
-  epic index file (`EPIC.md`) in that system's directory.
-- **`story: [path]`** — validate that the path exists and load that single file.
-- **No argument** — use `AskUserQuestion`, `request_user_input` or `clarify`:
-  - "What is the scope for this QA plan?"
-  - Options: "Current sprint", "Specific feature (enter system name)",
-    "Specific story (enter path)", "Full epic"
+Report: "Building the QA plan for [N] stories — app [app], scope [scope]."
 
-After resolving scope, report: "Building QA plan for [N] stories in [scope]."
-
-If a story file path is referenced but the file does not exist, note it as
-MISSING and continue with the remaining stories. Do not fail the entire plan
-for one missing file.
+A referenced story path that does not exist is noted MISSING and skipped; one missing
+file does not fail the plan.
 
 ---
 
 ## Phase 2: Load Inputs
 
-For each in-scope story file, read the full file and extract:
+Per story, extract:
 
-- **Story title** and story ID (from filename or header)
-- **Story Type** field (if present in the file header — e.g., `Type: Logic`)
-- **Acceptance criteria** — the complete numbered/bulleted list
-- **Implementation files** — listed under "Files to Create / Modify" or similar
-- **Engine notes** — any engine API warnings or version-specific notes
-- **GDD reference** — the GDD path(s) cited
-- **ADR reference** — the ADR(s) cited
-- **Estimate** — hours or story points if present
-- **Dependencies** — other stories this one depends on
+- Title, story ID, and `Status`
+- `Type:` if declared
+- Acceptance criteria, in full
+- Files to create or modify
+- Requirement IDs (`REQ-<AREA>-NNN`) and ADR references
+- Dependencies on other stories
 
-After reading stories, load supporting context once (not per story):
+Then load shared context once:
 
-- `design/gdd/systems-index.md` — to understand system priorities and which
-  GDDs are approved
-- For each unique GDD referenced across all stories: read the
-  **Acceptance Criteria**, **Formulas**, and **Edge Cases** sections. Do not load
-  the full GDD text. These three sections contain the testable requirements, the math
-  to verify, and the boundary conditions that tests must cover. If an Edge Cases
-  section is absent from the GDD, note it per GDD: "No Edge Cases section found — edge
-  case coverage will be inferred from acceptance criteria only."
-- `docs/architecture/control-manifest.md` — scan for forbidden patterns that
-  automated tests should guard against (if the file exists)
+- `docs/architecture/apps/<app>/requirements.yaml` — the requirement text behind each ID
+- `docs/architecture/apps/<app>/control-manifest.md` — forbidden patterns and guardrails
+  that tests should actively guard against, plus the `Manifest Version` the stories embed
+- `apps/<app>/shopify.app.toml` — the pinned API version every fixture must match
+- `.claude/docs/technical-preferences.md` — budgets and required test coverage
+- `.claude/docs/coding-standards.md` — the test-evidence table this plan must satisfy
 
-If no GDD is referenced in a story, note it as a gap but do not block the plan.
-The story will be classified using acceptance criteria alone.
+If a story cites no requirement, note the gap and plan from acceptance criteria alone.
 
 ---
 
 ## Phase 3: Classify Each Story
 
-For each story, assign a Story Type:
+If the story declares `Type:`, take it as authoritative — do not re-classify. If it does
+not, infer it, note that it was inferred, and flag the missing field as a gap.
 
-- **If the story already has a `Type:` field in its header**: accept it as-is. Do NOT re-classify or validate against the criteria below — the Type was set by lead-programmer at story creation and is authoritative. Record it as-is.
-- **If the `Type:` field is missing**: infer the type from the acceptance criteria using the table below, and note in the report that the type was inferred (not declared). Flag this as a gap — the story should have its Type declared explicitly before implementation begins.
-
-| Story Type | Classification Indicators |
+| Story Type | Indicators |
 |---|---|
-| **Logic** | Acceptance criteria reference calculations, formulas, numerical thresholds, state transitions, AI decisions, data validation, buff/debuff stacking, economy transactions, or any testable computation |
-| **Integration** | Criteria involve two or more systems interacting, signals or events propagating across system boundaries, save/load round-trips, network sync, or persistence |
-| **Visual/Feel** | Criteria reference animation behaviour, VFX, shader output, "feels responsive", perceived timing, screen shake, particle effects, audio sync, or visual feedback quality |
-| **UI** | Criteria reference menus, HUD elements, buttons, screens, dialogue boxes, inventory panels, tooltips, or any player-facing interface element |
-| **Config/Data** | Changes are limited to balance tuning values, data files, or configuration — no new code logic is involved |
+| **Logic** | Calculations, discount and price math, plan gating, state transitions, validation, idempotency keys |
+| **Integration** | Admin GraphQL calls, webhook handling, OAuth callback, database round-trips, job queue, two modules collaborating |
+| **Admin UI** | Polaris routes, forms, tables, empty and error states, App Bridge navigation |
+| **Extension** | Theme app block or checkout extension output, merchant settings, storefront or checkout rendering |
+| **Config/Data** | API version bump, scope change, migration, config-only work |
 
-**Mixed stories** (e.g., a story that adds both a formula and a UI display):
-assign the primary type based on which acceptance criteria carry the highest
-implementation risk, and note the secondary type. Mixed Logic+Integration or
-Visual+UI combinations are the most common.
-
-After classifying all stories, produce a classification summary table in
-conversation before proceeding to Phase 4. This gives the user visibility into
-how tests will be allocated.
+Mixed stories take the type carrying the highest risk and record the secondary type.
+Output the classification table in conversation before building the plan.
 
 ---
 
-## Phase 4: Generate Test Plan
-
-Assemble the full QA plan document. Use this structure:
+## Phase 4: Generate the Plan
 
 ````markdown
-# QA Plan: [Sprint/Feature Name]
+# QA Plan — [app]: [sprint / feature / story name]
 **Date**: [date]
 **Generated by**: /qa-plan
-**Scope**: [N stories across [N systems]]
-**Engine**: [engine name from .claude/docs/technical-preferences.md, or "Not configured"]
-**Sprint File**: [path to sprint plan if applicable]
+**Scope**: [N] stories, app [app]
+**API version**: [from shopify.app.toml]
+**Manifest version**: [from control-manifest.md]
+**Sprint record**: [path, if applicable]
 
 ---
 
 ## Test Summary
 
-| Story | Type | Automated Test Required | Manual Verification Required |
-|-------|------|------------------------|------------------------------|
-| [story title] | Logic | Unit test — `tests/unit/[system]/` | None |
-| [story title] | Integration | Integration test — `tests/integration/[system]/` | Smoke check |
-| [story title] | Visual/Feel | None (not automatable) | Screenshot + lead sign-off |
-| [story title] | UI | Interaction walkthrough | Manual step-through |
-| [story title] | Config/Data | Data validation test | Spot-check in-game values |
+| Story | Type | Automated test required | Manual verification required | Gate |
+|-------|------|------------------------|-----------------------------|------|
+| [title] | Logic | Unit test beside source in `apps/<app>/` | None | BLOCKING |
+| [title] | Integration | Integration test with recorded Admin GraphQL fixtures | Smoke check | BLOCKING |
+| [title] | Admin UI | Interaction test where practical | Dev-store walkthrough + screenshots | ADVISORY |
+| [title] | Extension | None (not automatable) | Dev-store walkthrough on a clean theme | ADVISORY |
+| [title] | Config/Data | Smoke check | Spot-check scopes and version in admin | ADVISORY |
 
 ---
 
 ## Automated Tests Required
 
-### [Story Title] — [Type]
-**Test file path**: `tests/[unit|integration]/[system]/[story-slug]_test.[ext]`
-**What to test**:
-- [Specific formula or rule from the GDD Formulas section]
-- [Each named state transition or decision branch]
-- [Each side effect that should or should not occur]
+### [Story title] — [Type]
+**Test file**: `apps/<app>/[module].test.ts` (beside the module it covers)
+**What to test**
+- [Each calculation or rule, with the boundary values that matter]
+- [Each named state transition — plan gating, discount apply/remove, tag add/remove]
+- [Each side effect that must not happen: no duplicate row, no second charge, no cross-shop read]
 
-**Edge cases to cover**:
-- Zero/minimum input values (e.g., 0 damage, empty inventory)
-- Maximum/boundary input values (e.g., max level, stat cap)
-- Invalid or null input (e.g., missing target, dead entity)
-- [Any edge case explicitly called out in the GDD Edge Cases section]
+**Fixtures**
+- Admin GraphQL: `apps/<app>/test/fixtures/graphql/[version]/[operation].json`, captured
+  from the pinned version; refresh deliberately when the API version changes
+- Webhook payloads: `apps/<app>/test/fixtures/webhooks/[topic].json`, including a
+  replayed duplicate delivery and an invalid HMAC
+- Database: factory functions, never inline magic rows
 
-**Estimated test count**: ~[N] unit tests
+**Edge cases**
+- Empty collection, single item, and the page-size boundary (100 / 250)
+- Null or missing GraphQL field that the pinned version can omit
+- Duplicate webhook delivery with the same event ID
+- Merchant on a cancelled or expired plan
+- Two shops in the fixture set, proving no cross-shop read
 
-[If no GDD formula reference was found for this story, note:]
-*No formula found in referenced GDD — test cases must be derived from acceptance
-criteria directly. Review the GDD Formulas section before writing tests.*
-
----
-
-## Manual QA Checklist
-
-### [Story Title] — [Type]
-**Verification method**: [Screenshot + designer sign-off | Playtest session |
-Manual step-through | Comparison against reference footage]
-**Who must sign off**: [designer / lead-programmer / qa-lead / art-lead]
-**Evidence to capture**: [screenshot of X | video clip of Y | written playtest
-notes | side-by-side comparison]
-
-Checklist:
-- [ ] [Specific observable condition — concrete and falsifiable]
-- [ ] [Another condition]
-- [ ] [Every acceptance criterion translated into a manual check item]
-
-*If any criterion uses subjective language ("feels", "looks", "seems"), it must
-be supplemented with a specific benchmark or a playtest protocol note.*
+**Estimated count**: ~[N] tests
 
 ---
 
-## Smoke Test Scope
+## Manual Verification
 
-Critical paths to verify before any QA hand-off for this sprint:
+### [Story title] — [Admin UI | Extension]
+**Method**: dev-store walkthrough on a clean, unmodified theme
+**Who signs off**: [polaris-specialist / liquid-specialist / qa-lead]
+**Evidence**: screenshots or a screen recording under `production/apps/<app>/qa/evidence/`
 
-1. Game launches to main menu without crash
-2. New game / new session can be started
-3. [Primary mechanic introduced or changed this sprint]
-4. [Any system with a regression risk from this sprint's changes]
-5. Save / load cycle completes without data loss (if save system exists)
-6. Performance is within budget on target hardware (no new frame spikes)
-
-*Smoke tests are verified by the developer via `/smoke-check`. Reference this
-list when running that skill.*
+- [ ] Every acceptance criterion restated as an observable check
+- [ ] Loading, empty, and error states all reachable and correct
+- [ ] Works at 1280 px wide and at 200% zoom without clipped controls
+- [ ] [Extension] block renders in the theme editor and on the storefront
 
 ---
 
-## Playtest Requirements
+## Accessibility Verification
 
-| Story | Playtest Goal | Min Sessions | Target Player Type |
-|-------|--------------|--------------|-------------------|
-| [story] | [What question must the session answer?] | [N] | [new player / experienced] |
+Target: WCAG 2.1 AA on every admin surface.
 
-**Sign-off requirement**: Playtest notes must be written to
-`production/session-logs/playtest-[sprint]-[story-slug].md` and reviewed by
-the [designer / qa-lead] before the story can be marked COMPLETE.
+- [ ] Every control reachable by keyboard; tab order follows the visual order
+- [ ] Focus is visible on every interactive element; focus returns after a modal closes
+- [ ] Every input has a programmatic label; icon-only buttons have accessible names
+- [ ] Text contrast at least 4.5:1; status is never conveyed by colour alone
+- [ ] Errors announced, and associated with the field that caused them
+- [ ] Streaming or async status changes announced politely, not by focus theft
+- [ ] One screen-reader pass (VoiceOver or NVDA) over the primary flow
 
-If no stories require playtest validation: *No playtest sessions required for
-this sprint.*
+Owner: `accessibility-specialist`. Failures are blocking for the story they cover.
 
 ---
 
-## Definition of Done — This Sprint
+## Performance Verification
 
-A story is DONE when ALL of the following are true:
+Measured on a warm session against the dev store, from `technical-preferences.md`:
 
-- [ ] All acceptance criteria verified — via automated test result OR documented
-      manual evidence (screenshot, video, or playtest notes with sign-off)
-- [ ] Test file exists at the specified path for all Logic and Integration stories
-- [ ] Manual evidence document exists for all Visual/Feel and UI stories
-- [ ] Smoke check passes (run `/smoke-check sprint` before QA hand-off)
-- [ ] No regressions introduced
-- [ ] Code reviewed (via `/code-review` or documented peer review)
-- [ ] Story file updated to `Status: Complete` (via `/story-done`)
+| Metric | Budget | Method | Owner |
+|---|---|---|---|
+| Admin route load (p75) | < 1.5 s | Repeat the primary flow, record timings | `performance-analyst` |
+| Initial bundle | < 250 KB gzipped | Build output | `performance-analyst` |
+| Webhook handler (p95) | < 500 ms | Delivery timing under replay | `webhooks-specialist` |
+| GraphQL cost | < 50% of bucket; ≤ 500 per request | Query cost report | `graphql-specialist` |
+
+A breach is a finding with an owner, not a footnote.
+
+---
+
+## Smoke Scope
+
+Merchant-critical paths to verify before any hand-off this sprint:
+
+1. Install completes on the dev store and the embedded admin loads
+2. The primary action for this sprint completes end to end
+3. Saving and re-reading merchant settings round-trips correctly
+4. A webhook delivery is accepted, verified, and processed once
+5. Uninstall cleans up and the app stops acting on the shop
+6. No new error in the app logs during the full pass
+
+Verified with `/smoke-check <app>`. Reference this list there rather than re-deriving it.
+
+---
+
+## Definition of Done — This Scope
+
+- [ ] Every acceptance criterion verified by a passing test or recorded manual evidence
+- [ ] Logic and Integration stories have a test file beside their module
+- [ ] Admin UI and Extension stories have evidence under `production/apps/<app>/qa/evidence/`
+- [ ] Accessibility checks passed on every changed admin surface
+- [ ] Performance budgets measured, not assumed
+- [ ] Smoke check passes
+- [ ] No regression in the existing suite
+- [ ] Code reviewed via `/code-review`
+- [ ] Story marked Complete via `/story-done`
 ````
 
-When generating content, use the actual story titles, GDD formula text, and
-acceptance criteria extracted in Phase 2. Do not use placeholder text — every
-test entry should reflect the real requirements of these specific stories.
+Use the real story titles, acceptance criteria, and requirement text from Phase 2. No
+placeholder content survives into the written plan.
 
 ---
 
-## Phase 5: Write Output
+## Phase 5: Write
 
-Show the complete plan in conversation (or a summary if the plan is very long),
-then ask two questions together using `AskUserQuestion`, `request_user_input` or `clarify`:
+Show the plan (or a summary if very long), then ask with `AskUserQuestion`,
+`request_user_input` or `clarify`, multi-select:
 
-```
-question: "Ready to write the QA plan. Choose output options:"
-multiSelect: true
-options:
-  - "Write QA plan to production/qa/qa-plan-[sprint-slug]-[date].md"
-  - "Also back-fill test case specs into each story file's ## QA Test Cases section (Recommended — enables /dev-story and /code-review traceability)"
-```
+- `[A]` write to `production/apps/<app>/qa/qa-plan-<scope-slug>-<date>.md`
+- `[B]` also back-fill each story's `## QA Test Cases` section with its test specs
+  (recommended — `/dev-story` and `/code-review` read it)
 
-If "Write QA plan" is selected: write the plan file exactly as generated — do not truncate.
+If `[A]`, write the file exactly as generated; do not truncate.
 
-If "Also back-fill story files" is selected: for each Logic and Integration story in scope, edit the story file at its path. Find the `## QA Test Cases` section and replace its content with the test case specs generated in Phase 4 for that story. If a story has no `## QA Test Cases` section, append it before `## Test Evidence`. For Visual/Feel and UI stories, write the manual verification steps instead of test specs.
+If `[B]`, edit each in-scope Logic and Integration story at its path: replace the
+`## QA Test Cases` body, or append the section before `## Test Evidence` when absent.
+Admin UI and Extension stories get their manual verification steps instead of test specs.
 
-After writing:
-
-"QA plan written to `production/qa/qa-plan-[sprint-slug]-[date].md`.
-
-Next steps:
-- Share this plan with the team before sprint implementation begins
-- Once all sprint stories are implemented, run `/smoke-check sprint` to gate QA hand-off — not yet, only after implementation is complete
-- For Logic/Integration stories, create the test files at the listed paths
-  before marking stories done — `/story-done` checks for them"
-
-Silently append to `production/session-state/active.md` (create the file if it does not exist):
+After writing, append to `production/apps/<app>/session-state/active.md`:
 
 ```
-<!-- QA-PLAN: [date] | System: [system/sprint identifier] | Plan written: production/qa/qa-plan-[identifier]-[date].md -->
+<!-- QA-PLAN: [date] | App: [app] | Scope: [scope] | Plan: production/apps/<app>/qa/qa-plan-<scope-slug>-<date>.md -->
 ```
 
 ---
 
 ## Collaborative Protocol
 
-- **Never write the plan without asking** — Phase 5 requires explicit approval.
-- **Classify conservatively**: when a story is ambiguous between Logic and
-  Integration, classify it as Integration — it requires both unit and
-  integration tests.
-- **Do not invent test cases** beyond what acceptance criteria and GDD formulas
-  support. If a formula is absent from the GDD, flag it rather than guessing.
-- **Playtest requirements are advisory**: the user decides whether a playtest
-  is warranted for borderline Visual/Feel stories. Flag the case; do not mandate.
-- Use `AskUserQuestion`, `request_user_input` or `clarify` for scope selection when no argument is provided.
-  Keep all other phases non-interactive — present findings, then ask once to
-  approve the write.
+- **Never write without approval** — Phase 5 requires it.
+- **Classify conservatively** — a story ambiguous between Logic and Integration is
+  Integration; it needs both.
+- **Do not invent tests** beyond what acceptance criteria and requirement text support.
+  A missing requirement is a gap to flag, not a case to guess.
+- **Fixtures are version-bound** — a test that passes against a remembered payload shape
+  proves nothing about the pinned version.
+- **One approval for the whole changeset**, listing every file that changes.

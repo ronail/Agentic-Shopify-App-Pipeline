@@ -1,186 +1,198 @@
 ---
 name: patch-notes
-description: "Generate player-facing patch notes from git history, sprint data, and internal changelogs. Translates developer language into clear, engaging player communication."
-argument-hint: "[version] [--style brief|detailed|full]"
+description: "Use when writing merchant-facing release notes. Translates an app's changelog entry into plain-language notes a Shopify merchant understands — what changed, what it means for their store, and what they must do — with no internal jargon."
+argument-hint: "[app] [version] [--style brief|detailed|full]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, Bash
 model: haiku
 agent: community-manager
 ---
 
+# Patch Notes
+
+Produces the notes a **merchant** reads: what changed in their app, what it means for
+their store, and whether they need to do anything. The engineering record lives in
+`apps/<app>/CHANGELOG.md`; this skill is the translation layer on top of it.
+
+A merchant runs a business, not a build pipeline. If a sentence only makes sense to
+someone who has read the code, it does not belong in these notes.
+
+---
+
 ## Phase 1: Parse Arguments
 
-- `version`: the release version to generate notes for (e.g., `1.2.0`)
-- `--style`: output style — `brief` (bullet points), `detailed` (with context), `full` (with developer commentary). Default: `detailed`.
-
-If no version is provided, ask the user before proceeding.
-
----
-
-## Phase 2: Gather Change Data
-
-- Read the internal changelog at `production/releases/[version]/changelog.md` if it exists
-- Also check `docs/CHANGELOG.md` for the relevant version entry
-- Run `git log` between the previous release tag and current tag/HEAD as a fallback
-- Read sprint retrospectives in `production/sprints/` for context
-- Read any balance change documents in `design/balance/`
-- Read bug fix records from QA if available
-
-**If no changelog data is available** (neither `production/releases/[version]/changelog.md`
-nor a `docs/CHANGELOG.md` entry for this version exists, and git log is empty or unavailable):
-
-> "No changelog data found for [version]. Run `/changelog [version]` first to generate the
-> internal changelog, then re-run `/patch-notes [version]`."
-
-Verdict: **BLOCKED** — stop here without generating notes.
+- `app` — slug from `docs/registry/apps.json`; default to the app named in `request.md`
+- `version` — the release to write notes for; ask if absent
+- `--style` — `brief` (bullets only), `detailed` (default: context per change), `full`
+  (adds a short note from the team on the biggest change)
 
 ---
 
-## Phase 2b: Detect Tone Guide and Template
+## Phase 2: Gather Source Material
 
-**Tone guide detection** — before drafting notes, check for writing style guidance:
+- `apps/<app>/CHANGELOG.md` — the `[version]` entry is the primary source
+- `production/apps/<app>/patch-notes-<version>.md` — an existing draft, if any
+- Sprint records in `production/apps/<app>/sprints/` — why the work happened
+- `request.md` and the app-local request history — merchant-reported problems already known
+- `git log` between the previous and current tag, scoped to `apps/<app>/`, as a fallback
 
-1. Check `.claude/docs/technical-preferences.md` for any "tone", "voice", or "style"
-   fields or sections.
-2. Check `docs/PATCH-NOTES-STYLE.md` if it exists.
-3. Check `design/community/tone-guide.md` if it exists.
-4. If any source contains tone/voice/style instructions, extract them and apply
-   them to the language and framing of the generated notes.
-5. If no tone guidance is found anywhere, default to:
-   player-friendly, non-technical language; enthusiastic but not hyperbolic;
-   focus on what the player experiences, not what the developer changed.
+**If there is no changelog entry and no git range for `[version]`:**
 
-**Template detection** — check whether a patch notes template exists:
+> "No changelog data found for [version]. Run `/changelog [app] [version]` first, then
+> re-run `/patch-notes [app] [version]`."
 
-1. Glob for `docs/patch-notes-template.md` and `.claude/docs/templates/patch-notes-template.md`.
-2. If found at either location, read it and use it as the output structure for Phase 4
-   instead of the built-in style templates (Brief / Detailed / Full). Fill in the
-   template's sections with the categorized data.
-3. If not found, use the built-in style templates as defined in Phase 4.
+Verdict: **BLOCKED** — stop without generating notes.
+
+---
+
+## Phase 2b: Detect Tone and Template
+
+**Tone**, in this order:
+
+1. `apps/<app>/docs/tone-guide.md`
+2. Any tone/voice/style section in `.claude/docs/technical-preferences.md`
+3. `docs/PATCH-NOTES-STYLE.md`
+4. Default: plain, calm, specific. No exclamation marks, no marketing adjectives, no
+   "we're thrilled".
+
+**Template**: Glob `apps/<app>/docs/patch-notes-template.md`, then
+`.claude/docs/templates/release-notes.md`. If one exists, follow its section order
+instead of the built-in styles and fill it from the categorized changes. Where a
+template section has nothing merchant-visible to say, drop the section rather than
+inventing content for it.
 
 ---
 
 ## Phase 3: Categorize and Translate
 
-Categorize all changes into player-facing categories:
+Categories, merchant-facing:
 
-- **New Content**: new features, maps, characters, items, modes
-- **Gameplay Changes**: balance adjustments, mechanic changes, progression changes
-- **Quality of Life**: UI improvements, convenience features, accessibility
-- **Bug Fixes**: grouped by system (combat, UI, networking, etc.)
-- **Performance**: optimization improvements players might notice
-- **Known Issues**: transparency about unresolved problems
+- **New** — a capability the merchant did not have before
+- **Improved** — an existing flow got faster, clearer, or more reliable
+- **Fixed** — something was broken and now is not
+- **Pricing or plan changes** — anything that changes what they pay or can access
+- **Action required** — reinstall, re-authorise, update a setting, update their theme
+- **Known issues** — honest statement plus a workaround where one exists
 
-Translate developer language to player language:
+Translation rules:
 
-- "Refactored damage calculation pipeline" → "Improved hit detection accuracy"
-- "Fixed null reference in inventory manager" → "Fixed a crash when opening inventory"
-- "Reduced GC allocations in combat loop" → "Improved combat performance"
-- Remove purely internal changes that don't affect players
-- Preserve specific numbers for balance changes (damage: 50 → 45)
+- Describe the **effect on the store**, not the mechanism
+- Drop anything with no merchant-visible effect
+- Keep concrete numbers when they are the point (limits, timings, plan prices)
+- Name the surface the merchant knows: "the Bundles page", "your product page",
+  "checkout" — never module or file names
+- Anything that breaks an existing setup is a headline, not a footnote
+
+| Internal phrasing | Merchant phrasing |
+|---|---|
+| "Dedupe webhook deliveries by event ID" | "Duplicate order updates no longer create duplicate tags" |
+| "Migrated to Admin API [version]" | "Updated to Shopify's current API so syncs keep working reliably" |
+| "Added pagination at 100 per page" | "Large catalogs now load in a single pass instead of timing out" |
+| "Server-side billing gating" | "Plan access is now checked on every action, so features can't be used outside your plan" |
+| "Refactored discount service" | *(no line — nothing changed for the merchant)* |
 
 ---
 
-## Phase 4: Generate Patch Notes
+## Phase 4: Generate the Notes
 
-### Brief Style
+### Brief
 ```markdown
-# Patch [Version] — [Title]
+# [App] [version] — [short title]
 
 **New**
-- [Feature 1]
-- [Feature 2]
+- [what they can now do]
 
-**Changes**
-- [Balance/mechanic change with before → after values]
+**Improved**
+- [what got better, with the merchant-visible effect]
 
-**Fixes**
-- [Bug fix 1]
-- [Bug fix 2]
+**Fixed**
+- [what used to go wrong; what happens now]
 
-**Known Issues**
-- [Issue 1]
+**Action required**
+- [step, or omit the section entirely]
 ```
 
-### Detailed Style
+### Detailed (default)
 ```markdown
-# Patch [Version] — [Title]
-*[Date]*
+# [App] [version] — [short title]
+*[date]*
 
-## Highlights
-[1-2 sentence summary of the most exciting changes]
+## What's new
+[Two sentences: the main change and what it means for their store.]
 
-## New Content
-### [Feature Name]
-[2-3 sentences describing the feature and why players should be excited]
+## New
+### [Capability]
+[What it does, where to find it, and one sentence on when to use it.]
 
-## Gameplay Changes
-### Balance
-| Change | Before | After | Reason |
-| ---- | ---- | ---- | ---- |
-| [Item/ability] | [old value] | [new value] | [brief rationale] |
+## Improved
+- **[Area]**: [before → after, in merchant terms]
 
-### Mechanics
-- **[Change]**: [explanation of what changed and why]
+## Fixed
+- [What used to go wrong]. [What happens now.]
 
-## Quality of Life
-- [Improvement with context]
+## Pricing and plans
+- [Only if something changed; state old and new explicitly.]
 
-## Bug Fixes
-### Combat
-- Fixed [description of what players experienced]
+## Action required
+- [Exactly what to do and where. Omit the section if nothing is required.]
 
-### UI
-- Fixed [description]
-
-### Networking
-- Fixed [description]
-
-## Performance
-- [Improvement players will notice]
-
-## Known Issues
-- [Issue and workaround if available]
+## Known issues
+- [Issue in merchant terms] — [workaround, or "we're working on it".]
 ```
 
-### Full Style
-Includes everything from Detailed, plus:
+### Full
+Everything in Detailed, plus:
 ```markdown
-## Developer Commentary
-### [Topic]
-> [Developer insight into a major change — why it was made, what was considered,
-> what the team learned. Written in first-person team voice.]
+## A note from the team
+> [2–3 sentences in first-person team voice on the biggest change: why it was made,
+> what merchants asked for, what is coming next. No internal detail.]
 ```
+
+Also produce a **short form** for in-app banners or update emails: one sentence plus,
+if needed, one action line. Under 300 characters.
 
 ---
 
-## Phase 5: Review Output
+## Phase 5: Review the Draft
 
-Check the generated notes for:
+Reject the draft and rewrite if any of these is true:
 
-- No internal jargon (replace technical terms with player-friendly language)
-- No references to internal systems, tickets, or sprint numbers
-- Balance changes include before/after values
-- Bug fixes describe the player experience, not the technical cause
-- Tone matches the game's voice (adjust formality based on game style)
+- A sentence names an internal component, ticket, sprint, branch, or log message
+- A fix describes the cause instead of the symptom the merchant saw
+- "Improved performance" appears without saying what the merchant will notice
+- Something that requires merchant action is buried below the fold
+- A claim cannot be traced to a changelog entry
+- Tone drifted into marketing ("revolutionary", "industry-first", "seamless")
 
 ---
 
-## Phase 6: Save Patch Notes
+## Phase 6: Save
 
-Present the completed patch notes to the user along with: a count of changes by category, and any internal changes that were excluded (for review).
+Present the notes with: counts per category, the short form, and the list of internal
+changes deliberately excluded.
 
-Ask: "May I write these patch notes to `docs/patch-notes/[version].md`?"
+Ask: "May I write these to `production/apps/<app>/patch-notes-<version>.md`?" On
+approval, write the file, creating the directory if needed.
 
-If yes, write the file to `docs/patch-notes/[version].md`, creating the directory
-if needed. Also write to `production/releases/[version]/patch-notes.md` as the
-internal archive copy.
+If a draft already exists at that path, show the diff and ask before replacing it.
+
+Verdict: **COMPLETE** — patch notes written.
 
 ---
 
 ## Phase 7: Next Steps
 
-Verdict: **COMPLETE** — patch notes generated and saved.
+- `/release-checklist [app] --version [version]` — confirm nothing else blocks submission
+- `/release [app] [version]` — publish the release the notes describe
+- Have `community-manager` read the final text for tone before it goes to merchants
 
-- Run `/release-checklist` to verify all other release gates are met before publishing.
-- Share the patch notes draft with the community-manager for tone review before posting publicly.
+---
+
+## Rules
+
+- Never invent a change that is not in the changelog or the commit range
+- Never promise a date, a roadmap item, or a fix "coming soon" unless it is written down
+  in the sprint record
+- Pricing copy must match live billing configuration exactly; verify before writing
+- If the release contains nothing a merchant would notice, say so plainly and ship a
+  two-line note — an inflating release note damages trust faster than a short one

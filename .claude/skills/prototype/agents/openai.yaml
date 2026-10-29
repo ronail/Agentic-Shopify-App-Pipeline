@@ -1,6 +1,6 @@
 interface:
   display_name: "Prototype"
-  short_description: "Concept prototype — validate the core idea is worth designing before writing GDDs. Run right after /brainstorm and /setup-engine. Routes to HTML, Engine, or..."
+  short_description: "Build a throwaway prototype of an app's merchant-facing flow under apps/<app>/prototype/ — real Polaris screens, mock data, no tests, no coverage requirement..."
   default_prompt: "Use the $prototype skill for the requested task."
 policy:
   allow_implicit_invocation: true

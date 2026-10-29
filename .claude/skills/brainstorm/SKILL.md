@@ -1,359 +1,186 @@
 ---
 name: brainstorm
-description: "Guided game concept ideation — from zero idea to a structured game concept document. Uses professional studio ideation techniques, player psychology frameworks, and structured creative exploration."
-argument-hint: "[genre or theme hint, or 'open'] [--review full|lean|solo]"
+description: "Guided Shopify app concept ideation — from a raw merchant pain to a structured app concept document, framed as either an Original or a Competitor-Killer. Produces apps/<app>/design/concept.md and registers the app."
+argument-hint: "[pain point, merchant niche, or 'open'] [--framing original|competitor-killer] [--review full|lean|solo]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write, WebSearch, Task, AskUserQuestion, request_user_input, clarify
 model: sonnet
 ---
 
-When this skill is invoked:
+# Shopify App Concept Ideation
 
-1. **Parse the argument** for an optional genre/theme hint (e.g., `roguelike`,
-   `space survival`, `cozy farming`). If `open` or no argument, start from
-   scratch. Also resolve the review mode (once, store for all gate spawns this run):
-   1. If `--review [full|lean|solo]` was passed → use that
-   2. Else read `production/review-mode.txt` → use that value
-   3. Else → default to `lean`
+Turns a vague merchant pain into one app concept that can survive
+`/research` and the gate-1 approval.
 
-   See `.claude/docs/director-gates.md` for the full check pattern.
+Output: `apps/<app>/design/concept.md`, plus an appended entry in
+`docs/registry/apps.json` when the app is new. Nothing else in the repo is
+written — no code, no prototype, no architecture.
 
-2. **Check for existing concept work**:
-   - Read `design/gdd/game-concept.md` if it exists (resume, don't restart)
-   - Read `design/gdd/game-pillars.md` if it exists (build on established pillars)
+Follow `docs/COLLABORATIVE-DESIGN-PRINCIPLE.md`: present choices, let the user
+decide, never invent merchant evidence.
 
-3. **Run through ideation phases** interactively, asking the user questions at
-   each phase. Do NOT generate everything silently — the goal is **collaborative
-   exploration** where the AI acts as a creative facilitator, not a replacement
-   for the human's vision.
+## Phase 0 — Parse arguments and resolve review mode
 
-   **Use `AskUserQuestion`, `request_user_input` or `clarify`** at key decision points throughout brainstorming:
-   - Constrained taste questions (genre preferences, scope, team size)
-   - Concept selection ("Which 2-3 concepts resonate?") after presenting options
-   - Direction choices ("Develop further, explore more, or prototype?")
-   - Pillar ranking after concepts are refined
-   Write full creative analysis in conversation text first, then use
-   `AskUserQuestion`, `request_user_input` or `clarify` to capture the decision with concise labels.
+1. **Seed**: everything before the flags is the seed — a merchant pain
+   (`"refund reconciliation is manual"`), a niche (`"subscription coffee"`), or
+   `open`.
+2. **Framing**: `--framing original` or `--framing competitor-killer`. If
+   absent, defer to Phase 3 (do not pick for the user).
+3. **Review mode**: `--review full|lean|solo` overrides
+   `production/review-mode.txt` for this run. Read the file if the flag is
+   missing; `lean` if the file is missing too. Gate rules:
+   `.claude/docs/director-gates.md`.
 
-   Professional studio brainstorming principles to follow:
-   - Withhold judgment — no idea is bad during exploration
-   - Encourage unusual ideas — outside-the-box thinking sparks better concepts
-   - Build on each other — "yes, and..." responses, not "but..."
-   - Use constraints as creative fuel — limitations often produce the best ideas
-   - Time-box each phase — keep momentum, don't over-deliberate early
+## Phase 1 — Context read
 
----
+- `request.md` — goal, success criteria, `## Apps in scope`. An idea that
+  duplicates a listed app is a scope change, not a new app: say so and offer
+  `/update-request` instead.
+- `docs/registry/apps.json` — apps already in the pipeline. Avoid overlap; if
+  two apps would share a surface, note the boundary now.
+- `docs/shopify-api-reference/` — what the pinned API version can actually do.
+- Existing concepts: `apps/*/design/concept.md`.
 
-### Phase 1: Creative Discovery
+Report in three lines: what exists, what the seed is, what is missing.
 
-Start by understanding the person, not the game. Ask these questions
-conversationally (not as a checklist):
+## Phase 2 — Merchant pain discovery
 
-**Emotional anchors**:
-- What's a moment in a game that genuinely moved you, thrilled you, or made
-  you lose track of time? What specifically created that feeling?
-- Is there a fantasy or power trip you've always wanted in a game but never
-  quite found?
+Ask one question at a time; stop as soon as the pain is concrete.
 
-**Taste profile**:
-- What 3 games have you spent the most time with? What kept you coming back?
-  *(Ask this as plain text — the user must be able to type specific game names freely.
-  Do NOT put this in an AskUserQuestion with preset options.)*
-- Are there genres you love? Genres you avoid? Why?
-- Do you prefer games that challenge you, relax you, tell you stories,
-  or let you express yourself? *(Use `AskUserQuestion`, `request_user_input` or `clarify` for this — constrained choice.)*
+| Probe | Question | Why it matters |
+|-------|----------|----------------|
+| Moment | When in the merchant's day does this hurt? | Anchors the app to a real admin screen |
+| Frequency | Daily, weekly, or seasonal? | Decides whether the app is a workflow or a one-off tool |
+| Cost | Minutes per occurrence, orders affected, revenue at risk | Justifies a paid plan |
+| Workaround | What do they do today — spreadsheet, manual edit, another app? | Defines the thing you must beat |
+| Trigger | What changed — new API, new store scale, policy change? | Timing for the pitch |
 
-**Practical constraints** (shape the sandbox before brainstorming).
-Bundle these into a single multi-tab `AskUserQuestion`, `request_user_input` or `clarify` with these exact tab labels:
-- Tab "Experience" — "What kind of experience do you most want players to have?" (Challenge & Mastery / Story & Discovery / Expression & Creativity / Relaxation & Flow)
-- Tab "Timeline" — "What's your realistic development timeline?" (Weeks / Months / 1-2 years / Multi-year)
-- Tab "Dev level" — "Where are you in your dev journey?" (First game / Shipped before / Professional background)
+Then a short evidence pass (optional, `research-specialist` via Task when the
+user wants it): merchant forum threads, app store review complaints on
+incumbents, Shopify changelog entries that unlock the job. Cite what you find;
+never present a guess as evidence.
 
-Use exactly these tab names — do not rename or duplicate them.
+If the pain cannot be stated in one sentence with a number in it, say so and
+propose two narrower seeds.
 
-**Synthesize** the answers into a **Creative Brief** — a 3-5 sentence
-summary of the person's emotional goals, taste profile, and constraints.
-Read the brief back and confirm it captures their intent.
+## Phase 3 — Choose the framing
 
----
+Two framings, different burdens of proof:
 
-### Phase 2: Concept Generation
+| Framing | Definition | Required evidence | When it wins |
+|---------|------------|-------------------|--------------|
+| **Original** | No installed app does this job today | Named manual workaround, and a reason incumbents have not covered it | Unserved job, new API surface, a niche too small for a category leader |
+| **Competitor-Killer** | A named app does this and you displace it | Two or more named competitors, the specific gap (pricing, API coverage, admin UX, review pain), and a wedge that survives a copy attempt | Crowded category where the leader is visibly weak |
 
-Using the creative brief as a foundation, generate **3 distinct concepts**
-that each take a different creative direction. Use these ideation techniques:
+Ask: "Is this an Original or a Competitor-Killer?"
 
-**Technique 1: Verb-First Design**
-Start with the core player verb (build, fight, explore, solve, survive,
-create, manage, discover) and build outward from there. The verb IS the game.
+- **Original** → write down why the job is unserved: missing API, wrong
+  economics, or a workflow merchants do not know they can automate.
+- **Competitor-Killer** → complete the table below before any concept prose:
 
-**Technique 2: Mashup Method**
-Combine two unexpected elements: [Genre A] + [Theme B]. The tension between
-the two creates the unique hook. (e.g., "farming sim + cosmic horror",
-"roguelike + dating sim", "city builder + real-time combat")
+| Competitor | Installs / rating | Their gap | Our wedge | Copy risk |
+|------------|-------------------|-----------|-----------|-----------|
 
-**Technique 3: Experience-First Design (MDA Backward)**
-Start from the desired player emotion (aesthetic goal from MDA framework:
-sensation, fantasy, narrative, challenge, fellowship, discovery, expression,
-submission) and work backward to the dynamics and mechanics that produce it.
+A Competitor-Killer with one competitor, or a wedge that is "cheaper", is a weak
+concept — say so plainly and offer to reframe as an Original with a narrower job.
 
-For each concept, present:
-- **Working Title**
-- **Elevator Pitch** (1-2 sentences — must pass the "10-second test")
-- **Core Verb** (the single most common player action)
-- **Core Fantasy** (the emotional promise)
-- **Unique Hook** (passes the "and also" test: "Like X, AND ALSO Y")
-- **Primary MDA Aesthetic** (which emotion dominates?)
-- **Estimated Scope** (small / medium / large)
-- **Why It Could Work** (1 sentence on market/audience fit)
-- **Biggest Risk** (1 sentence on the hardest unanswered question)
+## Phase 4 — Shape the concept
 
-Present all three. Then use `AskUserQuestion`, `request_user_input` or `clarify` to capture the selection.
+Fill these, confirming each with the user:
 
-**CRITICAL**: This MUST be a plain list call — no tabs, no form fields. Use exactly this structure:
+1. **Slug and name** — lowercase-hyphen slug, <= 30 chars, unique in the
+   registry. `apps/<slug>/` is the only home for the app's work.
+2. **Merchant job** — `When <situation>, I want <motivation>, so I can <outcome>`.
+3. **Pain evidence** — the numbers from Phase 2, with sources.
+4. **Wedge** — the one thing this app does better; one sentence.
+5. **Shopify surface map** — which surfaces the app needs:
 
+| Surface | Use it when | Notes |
+|---------|-------------|-------|
+| Embedded Admin app (Polaris + App Bridge) | Merchants configure or monitor | Default surface for most apps |
+| Admin action / block extension | A task belongs on an existing admin page | Cheaper than a full page; needs a reason not to build a page |
+| Theme app extension | Storefront rendering | Needs theme support and app-block adoption |
+| Checkout UI extension | Post-purchase or checkout steps | Only Plus plans can customise checkout fully |
+| Shopify Functions | Discount, delivery, payment, cart validation logic | Runs in a sandbox; no network calls |
+| Webhooks | Reacting to orders, products, app uninstalls | Needs idempotency and a retry story |
+| Storefront API / GraphQL Admin API | Data reads and writes | Pin the version; note protected customer data |
+
+6. **Monetisation** — free, flat monthly, usage-based, or a free tier with a
+   paid upgrade. Name the Billing API shape (recurring charge, usage charge) and
+   the line the merchant crosses to pay.
+7. **MVP scope** — at most three merchant flows. Anything else goes to
+   `Out of scope`.
+8. **Out of scope** — explicit, so `/scope-check` has something to hold.
+9. **Risks** — App Store category review, protected customer data approval,
+   API rate limits, a platform feature that could absorb the job.
+10. **Success metric** — one number that proves the app works
+    (for example: "setup completed by 60% of installs within 10 minutes").
+
+## Phase 5 — Write the concept
+
+Write `apps/<app>/design/concept.md`:
+
+```markdown
+# <App name> — Concept
+
+Slug: <slug>
+Framing: Original | Competitor-Killer
+Date: <YYYY-MM-DD>
+Status: draft | approved
+
+## Merchant Job
+## Pain Evidence
+## Wedge
+## Shopify Surface Map
+## Monetisation
+## MVP Scope (<= 3 flows)
+## Out of Scope
+## Risks
+## Success Metric
+## Open Questions
 ```
-AskUserQuestion(
-  prompt: "Which concept resonates with you? You can pick one, combine elements, or ask for fresh directions.",
-  options: [
-    "Concept 1 — [Title]",
-    "Concept 2 — [Title]",
-    "Concept 3 — [Title]",
-    "Combine elements across concepts",
-    "Generate fresh directions"
-  ]
-)
-```
 
-Do NOT use a `tabs` field here. The `tabs` form is for multi-field input only — using it here causes an "Invalid tool parameters" error. This is a plain `prompt` + `options` call.
+Then, only if the app is new:
 
-Never pressure toward a choice — let them sit with it.
+1. Append one entry to `docs/registry/apps.json` — `slug`, `name`, `purpose`,
+   `stage: "research"`, `last_approved_gate: null`, `created`. Append-only: never
+   reorder or rewrite other entries.
+2. Create `apps/<slug>/status.md` (`Stage: research`,
+   `Last approved gate: none`, `Blockers: none`), `apps/<slug>/README.md`, and
+   `apps/<slug>/approvals.json` (`{}`).
+3. Create `production/apps/<slug>/{sprints,milestones,session-state}/` with
+   `.gitkeep` files.
+4. Mirror the app into `request.md` `## Apps in scope` and add a matching row to
+   `request-history.md`. `.claude/hooks/track-request-changes.sh` enforces the
+   pair; a missing history row fails the hook.
 
----
+Show the diff of every file written and let the user object before moving on.
 
-### Phase 3: Core Loop Design
+## Phase 6 — Review gate
 
-For the chosen concept, use structured questioning to build the core loop.
-The core loop is the beating heart of the game — if it isn't fun in
-isolation, no amount of content or polish will save the game.
+Resolve review mode, then (unless `solo`):
 
-**30-Second Loop** (moment-to-moment):
+- **`product-director`** — is the job real, is the framing honest, is the MVP
+  small enough? Use the product-director gate and verdict format defined in
+  `.claude/docs/director-gates.md`.
+- **`growth-lead`** — is there a wedge a merchant would install today?
+- **`app-store-reviewer`** — does the concept risk a rejection (misleading
+  listing, unsupported surface, policy-adjacent claims)?
 
-Ask these as `AskUserQuestion`, `request_user_input` or `clarify` calls — derive the options from the chosen concept, don't hardcode them:
+`lean` runs the product-director gate only. Pass the concept path, the framing
+table, and the surface map as context. Handle the verdict:
 
-1. **Core action feel** — prompt: "What's the primary feel of the core action?" Generate 3-4 options that fit the concept's genre and tone, plus a free-text escape (`I'll describe it`).
+- **APPROVED** → set `Status: approved` in the concept.
+- **NEEDS REVISION** → apply the specific fixes, re-run once.
+- **MAJOR REVISION NEEDED** → return to Phase 2 or 3 with the objection quoted.
 
-2. **Key design dimension** — identify the most important design variable for this specific concept (e.g., world reactivity, pacing, player agency) and ask about it. Generate options that match the concept. Always include a free-text escape.
+## Phase 7 — Hand off
 
-After capturing answers, analyze: Is this action intrinsically satisfying? What makes it feel good? (Audio feedback, visual juice, timing satisfaction, tactical depth?)
+Say what is next and why, in one line each:
 
-**5-Minute Loop** (short-term goals):
-- What structures the moment-to-moment play into cycles?
-- Where does "one more turn" / "one more run" psychology kick in?
-- What choices does the player make at this level?
+- `/research <app>` — validate demand, competitor installs, and API access.
+- `/mmmvp-proposals <app>` — turn the concept into MMMVP options for gate-1.
+- `/design-review <path>` — if the concept is going straight into specs.
 
-**Session Loop** (30-120 minutes):
-- What does a complete session look like?
-- Where are the natural stopping points?
-- What's the "hook" that makes them think about the game when not playing?
-
-**Progression Loop** (days/weeks):
-- How does the player grow? (Power? Knowledge? Options? Story?)
-- What's the long-term goal? When is the game "done"?
-
-**Player Motivation Analysis** (based on Self-Determination Theory):
-- **Autonomy**: How much meaningful choice does the player have?
-- **Competence**: How does the player feel their skill growing?
-- **Relatedness**: How does the player feel connected (to characters,
-  other players, or the world)?
-
----
-
-### Phase 4: Pillars and Boundaries
-
-Game pillars are used by real AAA studios (God of War, Hades, The Last of
-Us) to keep hundreds of team members making decisions that all point the
-same direction. Even for solo developers, pillars prevent scope creep and
-keep the vision sharp.
-
-Collaboratively define **3-5 pillars**:
-- Each pillar has a **name** and **one-sentence definition**
-- Each pillar has a **design test**: "If we're debating between X and Y,
-  this pillar says we choose __"
-- Pillars should feel like they create tension with each other — if all
-  pillars point the same way, they're not doing enough work
-
-Then define **3+ anti-pillars** (what this game is NOT):
-- Anti-pillars prevent the most common form of scope creep: "wouldn't it
-  be cool if..." features that don't serve the core vision
-- Frame as: "We will NOT do [thing] because it would compromise [pillar]"
-
-**Pillar confirmation**: After presenting the full pillar set, use `AskUserQuestion`, `request_user_input` or `clarify`:
-- Prompt: "Do these pillars feel right for your game?"
-- Options: `[A] Lock these in` / `[B] Rename or reframe one` / `[C] Swap a pillar out` / `[D] Something else`
-
-If the user selects B, C, or D, make the revision, then use `AskUserQuestion`, `request_user_input` or `clarify` again:
-- Prompt: "Pillars updated. Ready to lock these in?"
-- Options: `[A] Lock these in` / `[B] Revise another pillar` / `[C] Something else`
-
-Repeat until the user selects [A] Lock these in.
-
-**Review mode check** — apply before spawning CD-PILLARS and AD-CONCEPT-VISUAL:
-- `solo` → skip both. Note: "CD-PILLARS skipped — Solo mode. AD-CONCEPT-VISUAL skipped — Solo mode." Proceed to Phase 5.
-- `lean` → skip both (not PHASE-GATEs). Note: "CD-PILLARS skipped — Lean mode. AD-CONCEPT-VISUAL skipped — Lean mode." Proceed to Phase 5.
-- `full` → spawn as normal.
-
-**After pillars and anti-pillars are agreed, spawn BOTH `creative-director` AND `art-director` via Task in parallel before moving to Phase 5. Issue both Task calls simultaneously — do not wait for one before starting the other.**
-
-- **`creative-director`** — gate **CD-PILLARS** (`.claude/docs/director-gates.md`)
-  Pass: full pillar set with design tests, anti-pillars, core fantasy, unique hook.
-
-- **`art-director`** — gate **AD-CONCEPT-VISUAL** (`.claude/docs/director-gates.md`)
-  Pass: game concept elevator pitch, full pillar set with design tests, target platform (if known), any reference games or visual touchstones the user mentioned.
-
-Collect both verdicts, then present them together using a two-tab `AskUserQuestion`, `request_user_input` or `clarify`:
-- Tab **"Pillars"**: present creative-director feedback. Options mirror the standard CD-PILLARS handling — `Lock in as-is` / `Revise [specific pillar]` / `Discuss further`.
-- Tab **"Visual anchor"**: present the art-director's 2-3 named visual direction options. Options: each named direction (one per option) + `Combine elements across directions` + `Describe my own direction`.
-
-The user's selected visual anchor (the named direction or their custom description) is stored as the **Visual Identity Anchor** — it will be written into the game-concept document and becomes the foundation of the art bible.
-
-If the creative-director returns CONCERNS or REJECT on pillars, resolve pillar issues before asking for the visual anchor selection — visual direction should flow from confirmed pillars.
-
----
-
-### Phase 5: Player Type Validation
-
-Using the Bartle taxonomy and Quantic Foundry motivation model, validate
-who this game is actually for:
-
-- **Primary player type**: Who will LOVE this game? (Achievers, Explorers,
-  Socializers, Competitors, Creators, Storytellers)
-- **Secondary appeal**: Who else might enjoy it?
-- **Who is this NOT for**: Being clear about who won't like this game is as
-  important as knowing who will
-- **Market validation**: Are there successful games that serve a similar
-  player type? What can we learn from their audience size?
-
----
-
-### Phase 6: Scope and Feasibility
-
-Ground the concept in reality:
-
-- **Target platform**: Use `AskUserQuestion`, `request_user_input` or `clarify` — "What platforms are you targeting for this game?"
-  Options: `PC (Steam / Epic)` / `Mobile (iOS / Android)` / `Console` / `Web / Browser` / `Multiple platforms`
-  Record the answer — it directly shapes the engine recommendation and will be passed to `/setup-engine`.
-  Note platform implications if relevant (e.g., mobile means Unity is strongly preferred; console means Godot has limitations; web means Godot exports cleanly).
-
-- **Engine experience**: Use `AskUserQuestion`, `request_user_input` or `clarify` — "Do you already have an engine you work in?"
-  Options: `Godot` / `Unity` / `Unreal Engine 5` / `No preference — help me decide`
-  - If they pick an engine → record it as their preference and move on. Do NOT second-guess it.
-  - If "No preference" → tell them: "Run `/setup-engine` after this session — it will walk you through the full decision based on your concept and platform target." Do not make a recommendation here.
-- **Art pipeline**: What's the art style and how labor-intensive is it?
-- **Content scope**: Estimate level/area count, item count, gameplay hours
-- **MVP definition**: What's the absolute minimum build that tests "is the
-  core loop fun?"
-- **Biggest risks**: Technical risks, design risks, market risks
-- **Scope tiers**: What's the full vision vs. what ships if time runs out?
-
-**Review mode check** — apply before spawning TD-FEASIBILITY:
-- `solo` → skip. Note: "TD-FEASIBILITY skipped — Solo mode." Proceed directly to scope tier definition.
-- `lean` → skip (not a PHASE-GATE). Note: "TD-FEASIBILITY skipped — Lean mode." Proceed directly to scope tier definition.
-- `full` → spawn as normal.
-
-**After identifying biggest technical risks, spawn `technical-director` via Task using gate TD-FEASIBILITY (`.claude/docs/director-gates.md`) before scope tiers are defined.**
-
-Pass: core loop description, platform target, engine choice (or "undecided"), list of identified technical risks.
-
-Present the assessment to the user. If HIGH RISK, offer to revisit scope before finalising. If CONCERNS, note them and continue.
-
-**Review mode check** — apply before spawning PR-SCOPE:
-- `solo` → skip. Note: "PR-SCOPE skipped — Solo mode." Proceed to document generation.
-- `lean` → skip (not a PHASE-GATE). Note: "PR-SCOPE skipped — Lean mode." Proceed to document generation.
-- `full` → spawn as normal.
-
-**After scope tiers are defined, spawn `producer` via Task using gate PR-SCOPE (`.claude/docs/director-gates.md`).**
-
-Pass: full vision scope, MVP definition, timeline estimate, team size.
-
-Present the assessment to the user. If UNREALISTIC, offer to adjust the MVP definition or scope tiers before writing the document.
-
----
-
-4. **Generate the game concept document** using the template at
-   `.claude/docs/templates/game-concept.md`. Fill in ALL sections from the
-   brainstorm conversation, including the MDA analysis, player motivation
-   profile, and flow state design sections.
-
-   **Include a Visual Identity Anchor section** in the game concept document with:
-   - The selected visual direction name
-   - The one-line visual rule
-   - The 2-3 supporting visual principles with their design tests
-   - The color philosophy summary
-
-   This section is the seed of the art bible — it captures the "everything must
-   move" decision before it can be forgotten between sessions.
-
-5. Use `AskUserQuestion`, `request_user_input` or `clarify` for write approval:
-- Prompt: "Game concept is ready. May I write it to `design/gdd/game-concept.md`?"
-- Options: `[A] Yes — write it` / `[B] Not yet — revise a section first`
-
-If [B]: ask which section to revise using `AskUserQuestion`, `request_user_input` or `clarify` with options: `Elevator Pitch` / `Core Fantasy & Unique Hook` / `Pillars` / `Core Loop` / `MVP Definition` / `Scope Tiers` / `Risks` / `Something else — I'll describe`
-
-After revising, show the updated section as a diff or clear before/after, then use `AskUserQuestion`, `request_user_input` or `clarify` — "Ready to write the updated concept document?"
-Options: `[A] Yes — write it` / `[B] Revise another section`
-Repeat until the user selects [A].
-
-If yes, generate the document using the template at `.claude/docs/templates/game-concept.md`, fill in ALL sections from the brainstorm conversation, and write the file, creating directories as needed.
-
-**Scope consistency rule**: The "Estimated Scope" field in the Core Identity table must match the full-vision timeline from the Scope Tiers section — not just say "Large (9+ months)". Write it as "Large (X–Y months, solo)" or "Large (X–Y months, team of N)" so the summary table is accurate.
-
-6. **Suggest next steps** (in this order — this is the professional studio
-   pre-production pipeline). List ALL steps — do not abbreviate or truncate:
-
-**Path A — Design-First** (recommended if the concept is well-defined):
-   1. "Run `/setup-engine` to configure the engine and populate version-aware reference docs"
-   2. "Run `/art-bible` to create the visual identity specification — do this BEFORE writing GDDs. **The art bible is required before the Technical Setup gate.** It gates asset production and shapes technical architecture decisions (rendering, VFX, UI systems)."
-   3. "Use `/design-review design/gdd/game-concept.md` to validate concept completeness before going downstream"
-   4. "Discuss vision with the `creative-director` agent for pillar refinement"
-   5. "Decompose the concept into individual systems with `/map-systems` — maps dependencies, assigns priorities, and creates the systems index"
-   6. "Author per-system GDDs with `/design-system` — guided, section-by-section GDD writing for each system identified in step 5"
-   7. "Plan the technical architecture with `/create-architecture` — produces the master architecture blueprint and Required ADR list"
-   8. "Record key architectural decisions with `/architecture-decision (×N)` — write one ADR per decision in the Required ADR list from `/create-architecture`"
-   9. "Run `/architecture-review` — bootstraps the TR registry and Requirements Traceability Matrix from your GDDs and ADRs (required before the Pre-Production gate)"
-   10. "Validate readiness to advance with `/gate-check` — phase gate before committing to production"
-
-**Path B — Prototype-First** (use if the core mechanic is unproven or the concept needs validation):
-   1. "Run `/setup-engine` to configure the engine"
-   2. "Run `/prototype [core-mechanic]` — validate the core idea is fun before writing any GDDs (1–3 days throwaway code)"
-   3. "If prototype PROCEEDS: run `/art-bible`, then continue with Path A steps 5–10 above, using prototype learnings to inform your GDDs"
-   4. "If prototype PIVOTS: return to `/brainstorm` with the learnings and reshape the concept"
-   5. "After full design and architecture, build the `/vertical-slice` to validate production readiness before committing to sprints"
-
-7. **Output a summary** with the chosen concept's elevator pitch, pillars,
-   primary player type, engine recommendation, biggest risk, and file path.
-
-Verdict: **COMPLETE** — game concept created and handed off for next steps.
-
----
-
-## Context Window Awareness
-
-This is a multi-phase skill. If context reaches or exceeds 70% during any phase,
-append this notice to the current response before continuing:
-
-> **Context is approaching the limit (≥70%).** The game concept document is saved
-> to `design/gdd/game-concept.md`. Open a fresh Claude Code session to continue
-> if needed — progress is not lost.
-
----
-
-## Recommended Next Steps
-
-After the game concept is written, follow the pre-production pipeline in order:
-1. `/setup-engine` — configure the engine and populate version-aware reference docs
-2. `/art-bible` — establish visual identity before writing any GDDs
-3. `/map-systems` — decompose the concept into individual systems with dependencies
-4. `/design-system [first-system]` — author per-system GDDs in dependency order
-5. `/create-architecture` — produce the master architecture blueprint
-6. `/architecture-review` — bootstrap TR registry and Requirements Traceability Matrix
-7. `/gate-check pre-production` — validate readiness before committing to production
+Do not run the next skill unasked. Verdict: **COMPLETE** once the concept is
+written, registered, and either approved or explicitly parked as draft.

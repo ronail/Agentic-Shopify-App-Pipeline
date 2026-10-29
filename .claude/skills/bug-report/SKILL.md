@@ -1,10 +1,21 @@
 ---
 name: bug-report
-description: "Creates a structured bug report from a description, or analyzes code to identify potential bugs. Ensures every bug report has full reproduction steps, severity assessment, and context."
+description: "Use when filing, verifying, or closing a bug in one app. Produces a structured report with reproduction steps, severity, affected component and evidence; verify mode re-checks the code path and related tests before a bug is closed."
 argument-hint: "[description] | analyze [path-to-file]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write
 model: sonnet
+---
+
+# Bug Report
+
+Records a defect against one app so it can be triaged, fixed, and closed with
+evidence. A bug that cannot be reproduced from its own report is not yet a bug
+report — it is a complaint.
+
+**Files:** `production/qa/bugs/BUG-[NNNN].md` (the qa agents also write to
+`docs/qa/bugs/`; check both before creating a new ID).
+
 ---
 
 ## Phase 1: Parse Arguments
@@ -41,16 +52,16 @@ If no argument is provided, ask the user for a bug description before proceeding
 **Reporter**: [Name]
 
 ## Classification
-- **Category**: [Gameplay / UI / Audio / Visual / Performance / Crash / Network]
-- **System**: [Which game system is affected]
+- **Category**: [Logic / Integration / Visual / UI / Config-Data / Security / Performance]
+- **Component**: [Which module, route, or file is affected?]
 - **Frequency**: [Always / Often (>50%) / Sometimes (10-50%) / Rare (<10%)]
 - **Regression**: [Yes/No/Unknown -- was this working before?]
 
 ## Environment
-- **Build**: [Version or commit hash]
-- **Platform**: [OS, hardware if relevant]
-- **Scene/Level**: [Where in the game]
-- **Game State**: [Relevant state -- inventory, quest progress, etc.]
+- **Build**: [App version or commit hash]
+- **Platform**: [OS and browser, dev store, or Shopify admin surface]
+- **Location**: [Where it happens -- `apps/<app>/` path plus route or surface]
+- **Store State**: [Relevant state -- plan, granted scopes, install state, merchant settings]
 
 ## Reproduction Steps
 **Preconditions**: [Required state before starting]
@@ -64,7 +75,7 @@ If no argument is provided, ask the user for a bug description before proceeding
 
 ## Technical Context
 - **Likely affected files**: [List of files based on codebase search]
-- **Related systems**: [What other systems might be involved]
+- **Related components**: [What other modules or layers might be involved]
 - **Possible root cause**: [If identifiable from the description]
 
 ## Evidence
@@ -102,7 +113,7 @@ Produce a verification verdict:
 
 - **VERIFIED FIXED** — reproduction steps no longer produce the bug; related tests pass
 - **STILL PRESENT** — bug reproduces as described; fix did not resolve the issue
-- **CANNOT VERIFY** — automated checks inconclusive; manual playtest required
+- **CANNOT VERIFY** — automated checks inconclusive; manual verification on a dev store required
 
 Ask: "May I update `production/qa/bugs/[BUG-ID].md` to set Status: Verified Fixed / Still Present / Cannot Verify?"
 

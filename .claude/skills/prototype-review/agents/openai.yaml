@@ -1,0 +1,6 @@
+interface:
+  display_name: "Prototype Review"
+  short_description: "Reviews a built prototype against the original request before any production build: flow fidelity, merchant language, empty and error states, and whether the..."
+  default_prompt: "Use the $prototype-review skill for the requested task."
+policy:
+  allow_implicit_invocation: true

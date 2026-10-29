@@ -1,7 +1,7 @@
 ---
 name: test-helpers
-description: "Generate engine-specific test helper libraries for the project's test suite. Reads existing test patterns and produces tests/helpers/ with assertion utilities, factory functions, and mock objects tailored to the project's systems. Reduces boilerplate in new test files."
-argument-hint: "[system-name | all | scaffold]"
+description: "Generate test helper libraries for the project's test suite. Reads existing test patterns and produces tests/helpers/ with assertion utilities, factory functions, and request mocks tailored to the project's modules. Reduces boilerplate in new test files."
+argument-hint: "[module-name | all | scaffold]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write
 model: sonnet
@@ -11,38 +11,39 @@ model: sonnet
 
 Writing test cases is faster and more consistent when common setup, teardown,
 and assertion patterns are abstracted into helpers. This skill generates a
-`tests/helpers/` library tailored to the project's actual engine, language,
-and systems — so every developer writes less boilerplate and more assertions.
+`tests/helpers/` library tailored to the project's actual stack, language,
+and modules — so every developer writes less boilerplate and more assertions.
 
-**Output:** `tests/helpers/` directory with engine-specific helper files
+**Output:** `tests/helpers/` directory with stack-appropriate helper files
 
 **When to run:**
 - After `/test-setup` scaffolds the framework (first time)
 - When multiple test files repeat the same setup boilerplate
-- When starting to write tests for a new system
+- When starting to write tests for a new module
 
 ---
 
 ## 1. Parse Arguments
 
 **Modes:**
-- `/test-helpers [system-name]` — generate helpers for a specific system
-  (e.g., `/test-helpers combat`)
-- `/test-helpers all` — generate helpers for all systems with test files
+- `/test-helpers [module-name]` — generate helpers for a specific module
+  (e.g., `/test-helpers billing`)
+- `/test-helpers all` — generate helpers for all modules with test files
 - `/test-helpers scaffold` — generate only the base helper library (no
-  system-specific helpers); use this on first run
+  module-specific helpers); use this on first run
 - No argument — run `scaffold` if no helpers exist, else `all`
 
 ---
 
-## 2. Detect Engine and Language
+## 2. Detect Stack and Language
 
 Read `.claude/docs/technical-preferences.md` and extract:
-- `Engine:` value
+- `Stack:` value
 - `Language:` value
 - `Framework:` from the Testing section
 
-If engine is not configured: "Engine not configured. Run `/setup-engine` first."
+If the stack is not configured: "Stack not configured. Run `/start` (or author
+`.claude/docs/technical-preferences.md`) first."
 
 ---
 
@@ -51,297 +52,188 @@ If engine is not configured: "Engine not configured. Run `/setup-engine` first."
 Scan the test directory for patterns already in use:
 
 ```
-Glob pattern="tests/**/*_test.*" (all test files)
+Glob pattern="tests/**/*.{test,spec}.*" (all test files)
 ```
 
 For a representative sample (up to 5 files), read the test files and extract:
-- Setup patterns (how `before_each` / `setUp` / fixtures are written)
+- Setup patterns (how `beforeEach` / fixtures / factories are written)
 - Common assertion patterns (what is being asserted most often)
-- Object creation patterns (how game objects or scenes are instantiated in tests)
-- Mock/stub patterns (how dependencies are replaced)
+- Object creation patterns (how domain objects are constructed in tests)
+- Mock/stub patterns (how HTTP, storage, and time are replaced)
 
 This ensures generated helpers match the project's existing style, not a
 generic template.
 
 Also read:
-- `design/gdd/systems-index.md` — to know which systems exist
-- In-scope GDD(s) — to understand what data types and values need testing
-- `docs/architecture/tr-registry.yaml` — to map requirements to tested systems
+- `docs/architecture/apps/[app]/requirements.yaml` — to know which modules and
+  behaviours exist, and what bounds and edge cases need testing
+- `docs/architecture/apps/[app]/control-manifest.md` — required and forbidden
+  patterns the helpers must not violate
 
 ---
 
-## 4. Generate Engine-Specific Helpers
+## 4. Generate Base Helpers
 
-### Godot 4 (GDUnit4 / GDScript)
+Generate one file per concern, not one monolith. Default layout for a
+TypeScript project on Vitest:
 
-**Base helper** (`tests/helpers/game_assertions.gd`):
+### `tests/helpers/assertions.ts`
 
-```gdscript
-## Game-specific assertion utilities for [Project Name] tests.
-## Extends GdUnitAssertions with domain-specific helpers.
-##
-## Usage:
-##   var assert = GameAssertions.new()
-##   assert.health_in_range(entity, 0, entity.max_health)
-
-class_name GameAssertions
-extends RefCounted
-
-## Assert a value is within the inclusive range [min_val, max_val].
-## Use for any formula output that has defined bounds in a GDD.
-static func assert_in_range(
-    value: float,
-    min_val: float,
-    max_val: float,
-    label: String = "value"
-) -> void:
-    assert(
-        value >= min_val and value <= max_val,
-        "%s %.2f is outside expected range [%.2f, %.2f]" % [label, value, min_val, max_val]
-    )
-
-## Assert a signal was emitted during a callable block.
-## Usage: assert_signal_emitted(entity, "health_changed", func(): entity.take_damage(10))
-static func assert_signal_emitted(
-    obj: Object,
-    signal_name: String,
-    action: Callable
-) -> void:
-    var emitted := false
-    obj.connect(signal_name, func(_args): emitted = true)
-    action.call()
-    assert(emitted, "Expected signal '%s' to be emitted, but it was not." % signal_name)
-
-## Assert that a callable does NOT emit a signal.
-static func assert_signal_not_emitted(
-    obj: Object,
-    signal_name: String,
-    action: Callable
-) -> void:
-    var emitted := false
-    obj.connect(signal_name, func(_args): emitted = true)
-    action.call()
-    assert(not emitted, "Expected signal '%s' NOT to be emitted, but it was." % signal_name)
-
-## Assert a node exists at path within a parent.
-static func assert_node_exists(parent: Node, path: NodePath) -> void:
-    assert(
-        parent.has_node(path),
-        "Expected node at path '%s' to exist." % str(path)
-    )
-```
-
-**Factory helper** (`tests/helpers/game_factory.gd`):
-
-```gdscript
-## Factory functions for creating test game objects.
-## Returns minimal objects configured for unit testing (no scene tree required).
-##
-## Usage: var player = GameFactory.make_player(health: 100)
-
-class_name GameFactory
-extends RefCounted
-
-## Create a minimal player-like object for testing.
-## Override fields as needed.
-static func make_player(health: int = 100) -> Node:
-    var player = Node.new()
-    player.set_meta("health", health)
-    player.set_meta("max_health", health)
-    return player
-```
-
-**Scene helper** (`tests/helpers/scene_runner_helper.gd`):
-
-```gdscript
-## Utilities for scene-based integration tests.
-## Wraps GdUnitSceneRunner for common patterns.
-
-class_name SceneRunnerHelper
-extends GdUnitTestSuite
-
-## Load a scene and wait one frame for _ready() to complete.
-func load_scene_and_wait(scene_path: String) -> Node:
-    var scene = load(scene_path).instantiate()
-    add_child(scene)
-    await get_tree().process_frame
-    return scene
-```
-
----
-
-### Unity (NUnit / C#)
-
-**Base helper** (`tests/helpers/GameAssertions.cs`):
-
-```csharp
-using NUnit.Framework;
-using UnityEngine;
-
-/// <summary>
-/// Game-specific assertion utilities for [Project Name] tests.
-/// Extends NUnit's Assert with domain-specific helpers.
-/// </summary>
-public static class GameAssertions
-{
-    /// <summary>
-    /// Assert a value is within an inclusive range [min, max].
-    /// Use for any formula output defined in GDD Formulas sections.
-    /// </summary>
-    public static void AssertInRange(float value, float min, float max, string label = "value")
-    {
-        Assert.That(value, Is.InRange(min, max),
-            $"{label} ({value:F2}) is outside expected range [{min:F2}, {max:F2}]");
-    }
-
-    /// <summary>Assert a UnityEvent or C# event was raised during an action.</summary>
-    public static void AssertEventRaised(ref bool wasCalled, System.Action action, string eventName)
-    {
-        wasCalled = false;
-        action();
-        Assert.IsTrue(wasCalled, $"Expected event '{eventName}' to be raised, but it was not.");
-    }
-
-    /// <summary>Assert a component exists on a GameObject.</summary>
-    public static void AssertHasComponent<T>(GameObject obj) where T : Component
-    {
-        var component = obj.GetComponent<T>();
-        Assert.IsNotNull(component,
-            $"Expected GameObject '{obj.name}' to have component {typeof(T).Name}.");
-    }
-}
-```
-
-**Factory helper** (`tests/helpers/GameFactory.cs`):
-
-```csharp
-using UnityEngine;
-
-/// <summary>
-/// Factory methods for creating minimal test objects without loading scenes.
-/// </summary>
-public static class GameFactory
-{
-    /// <summary>Create a minimal GameObject with a named component for testing.</summary>
-    public static GameObject MakeGameObject(string name = "TestObject")
-    {
-        var go = new GameObject(name);
-        return go;
-    }
-
-    /// <summary>
-    /// Create a ScriptableObject of type T for data-driven tests.
-    /// Dispose with Object.DestroyImmediate after test.
-    /// </summary>
-    public static T MakeScriptableObject<T>() where T : ScriptableObject
-    {
-        return ScriptableObject.CreateInstance<T>();
-    }
-}
-```
-
----
-
-### Unreal Engine (C++)
-
-**Base helper** (`tests/helpers/GameTestHelpers.h`):
-
-```cpp
-#pragma once
-
-#include "CoreMinimal.h"
-#include "Misc/AutomationTest.h"
-
+```ts
 /**
- * Game-specific assertion macros and helpers for [Project Name] automation tests.
- * Include in any test file that needs domain-specific assertions.
+ * Assertion utilities for [Project Name] tests.
+ * Domain-specific helpers layered on top of the runner's expect().
  *
  * Usage:
- *   GAME_TEST_ASSERT_IN_RANGE(TestName, DamageValue, 10.0f, 50.0f, TEXT("Damage"));
+ *   import { assertInRange, assertRejectsWithCode } from '../helpers/assertions';
  */
 
-// Assert a float value is within inclusive range [Min, Max]
-#define GAME_TEST_ASSERT_IN_RANGE(TestName, Value, Min, Max, Label) \
-    TestTrue( \
-        FString::Printf(TEXT("%s (%.2f) in range [%.2f, %.2f]"), Label, Value, Min, Max), \
-        (Value) >= (Min) && (Value) <= (Max) \
-    )
+/** Assert a value is within the inclusive range [min, max].
+ *  Use for any value with a bound stated in a requirement. */
+export function assertInRange(
+  value: number,
+  min: number,
+  max: number,
+  label = 'value',
+): void {
+  if (!(value >= min && value <= max)) {
+    throw new Error(
+      `${label} (${value}) is outside expected range [${min}, ${max}]`,
+    );
+  }
+}
 
-// Assert a UObject pointer is valid (not null, not garbage collected)
-#define GAME_TEST_ASSERT_VALID(TestName, Ptr, Label) \
-    TestTrue( \
-        FString::Printf(TEXT("%s is valid"), Label), \
-        IsValid(Ptr) \
-    )
-
-// Assert an Actor is in the world (spawned successfully)
-#define GAME_TEST_ASSERT_SPAWNED(TestName, ActorPtr, ClassName) \
-    TestNotNull( \
-        FString::Printf(TEXT("Spawned actor of class %s"), TEXT(#ClassName)), \
-        ActorPtr \
-    )
-
-/**
- * Helper to create a minimal test world.
- * Remember to call World->DestroyWorld(false) in teardown.
- */
-namespace GameTestHelpers
-{
-    inline UWorld* CreateTestWorld(const FString& WorldName = TEXT("TestWorld"))
-    {
-        UWorld* World = UWorld::CreateWorld(EWorldType::Game, false);
-        FWorldContext& WorldContext = GEngine->CreateNewWorldContext(EWorldType::Game);
-        WorldContext.SetCurrentWorld(World);
-        return World;
+/** Assert a promise rejects with an error carrying the expected code. */
+export async function assertRejectsWithCode(
+  fn: () => Promise<unknown>,
+  code: string,
+): Promise<void> {
+  try {
+    await fn();
+  } catch (err) {
+    const actual = (err as { code?: string }).code;
+    if (actual !== code) {
+      throw new Error(`Expected error code "${code}", received "${actual}"`);
     }
+    return;
+  }
+  throw new Error(`Expected rejection with code "${code}", but it resolved`);
 }
 ```
 
+### `tests/helpers/factories.ts`
+
+```ts
+/**
+ * Factory functions for constructing minimal test objects.
+ * Every factory takes a partial override so tests state only what matters.
+ *
+ * Usage: const charge = makeCharge({ amount: 1200 });
+ */
+
+export function makeCharge(overrides: Partial<Charge> = {}): Charge {
+  return {
+    id: 'gid://shopify/AppSubscription/1',
+    amount: 0,
+    currency: 'USD',
+    status: 'active',
+    ...overrides,
+  };
+}
+```
+
+### `tests/helpers/request-mocks.ts`
+
+```ts
+/**
+ * Recorded-response mocks for outbound HTTP.
+ * Tests must never reach the network — register handlers here.
+ */
+
+import { http, HttpResponse } from 'msw';
+import { setupServer } from 'msw/node';
+
+export const server = setupServer();
+
+/** GraphQL handler returning a single data payload. */
+export function graphqlOk(data: unknown) {
+  return http.post('https://*.myshopify.com/admin/api/*/graphql.json', () =>
+    HttpResponse.json({ data }),
+  );
+}
+
+/** GraphQL handler returning a top-level error list. */
+export function graphqlError(message: string) {
+  return http.post('https://*.myshopify.com/admin/api/*/graphql.json', () =>
+    HttpResponse.json({ errors: [{ message }] }),
+  );
+}
+```
+
+### `tests/helpers/webhook.ts`
+
+```ts
+/** Build a signed webhook request for handler tests. */
+export function makeWebhookRequest(
+  topic: string,
+  payload: unknown,
+  secret: string,
+): Request {
+  const body = JSON.stringify(payload);
+  const hmac = createHmac('sha256', secret).update(body, 'utf8').digest('base64');
+  return new Request('https://example.test/webhooks', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json', 'x-shopify-hmac-sha256': hmac, 'x-shopify-topic': topic },
+    body,
+  });
+}
+```
+
+Adapt names and idioms to the language in use. The point is the shape:
+**assertions**, **factories**, **transport mocks** — three files, no monolith.
+
 ---
 
-## 5. Generate System-Specific Helpers
+## 5. Generate Module-Specific Helpers
 
-For `[system-name]` or `all` modes, generate a helper per system:
+For `[module-name]` or `all` modes, generate a helper per module.
 
-Read the system's GDD to extract:
-- Data types (entity types, component names)
-- Formula variables and their bounds
-- Common test scenarios mentioned in Edge Cases
+Read the module's entries in `docs/architecture/apps/[app]/requirements.yaml` to extract:
+- Domain types and their required fields
+- Bounds, limits, and thresholds stated in acceptance criteria
+- Common failure scenarios named in edge cases
 
-Generate `tests/helpers/[system]_factory.[ext]` with factory functions
-specific to that system's objects.
+Generate `tests/helpers/[module].factory.ts` with factory functions specific to
+that module's objects, and a `[module].assertions.ts` only if the module has
+bounds that appear in more than one test.
 
-Example pattern for a `combat` system (Godot/GDScript):
+Example pattern for a `billing` module:
 
-```gdscript
-## Factory and assertion helpers for Combat system tests.
-## Generated by /test-helpers combat on [date].
-## Based on: design/gdd/combat.md
+```ts
+/**
+ * Factory and assertion helpers for the billing module.
+ * Generated by /test-helpers billing on [date].
+ * Based on: docs/architecture/apps/[app]/requirements.yaml (REQ-BILL-*)
+ */
 
-class_name CombatTestFactory
-extends RefCounted
+export const AMOUNT_MIN = 0;
+export const AMOUNT_MAX = 999_999; // requirement: capped at 9999.99 in minor units
 
-const DAMAGE_MIN := 0
-const DAMAGE_MAX := 999  # From GDD: damage formula upper bound
+/** Minimal subscription for charge-state tests. */
+export function makeSubscription(overrides: Partial<Subscription> = {}): Subscription {
+  return {
+    id: 'sub_1',
+    plan: 'basic',
+    amount: 0,
+    status: 'active',
+    ...overrides,
+  };
+}
 
-## Create a minimal attacker object for damage formula tests.
-static func make_attacker(attack: float = 10.0, crit_chance: float = 0.0) -> Node:
-    var attacker = Node.new()
-    attacker.set_meta("attack", attack)
-    attacker.set_meta("crit_chance", crit_chance)
-    return attacker
-
-## Create a minimal target object for damage receive tests.
-static func make_target(defense: float = 0.0, health: float = 100.0) -> Node:
-    var target = Node.new()
-    target.set_meta("defense", defense)
-    target.set_meta("health", health)
-    target.set_meta("max_health", health)
-    return target
-
-## Assert damage output is within GDD-specified bounds.
-static func assert_damage_in_bounds(damage: float) -> void:
-    GameAssertions.assert_in_range(damage, DAMAGE_MIN, DAMAGE_MAX, "damage")
+/** Assert a computed amount is inside the requirement's stated bounds. */
+export function assertAmountInBounds(amount: number): void {
+  assertInRange(amount, AMOUNT_MIN, AMOUNT_MAX, 'amount');
+}
 ```
 
 ---
@@ -353,13 +245,14 @@ Present a summary of what will be created:
 ```
 ## Test Helpers to Create
 
-Base helpers (engine: [engine]):
-- tests/helpers/game_assertions.[ext]
-- tests/helpers/game_factory.[ext]
-[engine-specific extras]
+Base helpers (stack: [stack], runner: [runner]):
+- tests/helpers/assertions.ts
+- tests/helpers/factories.ts
+- tests/helpers/request-mocks.ts
+[stack-specific extras]
 
-System helpers ([mode]):
-- tests/helpers/[system]_factory.[ext]  ← from [system] GDD
+Module helpers ([mode]):
+- tests/helpers/[module].factory.ts  ← from requirements.yaml ([REQ-prefix])
 ```
 
 Ask: "May I write these helper files to `tests/helpers/`?"
@@ -371,9 +264,9 @@ regenerated."
 After writing: Verdict: **COMPLETE** — helper files created.
 
 "Helper files created. To use them in a test:
-- Godot: `class_name` is auto-imported — no explicit import needed
-- Unity: Add `using` directive or reference the test assembly
-- Unreal: `#include \"tests/helpers/GameTestHelpers.h\"`"
+- TypeScript: `import { assertInRange } from '../helpers/assertions';`
+- Register the mock server in your setup file: `beforeAll(() => server.listen())`
+  and `afterEach(() => server.resetHandlers())`"
 
 ---
 
@@ -381,11 +274,10 @@ After writing: Verdict: **COMPLETE** — helper files created.
 
 - **Never overwrite existing helpers** — they may contain hand-written
   customisations. Only generate new files that don't exist yet
-- **Generated code is a starting point** — the generated factory functions use
-  metadata patterns for simplicity; adapt to the actual class structure once
-  the code exists
-- **Helpers should reflect the GDD** — bounds and constants in helpers should
-  trace to GDD Formulas sections, not invented values
+- **Generated code is a starting point** — the generated factories use plain
+  objects for simplicity; adapt to the real class or schema once the code exists
+- **Helpers should reflect the requirements** — bounds and constants in helpers
+  must trace to acceptance criteria in `requirements.yaml`, not invented values
 - **Ask before writing** — always confirm before creating files in `tests/`
 
 ## Next Steps

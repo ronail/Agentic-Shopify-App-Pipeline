@@ -1,0 +1,6 @@
+interface:
+  display_name: "Apply Updates"
+  short_description: "Applies ratified update proposals to agents, skills, rules or hooks: verifies approval, applies the minimal diff, updates references in the affected files, a..."
+  default_prompt: "Use the $apply-updates skill for the requested task."
+policy:
+  allow_implicit_invocation: true

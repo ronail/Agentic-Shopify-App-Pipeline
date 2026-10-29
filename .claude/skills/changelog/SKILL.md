@@ -1,177 +1,187 @@
 ---
 name: changelog
-description: "Auto-generates a changelog from git commits, sprint data, and design documents. Produces both internal and player-facing versions."
-argument-hint: "[version|sprint-number]"
+description: "Use when recording what shipped in an app release. Builds a Keep-a-Changelog entry from commits scoped to apps/<app>/, completed stories, and sprint records, picks the SemVer bump, and prepends it to apps/<app>/CHANGELOG.md."
+argument-hint: "[app] [version | --unreleased]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Bash, Write
-context: |
-  !git log --oneline -30 2>/dev/null
-  !git tag --list --sort=-v:refname 2>/dev/null | head -5
 model: haiku
 ---
 
-## Phase 1: Parse Arguments
+# Changelog
 
-Read the argument for the target version or sprint number. If a version is given, use the corresponding git tag. If a sprint number is given, use the sprint date range.
+Maintains the per-app changelog at `apps/<app>/CHANGELOG.md` in Keep a Changelog
+format with Semantic Versioning. This is the **engineering record**: it names
+requirement IDs, story files, and commit ranges, and it is the source
+`/patch-notes` translates for merchants.
 
-Verify the repository is initialized: run `git rev-parse --is-inside-work-tree` to confirm git is available. If not a git repo, inform the user and abort gracefully.
-
----
-
-## Phase 2: Gather Change Data
-
-Read the git log since the last tag or release:
-
-```
-git log --oneline [last-tag]..HEAD
-```
-
-If no tags exist, read the full log or a reasonable recent range (last 100 commits).
-
-Read sprint reports from `production/sprints/` for the relevant period to understand planned work and context behind changes.
-
-Read completed design documents from `design/gdd/` for any new features implemented during this period.
+One changelog per app. Never write a repository-wide changelog — each app ships on its
+own cadence.
 
 ---
 
-## Phase 3: Categorize Changes
+## Phase 1: Parse Arguments and Check Git
 
-Categorize every change into one of these categories:
+- `app` — slug from `docs/registry/apps.json`; default to the app named in `request.md`
+- `version` — target version (for example `1.4.0`); `--unreleased` (default) writes into
+  the `## [Unreleased]` section instead of cutting a version
 
-- **New Features**: Entirely new gameplay systems, modes, or content
-- **Improvements**: Enhancements to existing features, UX improvements, performance gains
-- **Bug Fixes**: Corrections to broken behavior
-- **Balance Changes**: Tuning of gameplay values, difficulty, economy
-- **Known Issues**: Issues the team is aware of but have not yet resolved
-- **Miscellaneous**: Changes that do not fit the above categories, or commits whose messages are too vague to classify confidently
-
-For each commit, check whether the message contains a task ID or story reference
-(e.g. `[STORY-123]`, `TR-`, `#NNN`, or similar). Count commits that lack any task reference
-and include this count in the Phase 4 Metrics section as: `Commits without task reference: [N]`.
+Verify git is available: `git rev-parse --is-inside-work-tree`. If that fails, say so
+and stop — a changelog without a commit range is guesswork.
 
 ---
 
-## Phase 4: Generate Internal Changelog
+## Phase 2: Gather Changes
 
-```markdown
-# Internal Changelog: [Version]
-Date: [Date]
-Sprint(s): [Sprint numbers covered]
-Commits: [Count] ([first-hash]..[last-hash])
+Read only this app's history:
 
-## New Features
-- [Feature Name] -- [Technical description, affected systems]
-  - Commits: [hash1], [hash2]
-  - Owner: [who implemented it]
-  - Design doc: [link if applicable]
-
-## Improvements
-- [Improvement] -- [What changed technically and why]
-  - Commits: [hashes]
-  - Owner: [who]
-
-## Bug Fixes
-- [BUG-ID] [Description of bug and root cause]
-  - Fix: [What was changed]
-  - Commits: [hashes]
-  - Owner: [who]
-
-## Balance Changes
-- [What was tuned] -- [Old value -> New value] -- [Design intent]
-  - Owner: [who]
-
-## Technical Debt / Refactoring
-- [What was cleaned up and why]
-  - Commits: [hashes]
-
-## Miscellaneous
-- [Change that didn't fit other categories, or vague commit message]
-  - Commits: [hashes]
-
-## Known Issues
-- [Issue description] -- [Severity] -- [ETA for fix if known]
-
-## Metrics
-- Total commits: [N]
-- Files changed: [N]
-- Lines added: [N]
-- Lines removed: [N]
-- Commits without task reference: [N]
+```bash
+git tag --list --sort=-v:refname | head -10
+git log --oneline <last-tag>..HEAD -- apps/<app>/
+git log --format="%h %s" -50 -- apps/<app>/
 ```
 
----
+Then load context:
 
-## Phase 5: Generate Player-Facing Changelog
+- `apps/<app>/CHANGELOG.md` — existing entries, the newest released version, and the
+  `## [Unreleased]` block
+- Sprint records in `production/apps/<app>/sprints/` — planned scope and the reasons
+  behind changes
+- Completed stories in `production/epics/**/story-*.md` whose header names this app —
+  pull story IDs, requirement IDs, and titles
+- `apps/<app>/status.md` — anything deliberately deferred
 
-```markdown
-# What is New in [Version]
-
-## New Features
-- **[Feature Name]**: [Player-friendly description of what they can now do
-  and why it is exciting. Focus on the experience, not the implementation.]
-
-## Improvements
-- **[What improved]**: [How this makes the game better for the player.
-  Be specific but avoid jargon.]
-
-## Bug Fixes
-- Fixed an issue where [describe what the player experienced, not what was
-  wrong in the code]
-- Fixed [player-visible symptom]
-
-## Balance Changes
-- [What changed in player-understandable terms and the design intent.
-  Example: "Healing potions now restore 50 HP (up from 30) -- we felt
-  players needed more recovery options in late-game encounters."]
-
-## Known Issues
-- We are aware of [issue description in player terms] and are working on a
-  fix. [Workaround if one exists.]
-
----
-Thank you for playing! Your feedback helps us make the game better.
-Report issues at [link].
-```
+Commits touching another app's directory are out of scope; do not fold them in.
 
 ---
 
-## Phase 6: Output
+## Phase 3: Categorize
 
-Output both changelogs to the user. The internal changelog is the primary working document. The player-facing changelog is ready for community posting after review.
+Map every change into exactly one Keep a Changelog section:
+
+| Section | What belongs here |
+|---------|-------------------|
+| **Added** | New merchant-facing capability, new surface, new scope-backed feature |
+| **Changed** | Behaviour change to an existing feature, UI change, dependency or API version bump |
+| **Deprecated** | Still working, scheduled for removal, with the removal version |
+| **Removed** | Feature or surface deleted in this release |
+| **Fixed** | Bug fix — name the broken behaviour |
+| **Security** | Vulnerability fix, token handling change, permission tightening |
+
+Internal-only work (refactors, test changes, CI) does not get a public line. Record it
+under that release's `### Internal` block with the commit range, so the record is
+complete without polluting the merchant-visible sections.
+
+Commits with a story or requirement reference (`story-NNN`, `REQ-<AREA>-NNN`, `#123`)
+are classified confidently. Commits without any reference go under `### Internal` with
+their hash and are counted as `Commits without a reference: [N]`.
 
 ---
 
-## Phase 7: Offer File Write
+## Phase 4: Choose the Version Bump
 
-After presenting the changelogs, ask the user:
+SemVer, decided from the entries, not from the author's mood:
 
-> "May I write this changelog to `docs/CHANGELOG.md`?
-> [A] Yes, append this entry (recommended if the file already exists)
-> [B] Yes, overwrite the file entirely
+- **MAJOR** — a merchant must change behaviour or re-authorise: scope change requiring
+  reinstall, removed feature, billing model change, extension relocation
+- **MINOR** — new capability, backward compatible
+- **PATCH** — fixes and internals only
+
+Record the reasoning in the release header:
+`Version: 1.4.0 (MINOR — new bundle scheduling; no merchant action required)`.
+
+---
+
+## Phase 5: Generate the Entry
+
+````markdown
+## [1.4.0] - 2026-10-29
+Version bump: MINOR — new capability, no merchant action required
+
+### Added
+- Scheduled bundle start and end dates (`REQ-BUNDLE-004`) — story-021-schedule.md
+
+### Changed
+- Admin API pinned to [version]; install and webhook flows re-verified (story-024-api-bump.md)
+
+### Deprecated
+- Legacy CSV import is deprecated and will be removed in 2.0.0
+
+### Removed
+- Nothing removed in this release
+
+### Fixed
+- Duplicate order tags when a webhook was delivered twice (`REQ-WHK-002`) — story-019-idempotency.md
+
+### Security
+- Access tokens are now encrypted at rest; no plaintext tokens remain in logs
+
+### Internal
+- Range: `a1b2c3d..e4f5g6h` (18 commits, 3 without a reference)
+- Refactor: split the discount service from the route layer — no behaviour change
+````
+
+For `--unreleased`, produce the same section bodies under `## [Unreleased]` with no date
+and no version bump line; the bump is decided when the version is cut.
+
+---
+
+## Phase 6: Review Before Writing
+
+Check the entry against these rules and fix it first:
+
+- Every user-visible change appears exactly once
+- Fixes name the broken behaviour, not the internal cause
+- Requirement and story IDs are present for anything traceable
+- Removals and deprecations state the version they take effect in
+- No entry describes work that did not ship in this range
+- If the history is noisy (reverts, fixups, merges), tell the story once instead of
+  listing every commit
+
+---
+
+## Phase 7: Write
+
+Ask:
+
+> "May I update `apps/<app>/CHANGELOG.md`?
+> [A] Yes, prepend this entry (recommended)
+> [B] Show the full file after the change first
 > [C] No — I'll copy it manually"
 
-- Check whether `docs/CHANGELOG.md` exists before asking. If it does, default the
-  recommendation to **[A] append**.
-- If the user selects [A]: append the new internal changelog entry to the top of
-  the existing file (newest entries first).
-- If the user selects [B]: overwrite the file with the new changelog.
-- If the user selects [C]: stop here without writing.
+Rules for the write:
 
-After a successful write: Verdict: **CHANGELOG WRITTEN** — changelog saved to `docs/CHANGELOG.md`.
-If the user declines: Verdict: **COMPLETE** — changelog generated.
+- **Released entries are immutable.** Never edit a section above the new one; a
+  correction ships as a new version.
+- Prepend the new entry immediately below the file header; newest first.
+- `## [Unreleased]` always stays at the top, empty after a version is cut.
+- Keep the file header intact:
+
+```markdown
+# Changelog — [app]
+
+All notable changes to this app. Format follows Keep a Changelog; versions follow
+Semantic Versioning. Merchant-facing notes are generated from these entries by
+`/patch-notes`.
+```
+
+Verdict after a write: **CHANGELOG WRITTEN** — `apps/<app>/CHANGELOG.md` updated.
+If the user declines: **COMPLETE** — entry generated, not saved.
 
 ---
 
-## Phase 7: Next Steps
+## Phase 8: Next Steps
 
-- Use `/patch-notes [version]` to generate a styled, saved version for public release.
-- Use `/release-checklist` before publishing the changelog externally.
+- `/patch-notes [app] [version]` — merchant-facing notes, translated from this entry
+- `/release-checklist [app] --version [version]` — submission readiness for the version
+- `/release [app] [version]` — publish, once both of the above pass
 
-### Guidelines
+---
 
-- Never expose internal code references, file paths, or developer names in the player-facing changelog
-- Group related changes together rather than listing individual commits
-- If a commit message is unclear, check the associated files and sprint data for context
-- Balance changes should always include the design reasoning, not just the numbers
-- Known issues should be honest — players appreciate transparency
-- If the git history is messy (merge commits, reverts, fixup commits), clean up the narrative rather than listing every commit literally
+## Guidelines
+
+- The changelog is read by engineers and by `/patch-notes`; write for both
+- One app, one file. Never merge two apps' histories to save a write
+- Commit hashes stay in `### Internal`; they never appear in a public section
+- If a change cannot be described without internal jargon, it probably is not
+  merchant-visible — move it to `### Internal`
+- Version numbers are decisions, not labels: state the bump rationale in the header

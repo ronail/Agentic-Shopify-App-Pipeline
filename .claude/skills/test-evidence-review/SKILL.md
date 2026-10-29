@@ -1,7 +1,7 @@
 ---
 name: test-evidence-review
 description: "Quality review of test files and manual evidence documents. Goes beyond existence checks — evaluates assertion coverage, edge case handling, naming conventions, and evidence completeness. Produces ADEQUATE/INCOMPLETE/MISSING verdict per story. Run before QA sign-off or on demand."
-argument-hint: "[story-path | sprint | system-name]"
+argument-hint: "[story-path | sprint | module-name]"
 user-invocable: true
 allowed-tools: Read, Glob, Grep, Write
 model: sonnet
@@ -17,7 +17,7 @@ A manual evidence doc that exists may lack the sign-offs required for closure.
 **Output:** Summary report (in conversation) + optional `production/qa/evidence-review-[date].md`
 
 **When to run:**
-- Before QA hand-off sign-off (`/team-qa` Phase 5)
+- Before sprint close-out and QA sign-off
 - On any story where test quality is in question
 - As part of milestone review for Logic and Integration story quality audit
 
@@ -28,8 +28,8 @@ A manual evidence doc that exists may lack the sign-offs required for closure.
 **Modes:**
 - `/test-evidence-review [story-path]` — review a single story's evidence
 - `/test-evidence-review sprint` — review all stories in the current sprint
-- `/test-evidence-review [system-name]` — review all stories in an epic/system
-- No argument — ask which scope: "Single story", "Current sprint", "A system"
+- `/test-evidence-review [module-name]` — review all stories in an epic's module
+- No argument — ask which scope: "Single story", "Current sprint", "A module"
 
 ---
 
@@ -38,18 +38,19 @@ A manual evidence doc that exists may lack the sign-offs required for closure.
 Based on the argument:
 
 **Single story**: Read the story file directly. Extract: Story Type, Test
-Evidence section, story slug, system name.
+Evidence section, story slug, module name.
 
 **Sprint**: Read the most recently modified file in `production/sprints/`.
 Extract the list of story file paths from the sprint plan. Read each story file.
 
-**System**: Glob `production/epics/[system-name]/story-*.md`. Read each.
+**Module**: Glob `production/epics/[module-name]/story-*.md`. Read each.
 
 For each story, collect:
-- `Type:` field (Logic / Integration / Visual/Feel / UI / Config/Data)
+- `Type:` field (Logic / Integration / UX/Visual / UI / Config/Data)
 - `## Test Evidence` section — the stated expected test file path or evidence doc
 - Story slug (from file name)
-- System name (from directory path)
+- Module name (from directory path)
+- App root `apps/[app]/` (from the story's `App:` field)
 - Acceptance Criteria list (all checkbox items)
 
 ---
@@ -58,14 +59,15 @@ For each story, collect:
 
 For each story, find the evidence:
 
-**Logic stories**: Glob `tests/unit/[system]/[story-slug]_test.*`
-  - If not found, also try: Grep in `tests/unit/[system]/` for files
+**Logic stories**: Glob `tests/unit/[module]/[story-slug]_test.*`
+  - If not found, also try: Grep in `tests/unit/[module]/` for files
     containing the story slug
 
-**Integration stories**: Glob `tests/integration/[system]/[story-slug]_test.*`
-  - Also check `production/session-logs/` for playtest records mentioning the story
+**Integration stories**: Glob `tests/integration/[module]/[story-slug]_test.*`
+  - Also check `production/session-logs/` for a recorded manual verification
+    mentioning the story
 
-**Visual/Feel and UI stories**: Glob `production/qa/evidence/[story-slug]-evidence.*`
+**UX/Visual and UI stories**: Glob `production/qa/evidence/[story-slug]-evidence.*`
 
 **Config/Data stories**: Glob `production/qa/smoke-*.md` (any smoke check report)
 
@@ -80,9 +82,9 @@ For each test file found, read it and evaluate:
 ### Assertion coverage
 
 Count the number of distinct assertions (lines containing assert, expect,
-check, verify, or engine-specific assertion patterns). Low assertion count is
-a quality signal — a test that makes only 1 assertion per test function may
-not cover the range of expected behaviour.
+should, check, verify, or framework-specific assertion patterns). Low assertion
+count is a quality signal — a test that makes only 1 assertion per test function
+may not cover the range of expected behaviour.
 
 Thresholds:
 - **3+ assertions per test function** → normal
@@ -98,9 +100,9 @@ test body references that specific case.
 
 Heuristics:
 - Grep test file for "zero", "max", "null", "empty", "min", "invalid",
-  "boundary", "edge" — presence of any is a positive signal
-- If the story has a Formulas section with specific bounds: check whether
-  tests exercise at minimum/maximum values
+  "boundary", "edge", "timeout", "error" — presence of any is a positive signal
+- If the requirement states explicit bounds or limits: check whether tests
+  exercise the minimum and maximum values, and at least one rejection case
 
 ### Naming quality
 
@@ -110,16 +112,16 @@ Pattern: `test_[scenario]_[expected_outcome]`
 Flag functions named generically (`test_1`, `test_run`, `testBasic`) as
 **naming issues** — they make failures harder to diagnose.
 
-### Formula traceability
+### Rule traceability
 
-For Logic stories where the GDD has a Formulas section: check that the test
-file contains at least one test whose name or comment references the formula
-name or a formula value. A test that exercises a formula without mentioning
-it by name is harder to maintain when the formula changes.
+For Logic stories whose requirement defines a rule, formula, or threshold: check
+that the test file contains at least one test whose name or comment references
+that rule or threshold. A test that exercises a rule without naming it is harder
+to maintain when the rule changes.
 
 ---
 
-## 5. Review Manual Evidence Quality (Visual/Feel / UI)
+## 5. Review Manual Evidence Quality (UX/Visual / UI)
 
 For each evidence document found, read it and evaluate:
 
@@ -133,7 +135,7 @@ Missing criteria mean a criterion was never verified.
 
 Check for three sign-off lines (or equivalent fields):
 - Developer sign-off
-- Designer / art-lead sign-off (for Visual/Feel)
+- Design/UX sign-off (for UX/Visual)
 - QA lead sign-off
 
 If any are missing or blank: flag as INCOMPLETE — the story cannot be fully
@@ -141,7 +143,7 @@ closed without all required sign-offs.
 
 ### Screenshot / artefact completeness
 
-For Visual/Feel stories: check whether screenshot file paths are referenced
+For UX/Visual stories: check whether screenshot or recording paths are referenced
 in the evidence doc. If referenced, Glob for them to confirm they exist.
 
 For UI stories: check whether a walkthrough sequence (step-by-step interaction
@@ -166,13 +168,13 @@ For each story, assign a verdict:
 | **INCOMPLETE** | Test/evidence exists but has quality gaps (thin assertions, missing sign-offs) |
 | **MISSING** | No test or evidence found for a story type that requires it |
 
-The overall sprint/system verdict is the worst story verdict present.
+The overall sprint/module verdict is the worst story verdict present.
 
 ```markdown
 ## Test Evidence Review
 
 > **Date**: [date]
-> **Scope**: [single story path | Sprint [N] | [system name]]
+> **Scope**: [single story path | Sprint [N] | [module name]]
 > **Stories reviewed**: [N]
 > **Overall verdict**: ADEQUATE / INCOMPLETE / MISSING
 
@@ -188,11 +190,11 @@ The overall sprint/system verdict is the worst story verdict present.
 - Assertion coverage: [N per function on average] — [adequate / thin / none]
 - Edge cases: [covered / partial / not found]
 - Naming: [consistent / [N] generic names flagged]
-- Formula traceability: [yes / no — formula names not referenced in tests]
+- Rule traceability: [yes / no — rule names not referenced in tests]
 
-**Manual evidence quality** *(Visual/Feel/UI only)*:
+**Manual evidence quality** *(UX/Visual/UI only)*:
 - Criterion linkage: [N/M criteria referenced]
-- Sign-offs: [Developer ✓ | Designer ✗ | QA Lead ✗]
+- Sign-offs: [Developer ✓ | Design/UX ✗ | QA Lead ✗]
 - Artefacts: [screenshots present / missing / N/A]
 - Freshness: [dated [date] — current / potentially stale]
 
@@ -208,7 +210,7 @@ The overall sprint/system verdict is the worst story verdict present.
 |-------|------|---------|--------|
 | [title] | Logic | ADEQUATE | None |
 | [title] | Integration | INCOMPLETE | Thin assertions (avg 1.2/function) |
-| [title] | Visual/Feel | INCOMPLETE | QA lead sign-off missing |
+| [title] | UX/Visual | INCOMPLETE | QA lead sign-off missing |
 | [title] | Logic | MISSING | No test file found |
 
 **BLOCKING items** (must resolve before story can be closed): [N]
@@ -231,7 +233,7 @@ After the report:
 
 - For BLOCKING items: "These must be resolved before `/story-done` can mark the
   story Complete. Would you like to address any of them now?"
-- For thin assertions: "Consider running `/test-helpers [system]` to see
+- For thin assertions: "Consider running `/test-helpers [module]` to see
   scaffolded assertion patterns for common cases."
 - For missing sign-offs: "Manual sign-off is required from [role]. Share
   `[evidence-path]` with them to complete sign-off."
