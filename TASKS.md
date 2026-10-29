@@ -624,7 +624,7 @@ Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill
 
 ### R10 — Verification gates (bind to Acceptance Criteria)
 
-- [ ] **Zero game strings, tree-wide:** `grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md .` → **0 results** (word-boundary variant of the baseline pattern, whole tree, `docs/legacy/` exempt)
+- [ ] **Zero game strings, tree-wide:** `grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=legacy --exclude=TASKS.md .` → **0 results** (word-boundary variant of the baseline pattern, whole tree, `docs/legacy/` exempt)
 - [ ] **Counts:** agents **31** == `.codex/agents`; skills **66**; rules **13**; hooks **15**; templates **35** — each equal to its reference doc
 - [ ] `python3 .codex/generate_compat.py` → no diff
 - [ ] `bash -n` all hooks; `python3 -m json.tool` on `.claude/settings.json` and `.codex/hooks.json`
@@ -647,7 +647,7 @@ Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill
 **Smoke test**
 
 ```bash
-! grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md . \
+! grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=legacy --exclude=TASKS.md . \
   && [ "$(ls .claude/agents/*.md | wc -l)" -eq 31 ] \
   && [ "$(ls -d .claude/skills/*/ | wc -l)" -eq 66 ] \
   && [ "$(ls .claude/rules/*.md | wc -l)" -eq 13 ] \
