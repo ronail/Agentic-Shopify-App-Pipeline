@@ -65,6 +65,16 @@
             "type": "command",
             "command": "bash .claude/hooks/validate-push.sh",
             "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/approval-gate.sh",
+            "timeout": 10
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/app-store-gate.sh",
+            "timeout": 10
           }
         ]
       }
@@ -75,12 +85,17 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash .claude/hooks/validate-assets.sh",
+            "command": "bash .claude/hooks/validate-skill-frontmatter.sh",
             "timeout": 10
           },
           {
             "type": "command",
             "command": "bash .claude/hooks/validate-skill-change.sh",
+            "timeout": 5
+          },
+          {
+            "type": "command",
+            "command": "bash .claude/hooks/track-request-changes.sh",
             "timeout": 5
           }
         ]
@@ -122,7 +137,7 @@
         ]
       }
     ],
-    "Stop": [
+    "SessionEnd": [
       {
         "matcher": "",
         "hooks": [

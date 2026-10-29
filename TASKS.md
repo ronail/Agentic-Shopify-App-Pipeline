@@ -444,17 +444,17 @@ Expected: `R4-OK`, then a manual `/start` invocation recorded in the commit mess
 
 **Add (12):** `master-request`, `request-history`, `mmmvp-proposal`, `app-concept`, `app-prd`, `prototype-review`, `shopify-app-architecture`, `app-store-listing`, `test-store-plan`, `merchant-onboarding`, `pricing-plan`, `kanban-card`
 
-- [ ] `.claude/docs/templates/collaborative-protocols/` is a **directory**, not one of the 37 templates: review each protocol doc in it for game examples and rewrite the affected ones — do not count it as a template
-- [ ] No template keeps GDD / MDA / Bartle / engine concepts as required sections
-- [ ] Every `.claude/docs/templates/...` path mentioned in a skill body resolves on disk (R10 automates this)
+- [x] `.claude/docs/templates/collaborative-protocols/` is a **directory**, not one of the 37 templates: review each protocol doc in it for game examples and rewrite the affected ones — do not count it as a template
+- [x] No template keeps GDD / MDA / Bartle / engine concepts as required sections
+- [x] Every `.claude/docs/templates/...` path mentioned in a skill body resolves on disk (R10 automates this)
 
 **Acceptance criteria**
 
-- [ ] **AC-R5.1** `ls .claude/docs/templates/*.md` = **35** files; the 14 deleted names are absent, the 12 new names are present
-- [ ] **AC-R5.2** `collaborative-protocols/` still exists and is documented as a directory, not a template
-- [ ] **AC-R5.3** No template requires GDD / MDA / Bartle / engine sections: `grep -rilE 'game design document|\bmda\b|bartle|engine compatibility' .claude/docs/templates` returns nothing
-- [ ] **AC-R5.4** Every `.claude/docs/templates/<name>.md` path referenced from a skill body resolves
-- [ ] **AC-R5.5** Each of the 12 new templates is referenced by at least one skill (otherwise it is dead weight — link it or drop it)
+- [x] **AC-R5.1** `ls .claude/docs/templates/*.md` = **35** files; the 14 deleted names are absent, the 12 new names are present
+- [x] **AC-R5.2** `collaborative-protocols/` still exists and is documented as a directory, not a template
+- [x] **AC-R5.3** No template requires GDD / MDA / Bartle / engine sections: `grep -rilE 'game design document|\bmda\b|bartle|engine compatibility' .claude/docs/templates` returns nothing
+- [x] **AC-R5.4** Every `.claude/docs/templates/<name>.md` path referenced from a skill body resolves
+- [x] **AC-R5.5** Each of the 12 new templates is referenced by at least one skill (otherwise it is dead weight — link it or drop it)
 
 **Smoke test**
 
@@ -472,27 +472,27 @@ Expected: `R5-OK`. A `MISSING` line is a skill pointing at a template that was d
 
 ### R6 — Hooks (12 → 15)
 
-- [ ] `session-start.sh` — print the same dashboard `/start` renders, read from `docs/registry/apps.json`; do **not** duplicate `/start`'s logic
-- [ ] `session-stop.sh` — repoint the accomplishment summary and session log at `apps/*/status.md` and `request-history.md` (it currently writes game session state)
-- [ ] `detect-gaps.sh` — replace game gap detection with pipeline gaps (`request.md` vs `apps/*/status.md`, stalled apps, missing approvals)
-- [ ] `validate-assets.sh` — repurpose (rename to `validate-skill-frontmatter.sh`) to check skill/agent frontmatter, or delete; it currently validates game assets
-- [ ] `validate-commit.sh` — keep the semantics, drop the `src/game` / `assets` path rules
-- [ ] `validate-push.sh`, `validate-skill-change.sh`, `log-agent.sh`, `log-agent-stop.sh`, `pre-compact.sh`, `post-compact.sh`, `notify.sh` — keep; verify no game paths survive
-- [ ] Add `track-request-changes.sh` — enforce tracking when `request.md` is updated (append to `request-history.md`, reject an untracked edit)
-- [ ] Add `approval-gate.sh` — read `apps/<app>/approvals.json`; block `/release`, `/apply-updates` and phase transitions unless the required gate id is recorded with timestamp and approver
-- [ ] Add `app-store-gate.sh` — block release when the App Store checklist fails
-- [ ] Wire every hook in `.claude/settings.json` **and** `.codex/hooks.json`, and register the same set in the Hermes profile's hook config
-- [ ] `bash -n` every hook; hooks still exit gracefully when `jq` / `python3` are missing
+- [x] `session-start.sh` — print the same dashboard `/start` renders, read from `docs/registry/apps.json`; do **not** duplicate `/start`'s logic
+- [x] `session-stop.sh` — repoint the accomplishment summary and session log at `apps/*/status.md` and `request-history.md` (it currently writes game session state)
+- [x] `detect-gaps.sh` — replace game gap detection with pipeline gaps (`request.md` vs `apps/*/status.md`, stalled apps, missing approvals)
+- [x] `validate-assets.sh` — repurpose (rename to `validate-skill-frontmatter.sh`) to check skill/agent frontmatter, or delete; it currently validates game assets
+- [x] `validate-commit.sh` — keep the semantics, drop the `src/game` / `assets` path rules
+- [x] `validate-push.sh`, `validate-skill-change.sh`, `log-agent.sh`, `log-agent-stop.sh`, `pre-compact.sh`, `post-compact.sh`, `notify.sh` — keep; verify no game paths survive
+- [x] Add `track-request-changes.sh` — enforce tracking when `request.md` is updated (append to `request-history.md`, reject an untracked edit)
+- [x] Add `approval-gate.sh` — read `apps/<app>/approvals.json`; block `/release`, `/apply-updates` and phase transitions unless the required gate id is recorded with timestamp and approver
+- [x] Add `app-store-gate.sh` — block release when the App Store checklist fails
+- [x] Wire every hook in `.claude/settings.json` **and** `.codex/hooks.json`, and ship the same set as a Hermes `hooks:` snippet in `production/hermes-hooks.yaml` (the operator applies it to their profile config — machine-global, not auto-applied)
+- [x] `bash -n` every hook; hooks still exit gracefully when `jq` / `python3` are missing
 
 **Acceptance criteria**
 
-- [ ] **AC-R6.1** `ls .claude/hooks/*.sh` = **15** and each one is named in `hooks-reference.md`
-- [ ] **AC-R6.2** `bash -n` is clean on all 15
-- [ ] **AC-R6.3** `.claude/settings.json` and `.codex/hooks.json` both parse as JSON and register the full set
-- [ ] **AC-R6.4** The three new hooks exist and are executable by `bash`: `track-request-changes.sh`, `approval-gate.sh`, `app-store-gate.sh`
-- [ ] **AC-R6.5** No hook references a game path: `grep -riE 'src/game|assets/|\bgodot\b|\bunity\b|\bunreal\b' .claude/hooks .codex/hooks` returns nothing
-- [ ] **AC-R6.6** `approval-gate.sh` and `app-store-gate.sh` were each run against a deliberately failing fixture and exited non-zero **by name** — a gate that has never rejected anything is not verified
-- [ ] **AC-R6.7** Hooks still work when `jq` is unavailable (simulate by `PATH` without `jq`)
+- [x] **AC-R6.1** `ls .claude/hooks/*.sh` = **15** and each one is named in `hooks-reference.md`
+- [x] **AC-R6.2** `bash -n` is clean on all 15
+- [x] **AC-R6.3** `.claude/settings.json` and `.codex/hooks.json` both parse as JSON and register the full set
+- [x] **AC-R6.4** The three new hooks exist and are executable by `bash`: `track-request-changes.sh`, `approval-gate.sh`, `app-store-gate.sh`
+- [x] **AC-R6.5** No hook references a game path: `grep -riE 'src/game|assets/|\bgodot\b|\bunity\b|\bunreal\b' .claude/hooks .codex/hooks` returns nothing
+- [x] **AC-R6.6** `approval-gate.sh` and `app-store-gate.sh` were each run against a deliberately failing fixture and exited non-zero **by name** — a gate that has never rejected anything is not verified
+- [x] **AC-R6.7** Hooks still work when `jq` is unavailable (simulate by `PATH` without `jq`)
 
 **Smoke test**
 

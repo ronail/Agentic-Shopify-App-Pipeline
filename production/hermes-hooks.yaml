@@ -1,0 +1,94 @@
+# production/hermes-hooks.yaml — Hermes Agent shell-hook registration for this repo.
+#
+# The operator copies the `hooks:` block below into their Hermes profile config
+# (`~/.hermes/config.yaml` or `~/.hermes/profiles/<name>/config.yaml`). Profile
+# config is machine-global and is NOT read from this repo, so this file is the
+# reproducible deliverable, not an active registration.
+#
+# Hermes shells read stdin JSON {hook_event_name, tool_name, tool_input,
+# session_id, cwd, extra} — the same `.tool_input.command` / `.tool_input.file_path`
+# shape the Claude and Codex payloads carry, so the scripts run unmodified.
+#
+# Event mapping vs .codex/hooks.json (Hermes VALID_HOOKS names differ in four places):
+#   SessionStart  -> on_session_start
+#   SessionEnd    -> on_session_end
+#   PreToolUse    -> pre_tool_call
+#   PostToolUse   -> post_tool_call
+#   PreCompact    -> (no pre-compaction event; see the pre-compact.sh note)
+#   PostCompact   -> post_compaction
+#   SubagentStart -> subagent_start
+#   SubagentStop  -> subagent_stop
+#   Notification  -> pre_approval_request (see the notify.sh note)
+
+hooks:
+  # --- SessionStart -----------------------------------------------------------
+  on_session_start:
+    - command: "bash .claude/hooks/session-start.sh"
+      timeout: 10
+    - command: "bash .claude/hooks/detect-gaps.sh"
+      timeout: 60
+
+  # --- PreToolUse (Bash commands) ---------------------------------------------
+  # Hermes runs shell commands through the `terminal` tool; Claude's `Bash` matcher
+  # maps to it.
+  pre_tool_call:
+    - command: "bash .claude/hooks/validate-commit.sh"
+      matcher: "terminal"
+      timeout: 60
+    - command: "bash .claude/hooks/validate-push.sh"
+      matcher: "terminal"
+      timeout: 60
+    - command: "bash .claude/hooks/approval-gate.sh"
+      matcher: "terminal"
+      timeout: 60
+      fail_closed: true
+    - command: "bash .claude/hooks/app-store-gate.sh"
+      matcher: "terminal"
+      timeout: 60
+      fail_closed: true
+
+  # --- PostToolUse (file writes) ----------------------------------------------
+  post_tool_call:
+    - command: "bash .claude/hooks/validate-skill-frontmatter.sh"
+      matcher: "write_file|patch|apply_patch|Edit|Write"
+      timeout: 60
+    - command: "bash .claude/hooks/validate-skill-change.sh"
+      matcher: "write_file|patch|apply_patch|Edit|Write"
+      timeout: 60
+    - command: "bash .claude/hooks/track-request-changes.sh"
+      matcher: "write_file|patch|apply_patch|Edit|Write"
+      timeout: 60
+
+  # --- Notification -----------------------------------------------------------
+  # operator: Hermes has no Notification event — pre_approval_request is the
+  # nearest fire site (the operator is being asked something).
+  pre_approval_request:
+    - command: "bash .claude/hooks/notify.sh"
+      timeout: 10
+
+  # --- PreCompact / PostCompact ----------------------------------------------
+  # operator: Hermes has no pre-compaction event. pre-compact.sh dumps session
+  # state ahead of the compaction summary; it runs first on post_compaction so the
+  # dump is on disk before post-compact.sh points back at it.
+  post_compaction:
+    - command: "bash .claude/hooks/pre-compact.sh"
+      timeout: 60
+    - command: "bash .claude/hooks/post-compact.sh"
+      timeout: 60
+
+  # --- SessionEnd -------------------------------------------------------------
+  on_session_end:
+    - command: "bash .claude/hooks/session-stop.sh"
+      timeout: 10
+
+  # --- Subagents --------------------------------------------------------------
+  subagent_start:
+    - command: "bash .claude/hooks/log-agent.sh"
+      timeout: 10
+  subagent_stop:
+    - command: "bash .claude/hooks/log-agent-stop.sh"
+      timeout: 10
+
+# Approve nothing implicitly: each (event, command) still needs the operator's
+# first-use consent (or --accept-hooks on a headless run).
+hooks_auto_accept: false

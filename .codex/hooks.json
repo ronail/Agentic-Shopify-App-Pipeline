@@ -1,5 +1,5 @@
 {
-  "description": "Codex lifecycle hooks for Claude Code Game Studios.",
+  "description": "Codex lifecycle hooks for the Agentic Shopify App Pipeline. All 15 hooks live in .claude/hooks/ — one copy, registered by both .claude/settings.json and this file.",
   "hooks": {
     "SessionStart": [
       {
@@ -9,13 +9,13 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-start.sh\"",
             "timeout": 10,
-            "statusMessage": "Loading project session context"
+            "statusMessage": "Loading pipeline dashboard"
           },
           {
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/detect-gaps.sh\"",
             "timeout": 10,
-            "statusMessage": "Checking documentation gaps"
+            "statusMessage": "Checking pipeline gaps"
           }
         ]
       }
@@ -41,6 +41,18 @@
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-push.sh\"",
             "timeout": 10,
             "statusMessage": "Checking push policy"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/approval-gate.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking gate approvals"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/app-store-gate.sh\"",
+            "timeout": 10,
+            "statusMessage": "Checking App Store checklist"
           }
         ]
       }
@@ -51,15 +63,33 @@
         "hooks": [
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/validate-assets.sh\"",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-skill-frontmatter.sh\"",
             "timeout": 10,
-            "statusMessage": "Validating asset changes"
+            "statusMessage": "Validating skill and agent frontmatter"
           },
           {
             "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.codex/hooks/validate-skill-change.sh\"",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/validate-skill-change.sh\"",
             "timeout": 5,
             "statusMessage": "Checking skill changes"
+          },
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/track-request-changes.sh\"",
+            "timeout": 5,
+            "statusMessage": "Checking request-history tracking"
+          }
+        ]
+      }
+    ],
+    "Notification": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/notify.sh\"",
+            "timeout": 10,
+            "statusMessage": "Sending notification"
           }
         ]
       }
@@ -72,7 +102,7 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/pre-compact.sh\"",
             "timeout": 10,
-            "statusMessage": "Saving session state before compaction"
+            "statusMessage": "Saving pipeline state before compaction"
           }
         ]
       }
@@ -85,7 +115,7 @@
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/post-compact.sh\"",
             "timeout": 10,
-            "statusMessage": "Restoring session context"
+            "statusMessage": "Restoring pipeline context"
           }
         ]
       }
@@ -96,20 +126,8 @@
           {
             "type": "command",
             "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-stop.sh\"",
-            "timeout": 3,
+            "timeout": 10,
             "statusMessage": "Recording session summary"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "bash \"$(git rev-parse --show-toplevel)/.claude/hooks/session-stop.sh\"",
-            "timeout": 3,
-            "statusMessage": "Recording turn summary"
           }
         ]
       }
