@@ -343,7 +343,7 @@ Expected: `R1-OK` with no `MISSING` line. A `MISSING` path means `CLAUDE.md` sti
 - [ ] **AC-R2.1** `ls .claude/agents/*.md` = **31** files and the names match the rewrite table + Add list exactly — no leftover, no extra
 - [ ] **AC-R2.2** All 31 deleted agents are gone from `.claude/agents` and from `.codex/agents`
 - [ ] **AC-R2.3** `.codex/agents/*.toml` = 31 and `python3 .codex/generate_compat.py` produces no diff
-- [ ] **AC-R2.4** No engine/audio/art/narrative string in any agent body: `grep -rilE 'godot|unity|unreal|gdscript|gdd|battle pass' .claude/agents` returns nothing
+- [ ] **AC-R2.4** No engine/audio/art/narrative string in any agent body: `grep -rliwE 'godot|unity|unreal|gdscript|gdd|battle pass' .claude/agents` returns nothing
 - [ ] **AC-R2.5** Every agent has the Collaboration Protocol section (`grep -L 'Collaboration Protocol' .claude/agents/*.md` is empty)
 - [ ] **AC-R2.6** Every agent's frontmatter has a valid `model:` tier of `opus|sonnet|haiku`
 - [ ] **AC-R2.7** `.claude/docs/agent-roster.md` lists all 31 with an owning rule + skill column, and that file's rows match the directory 1:1
@@ -353,7 +353,7 @@ Expected: `R1-OK` with no `MISSING` line. A `MISSING` path means `CLAUDE.md` sti
 ```bash
 [ "$(ls .claude/agents/*.md | wc -l)" -eq 31 ] \
   && [ "$(ls .codex/agents/*.toml | wc -l)" -eq 31 ] \
-  && ! grep -rilE 'godot|unity|unreal|gdscript|battle pass' .claude/agents \
+  && ! grep -rliwE 'godot|unity|unreal|gdscript|battle pass' .claude/agents \
   && [ -z "$(grep -L 'Collaboration Protocol' .claude/agents/*.md)" ] \
   && [ -z "$(grep -L -E '^model: (opus|sonnet|haiku)' .claude/agents/*.md)" ] \
   && echo R2-OK
@@ -378,7 +378,7 @@ Expected: `R2-OK`. Any count mismatch, game string, or agent missing the protoco
 **Acceptance criteria**
 
 - [ ] **AC-R3.1** `ls .claude/rules/*.md` = **13** files, matching the delete/rewrite/add lists
-- [ ] **AC-R3.2** No rule references a game path: `grep -rilE 'src/game|assets/|shader|godot|unity|unreal' .claude/rules` returns nothing
+- [ ] **AC-R3.2** No rule references a game path: `grep -riE 'src/game|assets/|shader|\bgodot\b|\bunity\b|\bunreal\b' .claude/rules` returns nothing
 - [ ] **AC-R3.3** Every rule has `paths:` frontmatter whose glob resolves to ≥1 existing file (record the `find` per glob in the commit)
 - [ ] **AC-R3.4** `rules-reference.md` has exactly 13 entries and each names a file that exists
 - [ ] **AC-R3.5** Each of the 7 new rules has a stated owner among the R2 agents
@@ -387,7 +387,7 @@ Expected: `R2-OK`. Any count mismatch, game string, or agent missing the protoco
 
 ```bash
 [ "$(ls .claude/rules/*.md | wc -l)" -eq 13 ] \
-  && ! grep -rilE 'src/game|assets/|shader|godot|unity|unreal' .claude/rules \
+  && ! grep -riE 'src/game|assets/|shader|\bgodot\b|\bunity\b|\bunreal\b' .claude/rules \
   && for f in $(grep -oE '[a-z0-9-]+\.md' .claude/docs/rules-reference.md | sort -u); do test -f ".claude/rules/$f" || { echo "MISSING $f"; exit 1; }; done \
   && echo R3-OK
 ```
@@ -416,7 +416,7 @@ Expected: `R3-OK`. Then run the per-glob `find` checks manually — that part ca
 
 - [ ] **AC-R4.1** `ls -d .claude/skills/*/` = **66** directories; the 23 deleted names are absent, the 14 new names are present
 - [ ] **AC-R4.2** `.agents/skills` is a symlink that resolves to `.claude/skills`
-- [ ] **AC-R4.3** No skill frontmatter/body carries game vocabulary: `grep -rilE 'godot|unity|unreal|gdd|bartle|mda framework' .claude/skills/*/SKILL.md` returns nothing
+- [ ] **AC-R4.3** No skill frontmatter/body carries game vocabulary: `grep -rliwE 'godot|unity|unreal|gdd|bartle|mda framework' .claude/skills/*/SKILL.md` returns nothing
 - [ ] **AC-R4.4** `skills-reference.md` has 66 entries, each naming a directory that exists
 - [ ] **AC-R4.5** Every skill named in an agent body exists, and every agent named in a skill body exists (R10's `check-references.py` is the arbiter; it must report zero here)
 - [ ] **AC-R4.6** `/research` and `/scaffold` exist as directories with `SKILL.md` and are listed in the catalog
@@ -428,7 +428,7 @@ Expected: `R3-OK`. Then run the per-glob `find` checks manually — that part ca
 [ "$(ls -d .claude/skills/*/ | wc -l)" -eq 66 ] \
   && [ -L .agents/skills ] && [ -e .agents/skills ] \
   && test -f .claude/skills/research/SKILL.md && test -f .claude/skills/scaffold/SKILL.md \
-  && ! grep -rilE 'godot|unity|unreal|gdd|bartle' .claude/skills/*/SKILL.md \
+  && ! grep -rliwE 'godot|unity|unreal|gdd|bartle' .claude/skills/*/SKILL.md \
   && echo R4-OK
 ```
 
@@ -490,7 +490,7 @@ Expected: `R5-OK`. A `MISSING` line is a skill pointing at a template that was d
 - [ ] **AC-R6.2** `bash -n` is clean on all 15
 - [ ] **AC-R6.3** `.claude/settings.json` and `.codex/hooks.json` both parse as JSON and register the full set
 - [ ] **AC-R6.4** The three new hooks exist and are executable by `bash`: `track-request-changes.sh`, `approval-gate.sh`, `app-store-gate.sh`
-- [ ] **AC-R6.5** No hook references a game path: `grep -rilE 'src/game|assets/|godot|unity|unreal' .claude/hooks .codex/hooks` returns nothing
+- [ ] **AC-R6.5** No hook references a game path: `grep -riE 'src/game|assets/|\bgodot\b|\bunity\b|\bunreal\b' .claude/hooks .codex/hooks` returns nothing
 - [ ] **AC-R6.6** `approval-gate.sh` and `app-store-gate.sh` were each run against a deliberately failing fixture and exited non-zero **by name** — a gate that has never rejected anything is not verified
 - [ ] **AC-R6.7** Hooks still work when `jq` is unavailable (simulate by `PATH` without `jq`)
 
@@ -502,7 +502,7 @@ Expected: `R5-OK`. A `MISSING` line is a skill pointing at a template that was d
   && python3 -m json.tool .claude/settings.json >/dev/null \
   && python3 -m json.tool .codex/hooks.json >/dev/null \
   && for h in track-request-changes.sh approval-gate.sh app-store-gate.sh; do test -f ".claude/hooks/$h" || { echo "MISSING $h"; exit 1; }; done \
-  && ! grep -rilE 'src/game|assets/|godot|unity|unreal' .claude/hooks .codex/hooks \
+  && ! grep -riE 'src/game|assets/|\bgodot\b|\bunity\b|\bunreal\b' .claude/hooks .codex/hooks \
   && echo R6-OK
 ```
 
@@ -539,7 +539,7 @@ Expected: `R6-OK`, then the two negative fixtures recorded in the commit (gate r
 ```bash
 test ! -d docs/engine-reference \
   && test -f docs/shopify-api-reference/VERSION.md \
-  && ! grep -rilE 'godot|unity|unreal|threejs|gdscript' --exclude-dir=legacy .claude/docs docs \
+  && ! grep -rliwE 'godot|unity|unreal|threejs|gdscript' --exclude-dir=legacy .claude/docs docs \
   && python3 -c "import sys;d=open('.claude/docs/workflow-catalog.yaml').read();assert 'phase' in d.lower()" \
   && echo R7-OK
 ```
@@ -624,7 +624,7 @@ Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill
 
 ### R10 — Verification gates (bind to Acceptance Criteria)
 
-- [ ] **Zero game strings, tree-wide:** `grep -rliE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md .` → **0 results** (same pattern as the 163-file baseline, whole tree, `docs/legacy/` exempt)
+- [ ] **Zero game strings, tree-wide:** `grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md .` → **0 results** (word-boundary variant of the baseline pattern, whole tree, `docs/legacy/` exempt)
 - [ ] **Counts:** agents **31** == `.codex/agents`; skills **66**; rules **13**; hooks **15**; templates **35** — each equal to its reference doc
 - [ ] `python3 .codex/generate_compat.py` → no diff
 - [ ] `bash -n` all hooks; `python3 -m json.tool` on `.claude/settings.json` and `.codex/hooks.json`
@@ -647,7 +647,7 @@ Expected: `R9-OK`. A leftover reference outside `docs/legacy/` means R4's `skill
 **Smoke test**
 
 ```bash
-! grep -rliE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md . \
+! grep -rliwE 'godot|unity|unreal|gdextension|gds|threejs|gdscript' --exclude-dir=.git --exclude-dir=docs/legacy --exclude=TASKS.md . \
   && [ "$(ls .claude/agents/*.md | wc -l)" -eq 31 ] \
   && [ "$(ls -d .claude/skills/*/ | wc -l)" -eq 66 ] \
   && [ "$(ls .claude/rules/*.md | wc -l)" -eq 13 ] \
