@@ -164,7 +164,7 @@ if [ "$APPLY" -eq 1 ] && [ "$ASSUME_YES" -ne 1 ]; then
 This will permanently, in this repository:
   • delete the worked-example apps and their ADRs/requirements/manifests
   • delete docs/examples/, docs/legacy/, docs/superpowers/, TASKS.md,
-    request.md, request-history.md and production/session-logs/
+    IDEA.md, request.md, request-history.md and production/session-logs/
   • delete Skill Testing Framework/
   • reset docs/registry/apps.json, docs/registry/architecture.yaml and
     design/registry/entities.yaml to an empty state
@@ -195,7 +195,7 @@ remove_path "docs/architecture/apps" "production/apps"
 # ── 2. Strip this project's history ──────────────────────────────────────────
 
 remove_path "docs/examples" "docs/legacy" "docs/superpowers" \
-            "TASKS.md" "request.md" "request-history.md"
+            "TASKS.md" "IDEA.md" "request.md" "request-history.md"
 
 if [ -d "$ROOT/production/session-logs" ]; then
   if [ "$APPLY" -eq 1 ]; then

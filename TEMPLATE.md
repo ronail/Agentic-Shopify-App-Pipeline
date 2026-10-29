@@ -18,7 +18,7 @@ project that is already initialised.
 | Harness config | `.codex/`, `production/hermes-*` | kept |
 | Worked example apps | `apps/discount-bundles/`, `apps/order-tags/` and their ADRs, requirements, control manifests, sprint state | **stripped** |
 | Worked sessions | `docs/examples/session-*.md` | **stripped** |
-| Retarget history | `TASKS.md`, `docs/legacy/`, `docs/superpowers/`, `request.md`, `request-history.md` | **stripped** |
+| Retarget history | `TASKS.md`, `IDEA.md`, `docs/legacy/`, `docs/superpowers/`, `request.md`, `request-history.md` | **stripped** |
 | Skill QA harness | `Skill Testing Framework/` | **stripped** |
 
 The worked examples exist so you can read a finished slice of the pipeline —

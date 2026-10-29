@@ -84,7 +84,9 @@ Confirm, from the actual output — never from assumption:
 - `isolation-check.py` reported `ISOLATION OK`
 - `TEMPLATE.md` and `scripts/init-template.sh` are gone
 - `apps/<slug>/` exists and the registry has one entry, or `apps/` is empty
-- `grep -rn 'discount-bundles\|order-tags'` returns nothing outside git history
+- `apps/` contains only the seeded app (or just `.gitkeep`) — no worked examples
+- `docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`, `IDEA.md`
+  and `Skill Testing Framework/` are gone
 
 If a check failed, report the failure and stop. Do not commit a broken tree.
 

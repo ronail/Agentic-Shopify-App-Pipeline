@@ -29,7 +29,7 @@ scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply    # a
 
 It strips the worked examples (both demo apps and their ADRs/requirements/sprint
 state, `docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`,
-`request*.md`, `Skill Testing Framework/`), resets the registries, retitles the
+`IDEA.md`, `request*.md`, `Skill Testing Framework/`), resets the registries, retitles the
 project, optionally seeds `apps/<slug>/`, runs the repository checks, and
 deletes itself. It refuses to run while `origin` points at the template repo, so
 this repository can never be stripped by accident.
@@ -156,8 +156,8 @@ order:
 
 The upstream framework targeted game development. This repo keeps its
 structure — tiers, gates, request-to-ship pipeline — and retargets every role
-and skill at Shopify app work. Divergence rules are recorded in
-[`docs/legacy/DIVERGENCE.md`](docs/legacy/DIVERGENCE.md).
+and skill at Shopify app work. The divergence record lives in this repository's
+git history.
 
 ## License
 
