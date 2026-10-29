@@ -277,7 +277,7 @@ CLAUDE.md                          -- Master config (read this first, ~60 lines)
   agents/                          -- 49 agent definitions (YAML frontmatter)
   skills/                          -- 73 slash command definitions (YAML frontmatter)
   hooks/                           -- 12 hook scripts (.sh) wired by settings.json
-  rules/                           -- 11 path-specific rule files
+  rules/                           -- 13 path-specific rule files
   docs/
     quick-start.md                 -- This file
     technical-preferences.md       -- Project-specific standards (populated by /setup-engine)

@@ -1,15 +1,15 @@
 ---
 paths:
-  - "src/networking/**"
+  - "apps/**"
 ---
 
-# Network Code Rules
+# Admin API & Webhook Network Rules
 
-- Server is AUTHORITATIVE for all gameplay-critical state — never trust the client
-- All network messages must be versioned for forward/backward compatibility
-- Client predicts locally, reconciles with server — implement rollback for mispredictions
-- Handle disconnection, reconnection, and host migration gracefully
-- Rate-limit all network logging to prevent log flooding
-- All networked values must specify replication strategy: reliable/unreliable, frequency, interpolation
-- Bandwidth budget: define and track per-message-type bandwidth usage
-- Security: validate all incoming packet sizes and field ranges
+- All Admin GraphQL traffic goes through one typed client module per app; routes never inline a fetch
+- The API version is read from `apps/<app>/shopify.app.toml` config — never hardcoded in a query, route, or test
+- Retry only idempotent operations, with bounded exponential backoff and jitter; honour `Retry-After` on THROTTLED
+- Inspect `errors` and `data.*.userErrors` on every response — a 200 with userErrors is a failure, not a success
+- Webhook deliveries are verified (HMAC) before any side effect, acknowledged fast, and processed from the queue
+- Log request/extensible cost and throttled status for every call that exceeds the app's budget
+- Outbound calls to other services carry a timeout and a circuit-breaker style guard; a slow dependency must not stall the queue
+- Never log access tokens, session tokens, or full merchant payloads

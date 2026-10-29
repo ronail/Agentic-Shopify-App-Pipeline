@@ -1,18 +1,15 @@
 ---
 paths:
-  - "design/gdd/**"
+  - "design/**"
 ---
 
-# Design Document Rules
+# Design Doc Rules (ADRs, UX Specs, Requirements)
 
-- Every design document MUST contain these 8 sections: Overview, Player Fantasy, Detailed Rules, Formulas, Edge Cases, Dependencies, Tuning Knobs, Acceptance Criteria
-- Formulas must include variable definitions, expected value ranges, and example calculations
-- Edge cases must explicitly state what happens, not just "handle gracefully"
-- Dependencies must be bidirectional — if system A depends on B, B's doc must mention A
-- Tuning knobs must specify safe ranges and what gameplay aspect they affect
-- Acceptance criteria must be testable — a QA tester must be able to verify pass/fail
-- No hand-waving: "the system should feel good" is not a valid specification
-- Balance values must link to their source formula or rationale
-- Design documents MUST be written incrementally: create skeleton first, then fill
-  each section one at a time with user approval between sections. Write each
-  approved section to the file immediately to persist decisions and manage context
+- Every app subsystem has an ADR under `docs/architecture/apps/<app>/`; the decision, alternatives, and consequences are all stated
+- Requirement docs live under `design/` or `apps/<app>/` and are registered in that app's `requirements.yaml` with `REQ-<AREA>-<NNN>` IDs
+- Each requirement set carries all 8 sections: Overview, Merchant Job, Detailed Rules, Calculations, Edge Cases, Dependencies, Configuration, Acceptance Criteria
+- Calculations are written as formulas with variable definitions and at least one worked example
+- Edge cases explicitly cover empty stores, huge catalogs, multi-currency, and partial failures
+- UX specs list the Polaris surfaces touched, every state (loading/empty/error), and the accessibility notes
+- Every value with a default states its rationale or source
+- Superseding a decision adds a new ADR that links back; the old one is marked superseded, never silently rewritten
