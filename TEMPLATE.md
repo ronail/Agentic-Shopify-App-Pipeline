@@ -88,10 +88,16 @@ It needs no input:
   **Actions → Template init → Run workflow** and pass `name` / `app`
 
 It no-ops in this repository (the `github.repository` guard) and in a repo that
-is already initialised (the `TEMPLATE.md` guard). Two things make it skip or
-fail: Actions disabled on the new repo — enable them and re-run it from the
-Actions tab — and branch protection on `main` that blocks
-`github-actions[bot]` — allow the bot, or initialise locally.
+is already initialised (the `TEMPLATE.md` guard). Three things stop it:
+
+| Symptom | Cause | Fix |
+| --- | --- | --- |
+| No run at all | Actions disabled on the new repo (org policy) | enable Actions, then **Actions → Template init → Run workflow** |
+| `403` on `git push` | Settings → Actions → *Workflow permissions* is **read-only**, so `contents: write` cannot be granted | switch it to *read and write*, re-run; or initialise locally |
+| `403` / rejected push | branch protection on `main` blocks `github-actions[bot]` | allow the bot, or initialise locally |
+
+Generated repos do not inherit branch protection, so the first two are the ones
+you are likely to hit.
 
 ## Pulling framework updates later
 
