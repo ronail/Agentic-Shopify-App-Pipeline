@@ -5,22 +5,22 @@ their tools are missing — nothing breaks, but you lose validation.
 
 ## First Run in a Generated Repo
 
-If you generated this repo from the template, run the initialiser **before**
-anything else:
+`.github/workflows/template-init.yml` initialises the repo for you on the first
+push: it strips the worked examples (both demo apps, their ADRs, requirements
+and sprint state, the session transcripts, the retarget history and
+`Skill Testing Framework/`), resets the three registries, retitles the project
+from the repository name, runs `.claude/scripts/check-references.py` and
+`.claude/scripts/isolation-check.py`, commits the result, and deletes itself.
+
+If Actions are unavailable, do it by hand and commit the result:
 
 ```bash
-scripts/init-template.sh --name "<your project>" --app <slug>     # preview
-scripts/init-template.sh --name "<your project>" --app <slug> --apply
+scripts/init-template.sh --name "<your project>" [--app <slug>]          # preview
+scripts/init-template.sh --name "<your project>" [--app <slug>] --apply  # apply
 ```
 
-It strips the worked-example apps, their ADRs/requirements/sprint state, the
-session transcripts, the retarget history and `Skill Testing Framework/`; resets
-the three registries; optionally seeds `apps/<slug>/`; runs
-`.claude/scripts/check-references.py` and `.claude/scripts/isolation-check.py`;
-then deletes itself and `TEMPLATE.md`. Commit the result before starting work.
-`.github/workflows/template-init.yml` runs the same flow automatically on the
-first push to a repo generated from the template; the commands above are the
-manual path when Actions are unavailable.
+Using the template is optional: a repo that is already initialised needs nothing
+from this section.
 
 ## Required
 
