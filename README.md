@@ -20,19 +20,24 @@ pipeline before you start your own.
 
 **→ [Use this template](https://github.com/ronail/Agentic-Shopify-App-Pipeline/generate)**
 
-Then initialise your new repo once:
+Then nothing — the new repo initialises itself.
+
+`.github/workflows/template-init.yml` runs on the first push to `main`. It strips
+the worked examples (both demo apps and their ADRs/requirements/sprint state,
+`docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`, `IDEA.md`,
+`request*.md`, `Skill Testing Framework/`), resets the registries, retitles the
+project (`acme-bundles` → *Acme Bundles*, tagline from the repo description),
+runs the repository checks, commits the result, and deletes itself.
+
+If Actions are disabled on the new repo, or the run failed, do it by hand:
 
 ```bash
 scripts/init-template.sh --name "Acme Bundles" --app acme-bundles            # preview
 scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply    # apply
 ```
 
-It strips the worked examples (both demo apps and their ADRs/requirements/sprint
-state, `docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`,
-`IDEA.md`, `request*.md`, `Skill Testing Framework/`), resets the registries, retitles the
-project, optionally seeds `apps/<slug>/`, runs the repository checks, and
-deletes itself. It refuses to run while `origin` points at the template repo, so
-this repository can never be stripped by accident.
+The script refuses to run while `origin` points at the template repo, so this
+repository can never be stripped by accident.
 
 Full contract: [TEMPLATE.md](TEMPLATE.md).
 <!-- TEMPLATE-ONLY:END -->

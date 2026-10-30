@@ -15,7 +15,13 @@ degradation for the two skills that read `Skill Testing Framework/`.
 **Tech Stack:** Bash, Python 3 (existing checkers), Markdown/YAML skills and
 docs, `gh` CLI for repository settings.
 
-**Spec:** `docs/superpowers/specs/2026-10-30-repo-template-mode-design.md` (rev. 2)
+**Spec:** `docs/superpowers/specs/2026-10-30-repo-template-mode-design.md` (rev. 4)
+
+> **Superseded in part (rev. 4):** the `/setup` skill task is dropped.
+> Initialisation runs from `.github/workflows/template-init.yml` instead — a
+> one-shot `push` workflow with a guard job that calls the same script, commits
+> the result and deletes itself. `scripts/init-template.sh` is the manual path.
+> The placeholder task is also dropped (owner: cosmetic).
 
 ## Global Constraints
 

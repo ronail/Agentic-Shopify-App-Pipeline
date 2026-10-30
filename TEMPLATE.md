@@ -76,8 +76,22 @@ The script:
    `.claude/scripts/isolation-check.py`;
 8. deletes this file and itself.
 
-From inside a harness, `/setup` runs the same flow with a preview and an
-approval step.
+### Or let the workflow do it
+
+`.github/workflows/template-init.yml` runs this script for you on the first push
+to a repo generated from the template, commits the result, and deletes itself.
+It needs no input:
+
+- **project name** ← the repository name (`acme-bundles` → *Acme Bundles*)
+- **description** ← the repository description
+- **no app is seeded** — seed one by hand with `--app <slug>`, or use
+  **Actions → Template init → Run workflow** and pass `name` / `app`
+
+It no-ops in this repository (the `github.repository` guard) and in a repo that
+is already initialised (the `TEMPLATE.md` guard). Two things make it skip or
+fail: Actions disabled on the new repo — enable them and re-run it from the
+Actions tab — and branch protection on `main` that blocks
+`github-actions[bot]` — allow the bot, or initialise locally.
 
 ## Pulling framework updates later
 

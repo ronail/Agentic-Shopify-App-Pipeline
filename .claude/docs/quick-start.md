@@ -27,10 +27,13 @@ scripts/init-template.sh --name "Acme Bundles" --app acme-bundles
 scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply
 ```
 
-The script removes the worked examples and the retarget history, resets the
-registries, retitles the project, runs the repository checks, then deletes
-itself. `/setup` runs the same flow with a preview and an approval step. The full
-contract is in `TEMPLATE.md` (which the script deletes).
+You normally do not run this by hand. `.github/workflows/template-init.yml` runs
+it on the first push to a repo generated from the template, commits the result
+and deletes itself: the project name comes from the repo name, the tagline from
+the repo description, and no app is seeded. The commands above are the manual
+path — use them when Actions are disabled, when the run failed, or when you want
+a different name. The full contract is in `TEMPLATE.md` (which both paths
+delete).
 
 ## Boot a Fresh Machine
 

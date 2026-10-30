@@ -32,6 +32,15 @@ Non-goals: domain generalisation; CI; **any deletion from this repo**.
 
 ## 3. In-repo changes — corrective or additive only
 
+> **Rev. 4 note (owner decision):** initialisation moved from the `/setup` skill
+> to `.github/workflows/template-init.yml`, a one-shot `push`-triggered workflow
+> with a guard job (the GitHub Skills pattern; there is no
+> "repo created from template" event — github.com/orgs/community/discussions/52965).
+> The workflow runs `scripts/init-template.sh`, commits the result and deletes
+> itself. `/setup` was dropped: it only added an interactive wrapper over the
+> same script, and `scripts/init-template.sh` remains the manual path when
+> Actions are unavailable. The spec's §3.3 `/setup` design is superseded.
+
 > **Rev. 3 note (owner decision):** the demo-slug → `my-app` placeholder rewrite
 > in 3.2 was reverted as unnecessary. Framework docs, skills and hook comments
 > keep the real example names; a generated repo will reference the worked

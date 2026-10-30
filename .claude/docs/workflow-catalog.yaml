@@ -35,9 +35,9 @@ phases:
     steps:
       - id: setup
         name: "Template Init"
-        command: /setup
+        command: "bash scripts/init-template.sh --name <project> [--app <slug>] --apply"
         required: false
-        description: "Initialise a repo generated from the template: preview and run scripts/init-template.sh, then verify. Not part of per-app progression."
+        description: "Runs automatically on the first push via .github/workflows/template-init.yml. This entry is only the manual path: strip the worked examples, optionally seed apps/<slug>/, verify. Not part of per-app progression."
 
       - id: start
         name: "Pipeline Dashboard"
