@@ -100,7 +100,8 @@ When a change crosses domains, the owner notifies before the change lands:
 ## 7. File and data boundaries
 
 - Write only inside the paths your rule owns: `apps/<app>/`, `docs/`,
-  `production/`, `src/`, `scripts/`. Never `docs/legacy/`.
+  `production/`, `src/`, `scripts/`. Never create an archive directory to park
+  superseded output — replace the file or record the decision.
 - `docs/registry/apps.json` is the one shared mutable registry. Only `stage` and
   `last_approved_gate` for your own app's entry may change; never reorder or
   rewrite other entries.

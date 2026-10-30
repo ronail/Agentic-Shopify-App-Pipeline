@@ -1,7 +1,7 @@
 # Agent Roster
 
-This is the single source of truth for the agent roster (49 → 31, ratified in
-`docs/legacy/REFACTOR-DECISIONS.md`). Every agent has a dedicated definition
+This is the single source of truth for the agent roster (49 → 31 roles, after
+retargeting the framework at Shopify apps). Every agent has a dedicated definition
 file in `.claude/agents/`. Delegate to the agent best suited to the task; when a
 task spans domains, the coordinating agent (usually `producer` or a domain
 lead) delegates to the matching specialist.

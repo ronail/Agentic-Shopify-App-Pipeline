@@ -47,6 +47,16 @@ If baseline is 0 FAILs and 0 WARNs, note it and proceed to Phase 2b.
 
 Look up the skill's `category:` field in `Skill Testing Framework/catalog.yaml`.
 
+**Harness guard.** If that file is absent (a repo generated from the template
+strips it), print:
+
+```
+Skill Testing Framework not installed; skipping the category baseline.
+```
+
+and continue from the static results alone — do not treat the missing baseline
+as a failure, and do not attempt to create the catalog.
+
 If no `category:` field is found, display:
 "Category: not yet assigned — skipping category checks."
 and skip to Phase 3.

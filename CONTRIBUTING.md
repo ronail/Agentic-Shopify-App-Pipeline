@@ -108,10 +108,10 @@ Types: `feat`, `fix`, `docs`, `chore`, `refactor`, `test`
 
 ## Upstream Relationship
 
-This repo diverged permanently from its upstream at a fixed commit and does not
-merge upstream changes; see [`docs/legacy/DIVERGENCE.md`](docs/legacy/DIVERGENCE.md)
-before proposing anything upstream-shaped. Fixes that matter are re-expressed for
-Shopify and applied by hand.
+This repo derives from a permanent fork of its upstream at a fixed commit and
+does not merge upstream changes; the divergence record lives in the git history.
+Before proposing anything upstream-shaped, check that history. Fixes that matter
+are re-expressed for Shopify and applied by hand.
 
 ## Platform Compatibility
 

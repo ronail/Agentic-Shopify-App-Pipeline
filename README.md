@@ -10,6 +10,38 @@ Built for solo founders who want pipeline-level structure without the headcount.
   <a href="https://developers.openai.com/codex/cli"><img src="https://img.shields.io/badge/Codex-supported-412991?logo=openai&logoColor=white" alt="Codex supported"></a>
 </p>
 
+<!-- TEMPLATE-ONLY:START -->
+## Use This Template
+
+This repo is a **GitHub template** for solo founders building Shopify apps. It
+ships the full pipeline *plus* two worked-example apps, their architecture
+records and worked session transcripts — so you can read a finished slice of the
+pipeline before you start your own.
+
+**→ [Use this template](https://github.com/ronail/Agentic-Shopify-App-Pipeline/generate)**
+
+Then nothing — the new repo initialises itself.
+
+`.github/workflows/template-init.yml` runs on the first push to `main`. It strips
+the worked examples (both demo apps and their ADRs/requirements/sprint state,
+`docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`, `IDEA.md`,
+`request*.md`, `Skill Testing Framework/`), resets the registries, retitles the
+project (`acme-bundles` → *Acme Bundles*, tagline from the repo description),
+runs the repository checks, commits the result, and deletes itself.
+
+If Actions are disabled on the new repo, or the run failed, do it by hand:
+
+```bash
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles            # preview
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply    # apply
+```
+
+The script refuses to run while `origin` points at the template repo, so this
+repository can never be stripped by accident.
+
+Full contract: [TEMPLATE.md](TEMPLATE.md).
+<!-- TEMPLATE-ONLY:END -->
+
 ## Why This Exists
 
 Shipping a Shopify app solo is mostly process work: validating that a merchant
@@ -75,6 +107,7 @@ If you already know what you need:
 | Hooks | `.claude/hooks/` | Commit, push, and session/skill validation |
 | Rules | `.claude/rules/` | Path-scoped standards enforced while editing |
 | Templates | `.claude/docs/templates/` | Requirements, ADRs, UX specs, test evidence, release checklists |
+| Scripts | `scripts/` | Template initialisation (`init-template.sh`) and repository checks |
 
 The full role list, tier by tier, is in
 [`.claude/docs/agent-roster.md`](.claude/docs/agent-roster.md). Agents are
@@ -85,8 +118,10 @@ Claude Code subagents; the same definitions drive Codex and Hermes.
 ```
 CLAUDE.md                     # Master configuration
 AGENTS.md                     # Codex spawn rules and model-tier mapping
+TEMPLATE.md                   # Template contract (deleted on initialisation)
 .claude/                      # Agents, skills, hooks, rules, docs, settings
 .codex/                       # Codex approvals, model mapping, hook wiring
+scripts/                      # init-template.sh and repository checks
 apps/<app-name>/              # Per-app code: admin UI, server, extensions, tests
 src/                          # Shared libraries used across apps
 design/                       # UX specs, API contracts, design notes
@@ -126,8 +161,8 @@ order:
 
 The upstream framework targeted game development. This repo keeps its
 structure — tiers, gates, request-to-ship pipeline — and retargets every role
-and skill at Shopify app work. Divergence rules are recorded in
-[`docs/legacy/DIVERGENCE.md`](docs/legacy/DIVERGENCE.md).
+and skill at Shopify app work. The divergence record lives in this repository's
+git history.
 
 ## License
 

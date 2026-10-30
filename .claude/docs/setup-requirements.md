@@ -3,6 +3,25 @@
 Prerequisites for the Agentic Shopify App Pipeline. All hooks fail gracefully if
 their tools are missing — nothing breaks, but you lose validation.
 
+## First Run in a Generated Repo
+
+`.github/workflows/template-init.yml` initialises the repo for you on the first
+push: it strips the worked examples (both demo apps, their ADRs, requirements
+and sprint state, the session transcripts, the retarget history and
+`Skill Testing Framework/`), resets the three registries, retitles the project
+from the repository name, runs `.claude/scripts/check-references.py` and
+`.claude/scripts/isolation-check.py`, commits the result, and deletes itself.
+
+If Actions are unavailable, do it by hand and commit the result:
+
+```bash
+scripts/init-template.sh --name "<your project>" [--app <slug>]          # preview
+scripts/init-template.sh --name "<your project>" [--app <slug>] --apply  # apply
+```
+
+Using the template is optional: a repo that is already initialised needs nothing
+from this section.
+
 ## Required
 
 | Requirement | Purpose | How to get it |

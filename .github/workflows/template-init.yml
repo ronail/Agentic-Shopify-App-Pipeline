@@ -1,0 +1,120 @@
+name: Template init
+
+# Runs once, in a repository generated from this template, on its creation push.
+#
+# GitHub has no "repo created from template" event (see
+# github.com/orgs/community/discussions/52965). The pattern GitHub Skills uses —
+# and the one used here — is a `push` trigger plus a guard job, with the work in
+# a second job that only runs when the guard says "this really is a fresh
+# template copy". The workflow then deletes itself in the commit it makes, so it
+# never runs again.
+#
+# Both jobs no-op in the template repository itself (`github.repository` guard)
+# and in a repo where the scaffolding is gone (`TEMPLATE.md` guard).
+#
+# `workflow_dispatch` is the manual retry: if Actions were disabled at creation
+# time, or the first run failed, run it by hand from the Actions tab.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      name:
+        description: "Project display name (default: the repository name)"
+        required: false
+      app:
+        description: "First app slug, lowercase kebab (optional, e.g. bundle-builder)"
+        required: false
+
+permissions:
+  contents: write
+
+concurrency:
+  group: template-init
+  cancel-in-progress: false
+
+jobs:
+  detect:
+    name: Fresh template copy?
+    if: github.repository != 'ronail/Agentic-Shopify-App-Pipeline'
+    runs-on: ubuntu-latest
+    outputs:
+      fresh: ${{ steps.state.outputs.fresh }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - id: state
+        name: Check for template scaffolding
+        run: |
+          set -eu
+          if [ -f TEMPLATE.md ] && [ -f scripts/init-template.sh ] && [ -d .claude/agents ]; then
+            echo "fresh=true" >> "$GITHUB_OUTPUT"
+            echo "Template scaffolding present — initialising."
+          else
+            echo "fresh=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::TEMPLATE.md or scripts/init-template.sh is gone — this repo is already initialised. Nothing to do."
+          fi
+
+  init:
+    name: Strip template payload
+    needs: detect
+    if: needs.detect.outputs.fresh == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Derive project name and app slug
+        id: derive
+        env:
+          REPO_NAME: ${{ github.event.repository.name }}
+          INPUT_NAME: ${{ inputs.name }}
+          INPUT_APP: ${{ inputs.app }}
+        run: |
+          set -eu
+          if [ -n "${INPUT_NAME:-}" ]; then
+            name="$INPUT_NAME"
+          else
+            # acme-bundles -> Acme Bundles
+            name=$(printf '%s' "$REPO_NAME" | tr '-' ' ' | awk '{
+              for (i = 1; i <= NF; i++)
+                printf "%s%s", (i > 1 ? " " : ""), toupper(substr($i, 1, 1)) substr($i, 2)
+              print ""
+            }')
+          fi
+          app=""
+          if [ -n "${INPUT_APP:-}" ] && printf '%s' "$INPUT_APP" | grep -Eq '^[a-z][a-z0-9-]*$'; then
+            app="$INPUT_APP"
+          elif [ -n "${INPUT_APP:-}" ]; then
+            echo "::warning::Ignoring app slug '$INPUT_APP' — must be lowercase kebab-case."
+          fi
+          {
+            echo "name=$name"
+            echo "app=$app"
+          } >> "$GITHUB_OUTPUT"
+
+      - name: Strip template payload
+        env:
+          PROJECT_NAME: ${{ steps.derive.outputs.name }}
+          PROJECT_DESCRIPTION: ${{ github.event.repository.description }}
+          APP_SLUG: ${{ steps.derive.outputs.app }}
+        run: |
+          set -eu
+          args=(--name "$PROJECT_NAME" --apply --yes)
+          if [ -n "${PROJECT_DESCRIPTION:-}" ]; then
+            args+=(--description "$PROJECT_DESCRIPTION")
+          fi
+          if [ -n "$APP_SLUG" ]; then
+            args+=(--app "$APP_SLUG")
+          fi
+          bash scripts/init-template.sh "${args[@]}"
+
+      - name: Commit result and retire this workflow
+        run: |
+          set -eu
+          git config user.name  "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          rm -f .github/workflows/template-init.yml
+          git add -A
+          git commit -m "chore: initialise project from the Agentic Shopify App Pipeline template [skip ci]"
+          git push origin "HEAD:${GITHUB_REF_NAME}"

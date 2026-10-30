@@ -15,6 +15,26 @@ API is **pinned to 2026-10**; every agent checks the pinned snapshot in
 `docs/shopify-api-reference/` before writing a query, mutation, or webhook
 payload.
 
+## Generate Your Repo (once)
+
+This repository is a GitHub template that ships two worked-example apps. Generate
+your own repo from it, then strip the examples:
+
+```bash
+# preview — writes nothing
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles
+# apply
+scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply
+```
+
+You normally do not run this by hand. `.github/workflows/template-init.yml` runs
+it on the first push to a repo generated from the template, commits the result
+and deletes itself: the project name comes from the repo name, the tagline from
+the repo description, and no app is seeded. The commands above are the manual
+path — use them when Actions are disabled, when the run failed, or when you want
+a different name. The full contract is in `TEMPLATE.md` (which both paths
+delete).
+
 ## Boot a Fresh Machine
 
 Five steps from nothing to a running app.
