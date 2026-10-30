@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
-# Agent Harness Game Studios — Status Line
+# Agentic Shopify App Pipeline — Status Line
 # Receives JSON on stdin, outputs a single-line status.
 #
-# Segments: ctx% | model | production stage [| Epic > Feature > Task]
+# Segments: ctx% | model | <n> apps @ <furthest stage> | request state | branch
 
 input=$(cat)
 
@@ -29,93 +29,67 @@ else
   ctx_label="ctx: --"
 fi
 
-# --- Production stage ---
-# Priority 1: Explicit stage from stage.txt
-stage_file="$cwd/production/stage.txt"
-stage=""
-if [ -f "$stage_file" ]; then
-  stage=$(head -1 "$stage_file" | tr -d '\r\n')
+# --- Pipeline state: how many apps, how far the furthest one has got ---
+registry="$cwd/docs/registry/apps.json"
+app_count=0
+if [ -f "$registry" ]; then
+  app_count=$(grep -o '"slug"' "$registry" 2>/dev/null | wc -l | tr -d ' ')
 fi
 
-# Priority 2: Auto-detect from artifacts
-if [ -z "$stage" ]; then
-  concept_file="$cwd/design/gdd/game-concept.md"
-  systems_file="$cwd/design/gdd/systems-index.md"
-  tech_prefs="$cwd/.claude/docs/technical-preferences.md"
+# stage ranks match the pipeline in README.md
+stage_rank() {
+  case "$1" in
+    research) echo 1 ;;
+    architecture) echo 2 ;;
+    prototype) echo 3 ;;
+    scope) echo 4 ;;
+    build) echo 5 ;;
+    test) echo 6 ;;
+    release) echo 7 ;;
+    monitor) echo 8 ;;
+    *) echo 0 ;;
+  esac
+}
 
-  has_concept=false
-  has_systems=false
-  engine_configured=false
-  src_count=0
-
-  [ -f "$concept_file" ] && has_concept=true
-  [ -f "$systems_file" ] && has_systems=true
-
-  # Check if engine is configured (not placeholder)
-  if [ -f "$tech_prefs" ]; then
-    engine_line=$(grep -m1 '^\*\*Engine\*\*:' "$tech_prefs" 2>/dev/null || true)
-    if [ -n "$engine_line" ] && ! echo "$engine_line" | grep -q "TO BE CONFIGURED"; then
-      engine_configured=true
+best_rank=0
+best_stage=""
+if [ -d "$cwd/apps" ]; then
+  for status_file in "$cwd"/apps/*/status.md; do
+    [ -f "$status_file" ] || continue
+    stage=$(grep -m1 -E '^Stage:' "$status_file" 2>/dev/null | sed 's/^Stage:[[:space:]]*//' | tr -d '\r')
+    [ -z "$stage" ] && continue
+    rank=$(stage_rank "$stage")
+    if [ "$rank" -gt "$best_rank" ]; then
+      best_rank=$rank
+      best_stage=$stage
     fi
-  fi
+  done
+fi
 
-  # Count source files (language-agnostic)
-  if [ -d "$cwd/src" ]; then
-    src_count=$(find "$cwd/src" -type f \( -name "*.gd" -o -name "*.cs" -o -name "*.cpp" -o -name "*.h" -o -name "*.py" -o -name "*.rs" -o -name "*.lua" -o -name "*.tscn" -o -name "*.tres" \) 2>/dev/null | wc -l | tr -d ' ')
-  fi
-
-  # Check for ADRs (signals Pre-Production phase)
-  has_adrs=false
-  if ls "$cwd/docs/architecture/"adr-*.md 2>/dev/null | head -1 | grep -q .; then
-    has_adrs=true
-  fi
-
-  # Determine stage (check from most-advanced backward)
-  if [ "$src_count" -ge 10 ] 2>/dev/null; then
-    stage="Production"
-  elif [ "$has_adrs" = true ]; then
-    stage="Pre-Production"
-  elif [ "$engine_configured" = true ]; then
-    stage="Technical Setup"
-  elif [ "$has_systems" = true ]; then
-    stage="Systems Design"
-  elif [ "$has_concept" = true ]; then
-    stage="Concept"
+if [ "$app_count" -gt 0 ] 2>/dev/null; then
+  if [ -n "$best_stage" ]; then
+    pipeline_label="${app_count} apps @ ${best_stage}"
   else
-    stage="Concept"
+    pipeline_label="${app_count} apps"
   fi
+else
+  pipeline_label="no apps"
 fi
 
-# --- Epic/Feature/Task breadcrumb (Production+ only) ---
-breadcrumb=""
-if [ "$stage" = "Production" ] || [ "$stage" = "Polish" ] || [ "$stage" = "Release" ]; then
-  state_file="$cwd/production/session-state/active.md"
-  if [ -f "$state_file" ]; then
-    # Parse structured STATUS block
-    in_block=false
-    epic="" feature="" task=""
-    while IFS= read -r line; do
-      case "$line" in
-        *"<!-- STATUS -->"*) in_block=true; continue ;;
-        *"<!-- /STATUS -->"*) break ;;
-      esac
-      if [ "$in_block" = true ]; then
-        case "$line" in
-          Epic:*) epic=$(echo "$line" | sed 's/^Epic: *//') ;;
-          Feature:*) feature=$(echo "$line" | sed 's/^Feature: *//') ;;
-          Task:*) task=$(echo "$line" | sed 's/^Task: *//') ;;
-        esac
-      fi
-    done < "$state_file"
-
-    # Build breadcrumb from whatever is set
-    parts=""
-    [ -n "$epic" ] && parts="$epic"
-    [ -n "$feature" ] && parts="${parts:+$parts > }$feature"
-    [ -n "$task" ] && parts="${parts:+$parts > }$task"
-    [ -n "$parts" ] && breadcrumb=" | $parts"
-  fi
+# --- Request state: /start routes on this ---
+if [ -f "$cwd/request.md" ]; then
+  request_label="request: set"
+else
+  request_label="request: none"
 fi
+
+# --- Branch (best effort; empty outside a git repo) ---
+branch=$(git -C "$cwd" rev-parse --abbrev-ref HEAD 2>/dev/null | tr -d '\r')
+[ -z "$branch" ] || [ "$branch" = "HEAD" ] && branch=""
 
 # --- Assemble ---
-printf "%s" "${ctx_label} | ${model} | ${stage}${breadcrumb}"
+if [ -n "$branch" ]; then
+  printf "%s" "${ctx_label} | ${model} | ${pipeline_label} | ${request_label} | ${branch}"
+else
+  printf "%s" "${ctx_label} | ${model} | ${pipeline_label} | ${request_label}"
+fi

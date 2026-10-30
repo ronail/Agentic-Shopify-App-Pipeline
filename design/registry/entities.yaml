@@ -1,168 +1,149 @@
-# Game World Entity Registry
+# Design Entity Registry
 #
-# PURPOSE: Single source of truth for all named game-world facts that appear
-# in more than one document. Skills check this before writing new content to
-# detect cross-doc inconsistencies at authoring time.
+# PURPOSE: Single source of truth for named design and platform facts that
+# appear in more than one document. Skills check this before writing new
+# content so cross-document drift is caught at authoring time.
 #
 # RULES:
-#   - Only register facts that cross system boundaries. Internal-only facts
-#     (a formula used in one GDD only) do NOT need to be registered.
+#   - Register a fact only when a second document must agree with it.
+#     A value used in one screen spec stays in that spec.
 #   - Never delete entries — set status: deprecated instead.
 #   - When a value changes: update the value, set revised: to today's date,
-#     and add a comment with the old value and which GDD changed it.
-#   - source: is the authoritative GDD — the one that "owns" this fact.
-#     Other GDDs that reference it list themselves in referenced_by.
-#   - When a new GDD references an existing entry, append its path to
-#     referenced_by. Do not create a duplicate entry.
+#     and add a comment naming the document that changed it.
+#   - source: is the authoritative document — the one that "owns" this fact.
+#     Documents that repeat it list themselves in referenced_by.
+#   - API facts must exist in the pinned snapshot: docs/shopify-api-reference/<version>/
 #
-# WRITTEN BY: /design-system (Phase 5 — after GDD sections are approved)
+# WRITTEN BY: /ux-design (when a shared pattern or constant is introduced)
+#             /quick-design (when a change alters a shared value)
 #             /consistency-check (when resolving conflicts)
-# READ BY:    /design-system (Phase 2 — before authoring begins, and after
-#               Section C/D writes to conflict-check new entities/formulas)
-#             /consistency-check (primary input — grep-first, GDD-second)
-#             /review-all-gdds (Phase 1 — baseline for Phase 2 checks)
-#             /architecture-review (data structure and interface validation)
+# READ BY:    /ux-design, /quick-design (before authoring, to avoid contradicting
+#               an existing fact)
+#             /consistency-check (primary input — grep-first, docs-second)
+#             /architecture-review (API surface and data-contract validation)
 #
 # SEARCH PATTERNS (for skills using Grep):
-#   All entity names:        Grep pattern="^  - name:" path="design/registry/entities.yaml"
-#   Specific entity:         Grep pattern="  - name: goblin" path="design/registry/entities.yaml"
-#   All items:               Grep pattern="^  - name:" path="design/registry/entities.yaml" (items section)
-#   What combat.md owns:     Grep pattern="source: design/gdd/combat.md"
-#   What inventory.md uses:  Grep pattern="referenced_by.*inventory"
-#   All gold values:          Grep pattern="value_gold:"
-#   Deprecated entries:      Grep pattern="status: deprecated"
+#   All entry names:        Grep pattern="^  - name:" path="design/registry/entities.yaml"
+#   One entry:              Grep pattern="  - name: bundle" path="design/registry/entities.yaml"
+#   What one doc owns:      Grep pattern="source: apps/<app>/design/ux/editor.md"
+#   Docs that repeat it:    Grep pattern="referenced_by.*editor"
+#   All limits:             Grep pattern="^constants:" -A 40
+#   Deprecated entries:     Grep pattern="status: deprecated"
 #
-# FORMAT: YAML. Consistent indentation is critical for grep reliability.
+# FORMAT: YAML. Consistent two-space indentation is required for grep reliability.
 #   Sections: entities | items | formulas | constants
-#   Each entry: name, status, source, referenced_by[], attributes{}, added, revised
+#   Each entry: name, status, source, referenced_by[], added, revised
+#
+# USED BY THE INIT SCRIPT: scripts/init-template.sh resets this file to the
+# empty shape below in a generated repo. Keep the section keys stable.
 
 version: 1
 last_updated: ""
 
 # ─── ENTITIES ────────────────────────────────────────────────────────────────
-# Named game-world objects: enemies, NPCs, characters, factions, bosses.
-# Register an entity here when it appears in more than one GDD — e.g., an
-# enemy defined in combat.md that also drops items listed in inventory.md.
+# Named domain objects the app reasons about — a bundle, a tag rule, a
+# discount, a merchant segment. Register one when two or more documents
+# describe its identity, lifecycle or fields.
 #
 # Required fields: name, status, source, referenced_by, added
-# Attribute fields: any key stats that could appear in another GDD
-#   (health, damage, drops, faction, etc.)
+# Attribute fields: any property another document might state
+#   (identifiers, lifecycle states, owning API object, metafield namespace).
 
 entities: []
 
-# Example (remove when first real entry is added):
+# Example:
 #
 # entities:
-#   - name: goblin
+#   - name: bundle
 #     status: active              # active | deprecated
-#     source: design/gdd/combat.md
+#     source: apps/discount-bundles/design/ux/bundle-editor.md
 #     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/inventory.md
-#     health: 40
-#     damage: 8
-#     drops:
-#       - item: goblin_arm        # must match an entry in items section
-#         qty: 1
-#         drop_rate: 0.8          # 0.0–1.0
-#     added: 2026-03-26
+#       - apps/discount-bundles/design/ux/bundle-editor.md
+#       - docs/architecture/apps/discount-bundles/ADR-0001-bundle-cart-transform.md
+#     identifiers:
+#       - shopify_product_id
+#       - metafield: namespace=custom, key=bundle_components
+#     lifecycle:
+#       - draft
+#       - active
+#       - archived
+#     added: 2026-10-30
 #     revised: ""
 
-
 # ─── ITEMS ───────────────────────────────────────────────────────────────────
-# Named collectables, equipment, consumables, crafting materials, currency.
-# Register an item when its name or value appears in more than one GDD.
+# Named API surfaces, admin components or shared UI patterns that more than one
+# document names — a Polaris component, an App Bridge context, a webhook topic,
+# an access scope.
 #
 # Required fields: name, status, source, referenced_by, added
-# Attribute fields: value_gold, weight, stackable, category, and any stat
-#   modifiers that another system (e.g., economy, crafting) might reference.
+# Attribute fields: surface (admin-ui | app-server | webhooks | extension),
+#   scope, topic, component, api_version.
 
 items: []
 
 # Example:
 #
 # items:
-#   - name: goblin_arm
+#   - name: orders/updated
 #     status: active
-#     source: design/gdd/combat.md   # drop defined in combat GDD
+#     source: docs/architecture/apps/order-tags/ADR-0002-order-tag-webhooks.md
 #     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/inventory.md    # inventory GDD lists its weight/stack rules
-#       - design/gdd/economy.md      # economy GDD references its sell price
-#     value_gold: 5
-#     weight: 1
-#     stackable: true
-#     category: crafting_material
-#     added: 2026-03-26
+#       - docs/architecture/apps/order-tags/ADR-0002-order-tag-webhooks.md
+#       - apps/order-tags/shopify.app.toml
+#     surface: webhooks
+#     topic: orders/updated
+#     api_version: "2026-10"
+#     added: 2026-10-30
 #     revised: ""
 
-
 # ─── FORMULAS ────────────────────────────────────────────────────────────────
-# Named calculations with defined variables and output ranges.
-# Register a formula when its output feeds into another system's input,
-# or when another GDD references it by name.
+# Named calculations whose output another document consumes — discount
+# application, proration, quantity expansion, rounding.
 #
 # Required fields: name, status, source, referenced_by, variables[],
 #   output_range[min, max], added
-# Optional: expression (the actual formula), notes
+# Optional: expression, notes
 
 formulas: []
 
 # Example:
 #
 # formulas:
-#   - name: damage_formula
+#   - name: bundle_unit_price
 #     status: active
-#     source: design/gdd/combat.md
+#     source: apps/discount-bundles/design/quick-specs/fixed-price-bundles.md
 #     referenced_by:
-#       - design/gdd/combat.md
-#       - design/gdd/progression.md   # progression GDD scales attack variable
+#       - apps/discount-bundles/design/ux/bundle-editor.md
+#       - docs/architecture/apps/discount-bundles/control-manifest.md
 #     variables:
-#       - attack
-#       - defense
-#       - crit_chance
-#       - crit_multiplier
-#     output_range: [0, 999]
-#     expression: "max(0, attack - defense) * (1 + crit_chance * crit_multiplier)"
-#     notes: "Output feeds into health-system damage intake. Min is 0 (armour
-#       can absorb all damage). Max is uncapped in formula but tuning knob
-#       damage_cap in combat.md clamps at 999."
-#     added: 2026-03-26
+#       - component_price_minor_units
+#       - component_quantity
+#       - discount_percent
+#     output_range: [0, 100000000]
+#     expression: "sum(component_price_minor_units * component_quantity) * (100 - discount_percent) / 100"
+#     notes: "All money in integer minor units. Rounding is half-up at the line level."
+#     added: 2026-10-30
 #     revised: ""
 
-
 # ─── CONSTANTS ───────────────────────────────────────────────────────────────
-# Named numerical values referenced across multiple systems.
-# Register a constant when it is defined in one GDD but another GDD must
-# agree with it (e.g., gold carry limit defined in economy but checked in
-# inventory, or base inventory slots defined in inventory but displayed in HUD).
+# Named limits or fixed values that more than one document must agree on —
+# platform limits, scope ceilings, copy strings that must match exactly.
 #
-# Required fields: name, status, source, referenced_by, value, unit, added
+# Required fields: name, status, source, referenced_by, value, added
+# Optional: unit, notes
 
 constants: []
 
 # Example:
 #
 # constants:
-#   - name: gold_carry_limit
+#   - name: max_components_per_bundle
 #     status: active
-#     source: design/gdd/economy.md
+#     source: apps/discount-bundles/design/quick-specs/fixed-price-bundles.md
 #     referenced_by:
-#       - design/gdd/economy.md
-#       - design/gdd/inventory.md   # inventory enforces the carry limit
-#       - design/gdd/ui.md          # HUD displays current gold vs limit
-#     value: 9999
-#     unit: gold
-#     added: 2026-03-26
-#     revised: ""
-#
-#   - name: base_inventory_slots
-#     status: active
-#     source: design/gdd/inventory.md
-#     referenced_by:
-#       - design/gdd/inventory.md
-#       - design/gdd/progression.md  # progression unlocks additional slots
-#     value: 20
-#     unit: slots
-#     added: 2026-03-26
+#       - apps/discount-bundles/design/ux/bundle-editor.md
+#     value: 100
+#     unit: components
+#     notes: "Shopify cart transform input limit; exceeding it fails the function run."
+#     added: 2026-10-30
 #     revised: ""
