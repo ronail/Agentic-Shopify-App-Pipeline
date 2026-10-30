@@ -5,8 +5,9 @@ their tools are missing — nothing breaks, but you lose validation.
 
 ## First Run in a Generated Repo
 
-`.github/workflows/template-init.yml` initialises the repo for you on the first
-push: it strips the worked examples (both demo apps, their ADRs, requirements
+`.github/workflows/template-init.yml` initialises the repo for you when you run
+it once from **Actions → Template init → Run workflow** (a generated repo fires
+no event on its own). It strips the worked examples (both demo apps, their ADRs, requirements
 and sprint state, the session transcripts, the retarget history and
 `Skill Testing Framework/`), resets the three registries, retitles the project
 from the repository name, runs `.claude/scripts/check-references.py` and

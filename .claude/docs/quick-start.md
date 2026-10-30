@@ -27,13 +27,14 @@ scripts/init-template.sh --name "Acme Bundles" --app acme-bundles
 scripts/init-template.sh --name "Acme Bundles" --app acme-bundles --apply
 ```
 
-You normally do not run this by hand. `.github/workflows/template-init.yml` runs
-it on the first push to a repo generated from the template, commits the result
-and deletes itself: the project name comes from the repo name, the tagline from
-the repo description, and no app is seeded. The commands above are the manual
-path — use them when Actions are disabled, when the run failed, or when you want
-a different name. The full contract is in `TEMPLATE.md` (which both paths
-delete).
+You normally do not run this by hand. A repo generated from the template carries
+`.github/workflows/template-init.yml`: click **Actions → Template init → Run
+workflow** once and it strips the examples, commits the result and deletes
+itself — project name from the repo name, tagline from the repo description, no
+app seeded. (Nothing runs at creation: GitHub fires no event for that commit.)
+The commands above are the manual path — use them when Actions are disabled,
+when the run failed, or when you want a different name. The full contract is in
+`TEMPLATE.md` (which both paths delete).
 
 ## Boot a Fresh Machine
 

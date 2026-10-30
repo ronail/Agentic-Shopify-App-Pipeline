@@ -20,9 +20,10 @@ pipeline before you start your own.
 
 **→ [Use this template](https://github.com/ronail/Agentic-Shopify-App-Pipeline/generate)**
 
-Then nothing — the new repo initialises itself.
+Then run it once: **Actions → Template init → Run workflow**.
 
-`.github/workflows/template-init.yml` runs on the first push to `main`. It strips
+GitHub fires no event when a repo is generated from a template, so nothing runs
+on its own. That one click strips
 the worked examples (both demo apps and their ADRs/requirements/sprint state,
 `docs/examples/`, `docs/legacy/`, `docs/superpowers/`, `TASKS.md`, `IDEA.md`,
 `request*.md`, `Skill Testing Framework/`), resets the registries, retitles the

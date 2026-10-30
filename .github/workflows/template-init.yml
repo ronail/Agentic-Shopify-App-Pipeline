@@ -1,13 +1,19 @@
 name: Template init
 
-# Runs once, in a repository generated from this template, on its creation push.
+# Runs once, in a repository generated from this template, and then deletes
+# itself in the commit it makes.
 #
 # GitHub has no "repo created from template" event (see
-# github.com/orgs/community/discussions/52965). The pattern GitHub Skills uses —
-# and the one used here — is a `push` trigger plus a guard job, with the work in
-# a second job that only runs when the guard says "this really is a fresh
-# template copy". The workflow then deletes itself in the commit it makes, so it
-# never runs again.
+# github.com/orgs/community/discussions/52965), and observed behaviour on a
+# generated repo is worse than "no event": nothing runs at creation, and `push`
+# runs are not reliably armed for a workflow file that arrived with the template
+# (three generated repos pushed to after creation produced zero runs; one run
+# fired only when a push added another workflow file). So `workflow_dispatch` —
+# **Actions → Template init → Run workflow** — is the path the docs send people
+# to. `push` stays as a bonus trigger for repos where it does fire.
+#
+# The guard job from the GitHub Skills pattern is kept regardless: it is what
+# makes the `push` path safe, and it prevents a double run.
 #
 # Both jobs no-op in the template repository itself (`github.repository` guard)
 # and in a repo where the scaffolding is gone (`TEMPLATE.md` guard).

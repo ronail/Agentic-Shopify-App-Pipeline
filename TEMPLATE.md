@@ -78,8 +78,12 @@ The script:
 
 ### Or let the workflow do it
 
-`.github/workflows/template-init.yml` runs this script for you on the first push
-to a repo generated from the template, commits the result, and deletes itself.
+`.github/workflows/template-init.yml` runs this script for you, commits the
+result, and deletes itself. Start it from **Actions → Template init → Run
+workflow** — GitHub fires no event when a repo is generated from a template, so
+nothing happens until you do (a `push` also triggers it once GitHub has
+registered the workflow).
+
 It needs no input:
 
 - **project name** ← the repository name (`acme-bundles` → *Acme Bundles*)
@@ -92,7 +96,7 @@ is already initialised (the `TEMPLATE.md` guard). Three things stop it:
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
-| No run at all | Actions disabled on the new repo (org policy) | enable Actions, then **Actions → Template init → Run workflow** |
+| No run at all | expected right after generation — GitHub fires no creation event; or Actions disabled on the new repo (org policy) | **Actions → Template init → Run workflow**; enable Actions first if it is off |
 | `403` on `git push` | Settings → Actions → *Workflow permissions* is **read-only**, so `contents: write` cannot be granted | switch it to *read and write*, re-run; or initialise locally |
 | `403` / rejected push | branch protection on `main` blocks `github-actions[bot]` | allow the bot, or initialise locally |
 
