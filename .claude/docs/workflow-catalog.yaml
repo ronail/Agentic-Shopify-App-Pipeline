@@ -376,6 +376,15 @@ phases:
         required: true
         description: "App Store submission readiness (scopes, billing, compliance webhooks, privacy)."
 
+      - id: app-page-materials
+        name: "App Page Materials"
+        command: /app-page-materials
+        required: true
+        artifact:
+          glob: "production/apps/*/app-store-listing.md"
+          pattern: "Verdict: complete"
+        description: "Author the App Store listing page: identity, copy, screenshots, app icon, promotional video, pricing, scopes, and data-handling disclosure."
+
       - id: app-store-checklist
         name: "App Store Checklist"
         command: /app-store-checklist

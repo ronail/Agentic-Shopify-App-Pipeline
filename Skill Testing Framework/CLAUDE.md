@@ -7,7 +7,7 @@ skill/agent framework. It is self-contained and separate from any app under `app
 
 | File | Purpose |
 |------|---------|
-| `catalog.yaml` | Master registry for all 66 skills and 31 agents. Contains category, group, spec path and last-test tracking fields. Always read this first when running any test command. |
+| `catalog.yaml` | Master registry for all 67 skills and 31 agents. Contains category, group, spec path and last-test tracking fields. Always read this first when running any test command. |
 | `quality-rubric.md` | Category-specific pass/fail metrics. Read the matching `###` section for the skill's category when running `/skill-test category`. |
 | `skills/[category]/[name].md` | Behavioral spec for a skill — 5 test cases + protocol compliance assertions. |
 | `agents/[group]/[name].md` | Behavioral spec for an agent — 5 test cases + protocol compliance assertions. |
@@ -25,13 +25,14 @@ skill/agent framework. It is self-contained and separate from any app under `app
 The `spec:` field in `catalog.yaml` is the authoritative path for each skill/agent spec.
 Always read it rather than guessing the path.
 
-## Skill categories (66 skills)
+## Skill categories (67 skills)
 
 ```
 gate        → gate-check
 review      → architecture-review, design-review, prototype-review
-authoring   → architecture-decision, create-architecture, mmmvp-proposals,
-              propose-updates, quick-design, update-request, ux-design, ux-review
+authoring   → app-page-materials, architecture-decision, create-architecture,
+              mmmvp-proposals, propose-updates, quick-design, update-request,
+              ux-design, ux-review
 readiness   → app-store-checklist, story-done, story-readiness
 pipeline    → build-prototype, create-control-manifest, create-epics,
               create-stories, create-test-store, deploy-to-test-store, dev-story,
