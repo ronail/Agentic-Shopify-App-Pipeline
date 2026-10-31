@@ -20,6 +20,7 @@ pass or a fail with evidence — a checklist of "looks fine" is worthless.
 - Before `gate-4-release`, always.
 - Before re-submitting after a rejection.
 - When scopes, pricing, or the listing copy changed after the last check.
+- After `/app-page-materials` authors or updates `production/apps/<app>/app-store-listing.md` — this skill verifies what that step produced.
 
 ## Inputs
 

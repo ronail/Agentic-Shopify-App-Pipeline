@@ -2,7 +2,7 @@ version: 2
 last_updated: ""
 
 # Registry for the Agentic Shopify App Pipeline skill/agent testing framework.
-# 66 skills, 31 agents. Read by /skill-test and /skill-improve.
+# 67 skills, 31 agents. Read by /skill-test and /skill-improve.
 #
 # skills[]: name, spec, category, priority, last_static/last_spec/last_category (+ _result)
 # agents[]: name, group, spec, category, last_spec (+ _result)
@@ -169,6 +169,17 @@ skills:
 
   - name: ux-review
     spec: Skill Testing Framework/skills/authoring/ux-review.md
+    last_static: ""
+    last_static_result: ""
+    last_spec: ""
+    last_spec_result: ""
+    last_category: ""
+    last_category_result: ""
+    priority: high
+    category: authoring
+
+  - name: app-page-materials
+    spec: Skill Testing Framework/skills/authoring/app-page-materials.md
     last_static: ""
     last_static_result: ""
     last_spec: ""

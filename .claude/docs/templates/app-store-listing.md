@@ -1,6 +1,7 @@
 # App Store Listing: [App Name]
 
 > **App**: `apps/<app>` · **Partner app**: [name/id] · **Gate**: gate-4-release
+> **Authored by**: `/app-page-materials` → `production/apps/<app>/app-store-listing.md`
 > **Verified by**: `/app-store-checklist` → `production/apps/<app>/app-store-checklist.md`
 
 ## Identity
