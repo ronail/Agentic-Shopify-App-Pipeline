@@ -1,0 +1,70 @@
+name: Vendor drift
+
+# Third-party skills are installed from .claude/vendor.lock.json, not committed.
+# Two things can still go wrong: the install goes missing or stale, and upstream
+# moves past the pinned commit. This job checks both and fails loudly, so an
+# upgrade is a deliberate re-pin rather than a silent drift.
+#
+# Deliberately a separate workflow with its own concurrency group, so a
+# third-party repo's churn can never block or deadlock the default checks.
+#
+# The installed-state half runs offline; the upstream half needs the API and is
+# skipped cleanly if the call fails.
+
+on:
+  schedule:
+    # Weekly, Monday 06:00 UTC.
+    - cron: "0 6 * * 1"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: vendor-drift
+  cancel-in-progress: true
+
+jobs:
+  check:
+    name: Check vendored skills against upstream
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Check for drift
+        id: drift
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: python3 scripts/check-vendor-drift.py --report-md vendor-drift.md
+
+      - name: Upload report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: vendor-drift-report
+          path: vendor-drift.md
+          if-no-files-found: ignore
+
+      - name: Open or update the tracking issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          REPORT: vendor-drift.md
+        run: |
+          set -eu
+          existing=$(gh issue list --label vendor-drift --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body-file "$REPORT"
+          else
+            gh issue create \
+              --title "Vendored skill drift detected" \
+              --label vendor-drift \
+              --body-file "$REPORT"
+          fi

@@ -179,6 +179,7 @@ Verdict **COMPLETE** — checklist generated, not saved.
 
 ## Phase 6: Next Steps
 
+- `/app-page-materials [app]` — author the listing page materials this checklist recommends (identity, copy, screenshots, pricing, scopes)
 - `/app-store-checklist [app]` — the listing-level detail behind the review submission
 - `/release [app] [version]` — the submission/publish flow, which consumes this file
 - `/deploy-to-test-store [app]` — if any dev-store verification above is still ❌

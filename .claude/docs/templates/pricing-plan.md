@@ -1,7 +1,9 @@
 # Pricing Plan: [App Name]
 
 > **App**: `apps/<app>` · **Owner**: growth-lead + billing-specialist
-> **Implemented with**: Shopify Billing API (`appSubscriptionCreate`, usage records)
+> **Pricing path**: [Shopify App Pricing | Manual Pricing (Billing API)]
+> **Implemented with**: [Partner Dashboard plans (App Pricing) | `appSubscriptionCreate` + usage records (Manual Pricing)]
+> **Path rule**: a new public app with a supported model uses Shopify App Pricing and configures plans in the Partner Dashboard — do not generate `appSubscriptionCreate` for it. Manual Pricing is only for an existing Billing API integration or a model App Pricing does not support; one-time purchases are not supported by App Pricing.
 > **Gate**: gate-4-release · **Verified by**: `/release` + `/app-store-checklist`
 
 ## Plans

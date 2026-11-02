@@ -1,6 +1,6 @@
 # Available Skills (Slash Commands)
 
-66 slash commands organized by pipeline phase. Type `/` to access any skill. The full step→skill map is resolved by /help from `.claude/docs/workflow-catalog.yaml`.
+67 slash commands organized by pipeline phase. Type `/` to access any skill. The full step→skill map is resolved by /help from `.claude/docs/workflow-catalog.yaml`.
 
 ## Onboarding & Navigation
 
@@ -95,6 +95,10 @@
 | Command | Purpose |
 |---------|---------|
 | `/release-checklist` | App Store submission readiness (scopes, billing, compliance, privacy). |
+| `/app-page-materials` | Author the App Store listing page: identity, copy, screenshots, icon, pricing, scopes, data handling. |
+| `/app-icon-forge` | Design the app icon and export the 1200x1200 listing PNG set. |
+| `/app-screenshot-capture` | Capture the 3-6 unique 1600x900 App Store screenshots from a deployed build. |
+| `/app-demo-video` | Compose the promo video and record the separate review demo screencast (local, account-free toolchain). |
 | `/app-store-checklist` | Final App Store submission gate. |
 | `/release` | Cut a versioned release for App Store submission. |
 | `/launch-checklist` | Post-approval go-live (deploy, live billing, monitoring, rollback). |

@@ -26,6 +26,9 @@ marrow/
 # Created on first use by /consistency-check and /architecture-review
 docs/consistency-failures.md
 
+# === Vendor skills (installed from .claude/vendor.lock.json) ===
+.claude/skills/remotion-official/
+
 # === Dependencies ===
 node_modules/
 .npm/

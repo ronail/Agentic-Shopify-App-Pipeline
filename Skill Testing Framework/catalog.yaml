@@ -2,7 +2,7 @@ version: 2
 last_updated: ""
 
 # Registry for the Agentic Shopify App Pipeline skill/agent testing framework.
-# 66 skills, 31 agents. Read by /skill-test and /skill-improve.
+# 70 skills, 31 agents. Read by /skill-test and /skill-improve.
 #
 # skills[]: name, spec, category, priority, last_static/last_spec/last_category (+ _result)
 # agents[]: name, group, spec, category, last_spec (+ _result)
@@ -176,6 +176,50 @@ skills:
     last_category: ""
     last_category_result: ""
     priority: high
+    category: authoring
+
+  - name: app-page-materials
+    spec: Skill Testing Framework/skills/authoring/app-page-materials.md
+    last_static: ""
+    last_static_result: ""
+    last_spec: ""
+    last_spec_result: ""
+    last_category: ""
+    last_category_result: ""
+    priority: high
+    category: authoring
+
+  - name: app-icon-forge
+    spec: Skill Testing Framework/skills/authoring/app-icon-forge.md
+    last_static: ""
+    last_static_result: ""
+    last_spec: ""
+    last_spec_result: ""
+    last_category: ""
+    last_category_result: ""
+    priority: medium
+    category: authoring
+
+  - name: app-screenshot-capture
+    spec: Skill Testing Framework/skills/authoring/app-screenshot-capture.md
+    last_static: ""
+    last_static_result: ""
+    last_spec: ""
+    last_spec_result: ""
+    last_category: ""
+    last_category_result: ""
+    priority: medium
+    category: authoring
+
+  - name: app-demo-video
+    spec: Skill Testing Framework/skills/authoring/app-demo-video.md
+    last_static: ""
+    last_static_result: ""
+    last_spec: ""
+    last_spec_result: ""
+    last_category: ""
+    last_category_result: ""
+    priority: medium
     category: authoring
 
   # Produce artifacts other skills consume

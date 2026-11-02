@@ -1,0 +1,6 @@
+interface:
+  display_name: "App Screenshot Capture"
+  short_description: "Capture the 3-6 unique 1600x900 App Store screenshots from a deployed Shopify app build: plan the screens, drive the browser, crop browser chrome, verify dim..."
+  default_prompt: "Use the $app-screenshot-capture skill for the requested task."
+policy:
+  allow_implicit_invocation: true
