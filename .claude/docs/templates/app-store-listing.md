@@ -1,6 +1,7 @@
 # App Store Listing: [App Name]
 
 > **App**: `apps/<app>` · **Partner app**: [name/id] · **Gate**: gate-4-release
+> **Authored by**: `/app-page-materials` → `production/apps/<app>/app-store-listing.md`
 > **Verified by**: `/app-store-checklist` → `production/apps/<app>/app-store-checklist.md`
 
 ## Identity
@@ -33,16 +34,48 @@ surfaces ("works on orders, products and inventory in your admin").]
 
 ## Media
 
-| Asset | Requirement | Status | Notes |
-|-------|-------------|--------|-------|
-| App icon | [1024×1024, no text] | [ ] | |
-| Screenshot 1 | Real UI, no mock data that misleads | [ ] | Shows the core payoff screen |
-| Screenshot 2 | Second workflow step | [ ] | |
-| Screenshot 3 | Settings / configuration | [ ] | |
-| Video (optional) | ≤60s, captioned | [ ] | |
+Media are separate materials with separate specs. A screenshot cannot stand in
+for a video, and the review screencast is not the public promo video — generate
+and verify each one independently.
 
-**Screenshot rule**: every screenshot shows a real screen a merchant will reach,
-with realistic data and no feature the app doesn't have.
+### App icon
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| 1200×1200 JPEG or PNG, square with padding (Shopify rounds the corners), no text, no screenshots, no Shopify trademarks | [ ] | |
+
+### Screenshots (static, 3–6 images)
+
+| # | Screen shown | Status | Notes |
+|---|--------------|--------|-------|
+| 1 | [Core payoff screen] | [ ] | 1600×900 (16:9) |
+| 2 | [A workflow step] | [ ] | Unique image, not a variant of #1 |
+| 3 | [Settings / configuration] | [ ] | |
+| 4–6 | [Optional additional views] | [ ] | Only if they add information |
+
+**Screenshot rule**: 3–6 unique 1600×900 (16:9) images, at least one showing real
+merchant UI; no browser chrome, no PII, no pricing, no Shopify logos. Every image
+shows a real screen a merchant reaches, with realistic data.
+
+### Promo / feature video (public listing)
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| 2–3 min, promotional rather than instructional, screencasts ≤25%, captioned | [ ] | |
+| Hosted on a stable URL | [ ] | |
+
+### Feature image (static alternative — only if there is no video)
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| 1600×900 (16:9), one focal point, alt text supplied | [ ] | Not a screenshot; conveys the benefit |
+
+### Demo screencast (required for review)
+
+| Requirement | Status | Notes |
+|-------------|--------|-------|
+| Step-by-step install → onboarding → primary action | [ ] | Referenced from Review Notes, not the public listing |
+| English audio or English subtitles | [ ] | Required by App Review |
 
 ## Pricing Presentation
 
@@ -85,6 +118,9 @@ this — make it operationally useful, not marketing.]
 - [ ] Uninstall cleanly revokes access and stops charges
 - [ ] Billing disclosure visible before the charge
 - [ ] Screenshots match the shipped UI
+- [ ] Screenshots and video are distinct materials, not reused for each other
+- [ ] No pricing rendered inside the icon, screenshots, or video
+- [ ] Demo screencast recorded and referenced from Review Notes
 - [ ] Support link monitored (response within [N] hours)
 
 ## Submission Record

@@ -2,7 +2,7 @@
 
 > **How to go from a merchant problem to a reviewed, released Shopify app.**
 >
-> This guide walks through every stage using the 31-agent roster, 66 skills, and
+> This guide walks through every stage using the 31-agent roster, 70 skills, and
 > the hooks in `.claude/hooks/`. It assumes you are working from the repository
 > root, in Claude Code, Codex, or Hermes.
 >
@@ -716,16 +716,20 @@ Submission as a checklist, with every claim proven on a dev store.
 ### Pipeline
 
 ```
-/release-checklist  -->  /app-store-checklist  -->  /release  -->  /changelog
-        |                         |                     |              |
-        v                         v                     v              v
-  build, architecture,      listing, scopes,      deploy version,   merchant +
-  compliance, scopes        screenshots,          tag, record       patch notes
-                            billing               gate-4-release
-                                                         |
-                                                         v
-                                              /launch-checklist  -->  /gate-check gate-4-release
+/release-checklist  -->  /app-page-materials  -->  /app-store-checklist  -->  /release  -->  /changelog
+        |                         |                          |                     |              |
+        v                         v                          v                     v              v
+  build, architecture,      listing copy, media assets,  listing, scopes,      deploy version,   merchant +
+  compliance, scopes        icon, pricing, data          screenshots,          tag, record       patch notes
+                            handling                     billing               gate-4-release
+                                                                                     |
+                                                                                     v
+                                                                          /launch-checklist  -->  /gate-check gate-4-release
 ```
+
+Media assets are produced by `/app-icon-forge` (icon), `/app-screenshot-capture`
+(3-6 unique 1600x900 screenshots), and `/app-demo-video` (composed promo + review
+screencast), each recorded by `/app-page-materials`.
 
 ### Step 8.1: `/release-checklist`
 
@@ -740,7 +744,19 @@ store for this exact version.
 
 A handler that returns 200 is not evidence that redaction works.
 
-### Step 8.2: `/app-store-checklist`
+### Step 8.2: `/app-page-materials`
+
+```
+/app-page-materials discount-bundles
+```
+
+Authors the App Store listing page materials: identity, listing copy, pricing
+presentation, permissions and scopes, and the data-handling disclosure. Media are
+distinct materials produced by `/app-icon-forge`, `/app-screenshot-capture`, and
+`/app-demo-video`. Writes `production/apps/<app>/app-store-listing.md`, which
+`/app-store-checklist` then verifies.
+
+### Step 8.3: `/app-store-checklist`
 
 ```
 /app-store-checklist discount-bundles
@@ -750,7 +766,7 @@ Listing title and description matching what the app actually does, scope
 justifications, screenshots from the current build, privacy policy matching the
 schema, billing configured through Shopify (no external payment links).
 
-### Step 8.3: `/release` and `/launch-checklist`
+### Step 8.4: `/release` and `/launch-checklist`
 
 ```
 /release discount-bundles 1.0.0
@@ -765,18 +781,18 @@ submission is not.
 `/launch-checklist` is the post-deploy pass: install flow on a clean store, webhook
 delivery, uninstall/reinstall, support link.
 
-### Step 8.4: `/changelog` and `/patch-notes`
+### Step 8.5: `/changelog` and `/patch-notes`
 
 Merchant-facing notes trace each line to a requirement ID, so support can answer
 "why did this change?". `/patch-notes` writes the shorter in-app variant.
 
-### Step 8.5: Gate 4 — release
+### Step 8.6: Gate 4 — release
 
 ```
 /gate-check gate-4-release
 ```
 
-**Evidence required:** release checklist complete, App Store checklist complete, a
+**Evidence required:** release checklist complete, listing materials complete, App Store checklist complete, a
 deployed version, and `gate-4-release` recorded with approver and timestamp.
 
 ---
@@ -1048,7 +1064,7 @@ Agent frontmatter declares `haiku`, `sonnet` or `opus`. Codex maps these through
 
 ## Appendix B: Skill Quick-Reference
 
-66 skills, each a directory under `.claude/skills/`.
+70 skills, each a directory under `.claude/skills/`.
 
 ### Onboarding and navigation (7)
 
@@ -1088,9 +1104,10 @@ Agent frontmatter declares `haiku`, `sonnet` or `opus`. Codex maps these through
 `smoke-check`, `regression-suite`, `soak-test`, `perf-profile`, `security-audit`,
 `retrospective`
 
-### Test store and release (9)
+### Test store and release (13)
 
 `create-test-store`, `deploy-to-test-store`, `release-checklist`,
+`app-page-materials`, `app-icon-forge`, `app-screenshot-capture`, `app-demo-video`,
 `app-store-checklist`, `release`, `launch-checklist`, `changelog`, `patch-notes`,
 `hotfix`
 
@@ -1134,7 +1151,7 @@ Agent frontmatter declares `haiku`, `sonnet` or `opus`. Codex maps these through
 4. /sprint-plan → /story-readiness → gate-3
 5. /dev-story → /code-review → /story-done
 6. /qa-plan → /smoke-check → /security-audit
-7. /release-checklist → /app-store-checklist → /release → gate-4
+7. /release-checklist → /app-page-materials (+ /app-icon-forge, /app-screenshot-capture, /app-demo-video) → /app-store-checklist → /release → gate-4
 ```
 
 ### Workflow 4: "Something broke in production"
@@ -1174,12 +1191,14 @@ Agent frontmatter declares `haiku`, `sonnet` or `opus`. Codex maps these through
 
 ```
 1. /release-checklist
-2. /app-store-checklist
-3. /security-audit
-4. /release <app> <version>
-5. /changelog + /patch-notes
-6. /launch-checklist
-7. /gate-check gate-4-release
+2. /app-page-materials
+3. /app-icon-forge + /app-screenshot-capture + /app-demo-video
+4. /app-store-checklist
+5. /security-audit
+6. /release <app> <version>
+7. /changelog + /patch-notes
+8. /launch-checklist
+9. /gate-check gate-4-release
 ```
 
 ### Workflow 8: "Shopify released a new API version"

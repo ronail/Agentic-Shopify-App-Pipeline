@@ -115,6 +115,9 @@ jobs:
           fi
           bash scripts/init-template.sh "${args[@]}"
 
+      - name: Install pinned vendor skills
+        run: bash scripts/install-vendor-skills.sh --install-at-init
+
       - name: Commit result and retire this workflow
         run: |
           set -eu
@@ -122,5 +125,8 @@ jobs:
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
           rm -f .github/workflows/template-init.yml
           git add -A
+          # Vendor skills are gitignored in the template but belong in the
+          # generated project, so it builds without a network round-trip.
+          git add -f .claude/skills
           git commit -m "chore: initialise project from the Agentic Shopify App Pipeline template [skip ci]"
           git push origin "HEAD:${GITHUB_REF_NAME}"

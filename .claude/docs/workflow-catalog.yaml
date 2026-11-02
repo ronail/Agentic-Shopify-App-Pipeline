@@ -376,6 +376,39 @@ phases:
         required: true
         description: "App Store submission readiness (scopes, billing, compliance webhooks, privacy)."
 
+      - id: app-page-materials
+        name: "App Page Materials"
+        command: /app-page-materials
+        required: true
+        artifact:
+          glob: "production/apps/*/app-store-listing.md"
+          pattern: "Verdict: complete"
+        description: "Author the App Store listing page: identity, copy, screenshots, app icon, promotional video, pricing, scopes, and data-handling disclosure."
+
+      - id: app-icon-forge
+        name: "App Icon Forge"
+        command: /app-icon-forge
+        required: false
+        artifact:
+          glob: "apps/*/design/icon/exports/shopify-listing-1200.png"
+        description: "Design the app icon and export the 1200x1200 listing PNG set."
+
+      - id: app-screenshot-capture
+        name: "App Screenshot Capture"
+        command: /app-screenshot-capture
+        required: false
+        artifact:
+          glob: "production/apps/*/assets/screenshots/manifest.md"
+        description: "Capture the 3-6 unique 1600x900 App Store screenshots from a deployed build."
+
+      - id: app-demo-video
+        name: "App Demo Video"
+        command: /app-demo-video
+        required: false
+        artifact:
+          glob: "production/apps/*/assets/video/promo.mp4"
+        description: "Compose the promo video and record the separate review demo screencast (local, account-free toolchain)."
+
       - id: app-store-checklist
         name: "App Store Checklist"
         command: /app-store-checklist

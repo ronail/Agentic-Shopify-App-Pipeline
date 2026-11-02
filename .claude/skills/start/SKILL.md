@@ -68,6 +68,23 @@ for a in apps:
 PY
 ```
 
+## Phase 1.5 — Vendor skills
+
+Third-party skills are pinned dependencies, not repo content. Check them:
+
+```bash
+bash scripts/install-vendor-skills.sh --check
+```
+
+Add one dashboard line — `Vendor skills: <n>/<total> installed` — naming anything
+missing or stale. If something is missing, offer once:
+
+> Install the pinned vendor skill(s)? (`bash scripts/install-vendor-skills.sh --install`)
+
+Never install without that confirmation: it writes into `.claude/skills/` and
+needs network access. A stale install is reported and offered the same way; never
+fetch `main` to "fix" it — the lock's pinned commit is the contract.
+
 ## Phase 2 — Print the dashboard
 
 One screen, no prose padding:

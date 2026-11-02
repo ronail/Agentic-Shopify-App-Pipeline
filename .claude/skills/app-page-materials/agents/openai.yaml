@@ -1,0 +1,6 @@
+interface:
+  display_name: "App Page Materials"
+  short_description: "Author the Shopify App Store listing page materials for an app: identity, listing copy, screenshots, app icon, promotional video, pricing presentation, permi..."
+  default_prompt: "Use the $app-page-materials skill for the requested task."
+policy:
+  allow_implicit_invocation: true

@@ -1,0 +1,6 @@
+interface:
+  display_name: "App Icon Forge"
+  short_description: "Design a Shopify app icon from concept to production PNG set: discovery, 3-4 concepts, SVG, feedback loop, and export at 1200x1200 listing, favicon, and soci..."
+  default_prompt: "Use the $app-icon-forge skill for the requested task."
+policy:
+  allow_implicit_invocation: true

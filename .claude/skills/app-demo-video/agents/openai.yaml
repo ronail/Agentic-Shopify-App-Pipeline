@@ -1,0 +1,6 @@
+interface:
+  display_name: "App Demo Video"
+  short_description: "Produce the two Shopify App Store video materials from a real app build: a 2-3 minute public promo video (composed, not recorded) and a separate review-only..."
+  default_prompt: "Use the $app-demo-video skill for the requested task."
+policy:
+  allow_implicit_invocation: true
